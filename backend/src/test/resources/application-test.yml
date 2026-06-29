@@ -14,6 +14,11 @@ spring:
   flyway:
     enabled: false
 
+app:
+  jwt:
+    secret: test-secret-key-for-testing-purposes-must-be-at-least-256-bits-long
+    expiration-ms: 3600000
+
 logging:
   level:
     com.personalfinance: DEBUG
