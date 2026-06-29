@@ -4,6 +4,7 @@ import com.personalfinance.model.entity.Transaction;
 import com.personalfinance.model.entity.enums.TransactionType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +20,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
   Page<Transaction> findByUserIdAndTypeOrderByDateDesc(
       UUID userId, TransactionType type, Pageable pageable);
+
+  List<Transaction> findByImportSessionIdAndUserId(UUID importSessionId, UUID userId);
 
   @Query(
       "SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.user.id = :userId AND t.type = :type AND t.date BETWEEN :start AND :end")
