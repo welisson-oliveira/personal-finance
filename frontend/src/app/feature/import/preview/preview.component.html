@@ -1,0 +1,134 @@
+@if (preview) {
+  <div class="page-header">
+    <div class="header-info">
+      <h1>Import Preview</h1>
+      <div class="meta">
+        <span class="badge">{{ preview.documentType }}</span>
+        <span class="period"
+          >{{ preview.periodStart | date: 'MMM d' }} – {{ preview.periodEnd | date: 'MMM d, yyyy' }}</span
+        >
+        <span class="count">{{ preview.transactions.length }} transactions</span>
+        @if (needsReviewCount() > 0) {
+          <span class="review-badge">{{ needsReviewCount() }} need review</span>
+        }
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-button (click)="cancel()" [disabled]="loading">Cancel</button>
+      <button mat-raised-button color="primary" (click)="confirm()" [disabled]="loading">
+        <mat-icon>check</mat-icon>
+        Confirm Import
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  }
+
+  <mat-card class="table-card">
+    <div class="table-wrapper">
+      <table mat-table [dataSource]="preview.transactions" class="preview-table">
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>Date</th>
+          <td mat-cell *matCellDef="let tx">{{ tx.date | date: 'dd/MM' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="description">
+          <th mat-header-cell *matHeaderCellDef>Description</th>
+          <td mat-cell *matCellDef="let tx" class="desc-cell">
+            <div class="desc-main">{{ tx.normalizedDescription || tx.description }}</div>
+            @if (tx.cardHolder) {
+              <div class="desc-sub">{{ tx.cardHolder }}</div>
+            }
+            @if (tx.installmentInfo) {
+              <div class="desc-sub installment">Parcel {{ tx.installmentInfo }}</div>
+            }
+            @if (tx.needsReview) {
+              <mat-icon class="review-icon" title="Needs review">warning</mat-icon>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="amount">
+          <th mat-header-cell *matHeaderCellDef>Amount</th>
+          <td
+            mat-cell
+            *matCellDef="let tx"
+            [class.income-amount]="tx.type === 'INCOME'"
+            [class.expense-amount]="tx.type === 'EXPENSE'"
+          >
+            {{ formatAmount(tx) }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <td mat-cell *matCellDef="let tx">
+            <span
+              class="type-chip"
+              [class.income-chip]="tx.type === 'INCOME'"
+              [class.expense-chip]="tx.type === 'EXPENSE'"
+            >
+              {{ tx.type }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="incomeType">
+          <th mat-header-cell *matHeaderCellDef>Income Type</th>
+          <td mat-cell *matCellDef="let tx">
+            @if (tx.type === 'INCOME') {
+              <mat-select [(ngModel)]="tx.incomeType" class="inline-select">
+                @for (opt of incomeTypes; track opt.value) {
+                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+            } @else {
+              —
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="budgetGroup">
+          <th mat-header-cell *matHeaderCellDef>Budget Group</th>
+          <td mat-cell *matCellDef="let tx">
+            @if (tx.type === 'EXPENSE') {
+              <mat-select [(ngModel)]="tx.budgetGroup" class="inline-select">
+                @for (opt of budgetGroups; track opt.value) {
+                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+            } @else {
+              —
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="category">
+          <th mat-header-cell *matHeaderCellDef>Category</th>
+          <td mat-cell *matCellDef="let tx">
+            <mat-select [(ngModel)]="tx.categoryId" class="inline-select" placeholder="None">
+              <mat-option [value]="null">None</mat-option>
+              @for (cat of categories; track cat.id) {
+                <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+              }
+            </mat-select>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="notes">
+          <th mat-header-cell *matHeaderCellDef>Notes</th>
+          <td mat-cell *matCellDef="let tx">
+            <input matInput [(ngModel)]="tx.notes" class="notes-input" placeholder="Add note..." />
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.needs-review-row]="row.needsReview"></tr>
+      </table>
+    </div>
+  </mat-card>
+} @else {
+  <p>No preview data. <a routerLink="/import">Go back to upload</a>.</p>
+}
