@@ -27,6 +27,7 @@ interface DialogData {
     MatInputModule,
   ],
   templateUrl: './resolve-dialog.component.html',
+  styleUrl: './resolve-dialog.component.scss',
 })
 export class ResolveDialogComponent {
   categoryId: string | undefined;
