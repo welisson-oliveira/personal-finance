@@ -3,12 +3,14 @@ package com.personalfinance.service;
 import com.personalfinance.dto.request.ResolveReviewRequest;
 import com.personalfinance.dto.response.ReviewQueueItemResponse;
 import com.personalfinance.model.entity.MerchantAlias;
+import com.personalfinance.model.entity.MerchantDisplayName;
 import com.personalfinance.model.entity.MerchantRule;
 import com.personalfinance.model.entity.ReviewQueue;
 import com.personalfinance.model.entity.Transaction;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.repository.CategoryRepository;
 import com.personalfinance.repository.MerchantAliasRepository;
+import com.personalfinance.repository.MerchantDisplayNameRepository;
 import com.personalfinance.repository.MerchantRuleRepository;
 import com.personalfinance.repository.ReviewQueueRepository;
 import com.personalfinance.repository.TransactionRepository;
@@ -26,6 +28,7 @@ public class ReviewQueueService {
   private final ReviewQueueRepository reviewQueueRepository;
   private final MerchantRuleRepository merchantRuleRepository;
   private final MerchantAliasRepository merchantAliasRepository;
+  private final MerchantDisplayNameRepository merchantDisplayNameRepository;
   private final TransactionRepository transactionRepository;
   private final CategoryRepository categoryRepository;
 
@@ -84,7 +87,40 @@ public class ReviewQueueService {
           MerchantAlias.builder().merchantRule(rule).alias(rawAlias).build());
     }
 
-    applyRuleToSessionTransactions(item, rule, user.getId(), request.getTransactionNotes());
+    String cleanNotes =
+        (request.getTransactionNotes() == null || request.getTransactionNotes().isBlank())
+            ? null
+            : request.getTransactionNotes().trim();
+
+    if (cleanNotes != null) {
+      MerchantDisplayName mdn =
+          merchantDisplayNameRepository
+              .findByUserIdAndNormalizedName(user.getId(), normalizedName)
+              .orElseGet(
+                  () ->
+                      MerchantDisplayName.builder()
+                          .user(user)
+                          .normalizedName(normalizedName)
+                          .build());
+      mdn.setDisplayName(cleanNotes);
+      mdn.setUpdatedAt(LocalDateTime.now());
+      merchantDisplayNameRepository.save(mdn);
+    }
+
+    // Apply rule to this session's transactions
+    applyRuleToSessionTransactions(item, rule, user.getId(), cleanNotes);
+
+    // Resolve all other pending queue items with the same normalized name
+    List<ReviewQueue> siblings =
+        reviewQueueRepository.findByUserIdAndNormalizedDescriptionIgnoreCaseAndStatus(
+            user.getId(), normalizedName, "PENDING");
+    for (ReviewQueue sibling : siblings) {
+      if (sibling.getId().equals(reviewId)) continue;
+      applyRuleToSessionTransactions(sibling, rule, user.getId(), cleanNotes);
+      sibling.setStatus("REVIEWED");
+      sibling.setResolvedAt(LocalDateTime.now());
+      reviewQueueRepository.save(sibling);
+    }
 
     item.setStatus("REVIEWED");
     item.setResolvedAt(LocalDateTime.now());

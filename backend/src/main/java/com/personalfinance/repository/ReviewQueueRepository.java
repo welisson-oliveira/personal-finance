@@ -11,6 +11,9 @@ public interface ReviewQueueRepository extends JpaRepository<ReviewQueue, UUID> 
 
   List<ReviewQueue> findByUserIdAndStatusOrderByCreatedAtDesc(UUID userId, String status);
 
+  List<ReviewQueue> findByUserIdAndNormalizedDescriptionIgnoreCaseAndStatus(
+      UUID userId, String normalizedDescription, String status);
+
   int countByImportSessionIdAndStatus(UUID importSessionId, String status);
 
   void deleteByImportSessionId(UUID importSessionId);
