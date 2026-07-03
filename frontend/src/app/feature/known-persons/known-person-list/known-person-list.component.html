@@ -1,0 +1,62 @@
+<div class="page-header">
+  <h1>Pessoas Conhecidas</h1>
+  <button mat-raised-button color="primary" (click)="openCreate()">
+    <mat-icon>person_add</mat-icon>
+    Nova Pessoa
+  </button>
+</div>
+
+@if (loading) {
+  <div class="loading-center">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+} @else {
+  <mat-card>
+    <mat-list>
+      @for (person of persons; track person.id) {
+        <mat-list-item class="person-item" [class.inactive]="!person.active">
+          <mat-icon matListItemIcon [class.inactive-icon]="!person.active">
+            {{ person.active ? 'person' : 'person_off' }}
+          </mat-icon>
+          <span matListItemTitle>
+            {{ person.name }}
+            @if (!person.active) {
+              <span class="inactive-badge">Inativo</span>
+            }
+          </span>
+          <span matListItemLine class="person-meta">
+            <mat-chip-set>
+              <mat-chip>{{ relationshipLabel[person.relationship] || person.relationship }}</mat-chip>
+              <mat-chip>{{ incomeTypeLabel[person.defaultIncomeType] || person.defaultIncomeType }}</mat-chip>
+            </mat-chip-set>
+            @if (person.defaultLabel) {
+              <span class="label-hint">{{ person.defaultLabel }}</span>
+            }
+          </span>
+          <div matListItemMeta class="item-actions">
+            <button mat-icon-button (click)="openEdit(person)" title="Editar">
+              <mat-icon>edit</mat-icon>
+            </button>
+            @if (person.active) {
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="deactivate(person)"
+                matTooltip="Desativar (não exclui)"
+                title="Desativar"
+              >
+                <mat-icon>block</mat-icon>
+              </button>
+            }
+          </div>
+        </mat-list-item>
+        <mat-divider></mat-divider>
+      }
+      @if (persons.length === 0) {
+        <mat-list-item>
+          <span matListItemTitle>Nenhuma pessoa cadastrada.</span>
+        </mat-list-item>
+      }
+    </mat-list>
+  </mat-card>
+}

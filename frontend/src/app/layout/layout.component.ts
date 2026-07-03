@@ -34,11 +34,11 @@ interface NavItem {
 export class LayoutComponent {
   navItems: NavItem[] = [
     { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
-    { label: 'Transactions', icon: 'receipt_long', route: '/transactions' },
-    { label: 'Import', icon: 'upload_file', route: '/import' },
-    { label: 'Review Queue', icon: 'rate_review', route: '/review' },
-    { label: 'Categories', icon: 'category', route: '/categories' },
-    { label: 'Known Persons', icon: 'people', route: '/known-persons' },
+    { label: 'Transações', icon: 'receipt_long', route: '/transactions' },
+    { label: 'Importar', icon: 'upload_file', route: '/import' },
+    { label: 'Fila de Revisão', icon: 'rate_review', route: '/review' },
+    { label: 'Categorias', icon: 'category', route: '/categories' },
+    { label: 'Pessoas Conhecidas', icon: 'people', route: '/known-persons' },
   ];
 
   constructor(
