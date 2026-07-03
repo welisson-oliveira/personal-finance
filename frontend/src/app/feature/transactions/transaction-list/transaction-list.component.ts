@@ -154,11 +154,11 @@ export class TransactionListComponent implements OnInit {
   saveNotes(tx: Transaction): void {
     const notes = this.editingNotes.trim();
     this.txService.updateNotes(tx.id, notes).subscribe({
-      next: (updated) => {
-        tx.notes = updated.notes;
+      next: () => {
         this.editingId = null;
         this.editingNotes = '';
         this.snackBar.open('Apelido salvo.', 'Fechar', { duration: 2500 });
+        this.load();
       },
       error: () => {
         this.snackBar.open('Erro ao salvar apelido.', 'Fechar', { duration: 3000 });

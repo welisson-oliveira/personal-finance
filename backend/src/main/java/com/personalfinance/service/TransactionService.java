@@ -3,14 +3,18 @@ package com.personalfinance.service;
 import com.personalfinance.dto.request.CreateTransactionRequest;
 import com.personalfinance.dto.response.TransactionResponse;
 import com.personalfinance.model.entity.Category;
+import com.personalfinance.model.entity.MerchantDisplayName;
 import com.personalfinance.model.entity.Transaction;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.CategoryRepository;
+import com.personalfinance.repository.MerchantDisplayNameRepository;
 import com.personalfinance.repository.TransactionRepository;
 import com.personalfinance.repository.TransactionSpecifications;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,6 +30,7 @@ public class TransactionService {
 
   private final TransactionRepository transactionRepository;
   private final CategoryRepository categoryRepository;
+  private final MerchantDisplayNameRepository merchantDisplayNameRepository;
 
   @Transactional(readOnly = true)
   public Page<TransactionResponse> findAll(
@@ -93,8 +98,37 @@ public class TransactionService {
   @Transactional
   public TransactionResponse updateNotes(UUID id, User user, String notes) {
     Transaction tx = findOwned(id, user.getId());
-    tx.setNotes(notes == null || notes.isBlank() ? null : notes);
-    return toResponse(transactionRepository.save(tx));
+    String effectiveName =
+        tx.getNormalizedDescription() != null ? tx.getNormalizedDescription() : tx.getDescription();
+    String cleanNotes = (notes == null || notes.isBlank()) ? null : notes.trim();
+
+    // Upsert or delete the merchant display name mapping
+    if (cleanNotes == null) {
+      merchantDisplayNameRepository
+          .findByUserIdAndNormalizedName(user.getId(), effectiveName)
+          .ifPresent(merchantDisplayNameRepository::delete);
+    } else {
+      MerchantDisplayName mdn =
+          merchantDisplayNameRepository
+              .findByUserIdAndNormalizedName(user.getId(), effectiveName)
+              .orElseGet(
+                  () ->
+                      MerchantDisplayName.builder()
+                          .user(user)
+                          .normalizedName(effectiveName)
+                          .build());
+      mdn.setDisplayName(cleanNotes);
+      mdn.setUpdatedAt(LocalDateTime.now());
+      merchantDisplayNameRepository.save(mdn);
+    }
+
+    // Propagate to all transactions with the same effective name for this user
+    List<Transaction> matching =
+        transactionRepository.findByUserIdAndEffectiveName(user.getId(), effectiveName);
+    matching.forEach(t -> t.setNotes(cleanNotes));
+    transactionRepository.saveAll(matching);
+
+    return toResponse(matching.stream().filter(t -> t.getId().equals(id)).findFirst().orElse(tx));
   }
 
   @Transactional
