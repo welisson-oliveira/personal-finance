@@ -1,7 +1,7 @@
 package com.personalfinance.controller;
 
 import com.personalfinance.dto.response.ImportPreviewResponse;
-import com.personalfinance.model.entity.ImportSession;
+import com.personalfinance.dto.response.ImportSessionResponse;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.service.TransactionImportService;
 import java.io.IOException;
@@ -24,7 +24,7 @@ public class ImportController {
   @PostMapping(value = "/parse", consumes = "multipart/form-data")
   public ResponseEntity<ImportPreviewResponse> parse(
       @RequestParam("file") MultipartFile file,
-      @RequestParam("documentType") String documentType,
+      @RequestParam(value = "documentType", required = false) String documentType,
       @AuthenticationPrincipal User user)
       throws IOException {
     ImportPreviewResponse preview = importService.parseAndPreview(file, documentType, user);
@@ -44,7 +44,7 @@ public class ImportController {
   }
 
   @GetMapping("/history")
-  public ResponseEntity<List<ImportSession>> history(@AuthenticationPrincipal User user) {
+  public ResponseEntity<List<ImportSessionResponse>> history(@AuthenticationPrincipal User user) {
     return ResponseEntity.ok(importService.getHistory(user.getId()));
   }
 }

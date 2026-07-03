@@ -18,6 +18,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
   Page<Transaction> findByUserIdOrderByDateDesc(UUID userId, Pageable pageable);
 
+  long countByImportSessionId(UUID importSessionId);
+
   Page<Transaction> findByUserIdAndTypeOrderByDateDesc(
       UUID userId, TransactionType type, Pageable pageable);
 

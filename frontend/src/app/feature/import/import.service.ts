@@ -1,16 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ImportPreviewResponse } from '../../core/models/import.model';
+import { ImportPreviewResponse, ImportSessionResponse } from '../../core/models/import.model';
 
 @Injectable({ providedIn: 'root' })
 export class ImportService {
   constructor(private http: HttpClient) {}
 
-  parse(file: File, documentType: string): Observable<ImportPreviewResponse> {
+  parse(file: File): Observable<ImportPreviewResponse> {
     const form = new FormData();
     form.append('file', file);
-    form.append('documentType', documentType);
     return this.http.post<ImportPreviewResponse>('/api/import/parse', form);
   }
 
@@ -20,5 +19,9 @@ export class ImportService {
 
   cancel(sessionId: string): Observable<void> {
     return this.http.post<void>(`/api/import/${sessionId}/cancel`, {});
+  }
+
+  getHistory(): Observable<ImportSessionResponse[]> {
+    return this.http.get<ImportSessionResponse[]>('/api/import/history');
   }
 }

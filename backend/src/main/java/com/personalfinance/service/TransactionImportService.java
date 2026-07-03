@@ -1,10 +1,12 @@
 package com.personalfinance.service;
 
 import com.personalfinance.dto.response.ImportPreviewResponse;
+import com.personalfinance.dto.response.ImportSessionResponse;
 import com.personalfinance.dto.response.ParsedTransactionDTO;
 import com.personalfinance.model.entity.*;
 import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.*;
+import com.personalfinance.service.parser.DocumentTypeDetector;
 import com.personalfinance.service.parser.NubankExtratoParser;
 import com.personalfinance.service.parser.NubankFaturaParser;
 import java.io.IOException;
@@ -23,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class TransactionImportService {
 
+  private final DocumentTypeDetector documentTypeDetector;
   private final NubankExtratoParser extratoParser;
   private final NubankFaturaParser faturaParser;
   private final IncomeClassificationService incomeClassifier;
@@ -40,12 +43,16 @@ public class TransactionImportService {
   public ImportPreviewResponse parseAndPreview(MultipartFile file, String documentType, User user)
       throws IOException {
     String text = extractText(file.getBytes());
+    String resolvedType =
+        (documentType != null && !documentType.isBlank())
+            ? documentType
+            : documentTypeDetector.detect(text);
     String holderName = user.getName();
 
     List<ParsedTransactionDTO> rawTx;
     LocalDate[] period = new LocalDate[2];
 
-    if ("EXTRATO".equals(documentType)) {
+    if ("EXTRATO".equals(resolvedType)) {
       var result = extratoParser.parse(text, holderName);
       rawTx = result.transactions();
       period[0] = result.periodStart();
@@ -86,7 +93,7 @@ public class TransactionImportService {
         importSessionRepository.save(
             ImportSession.builder()
                 .user(user)
-                .documentType(documentType)
+                .documentType(resolvedType)
                 .fileName(
                     file.getOriginalFilename() != null ? file.getOriginalFilename() : "upload.pdf")
                 .periodStart(period[0])
@@ -99,7 +106,7 @@ public class TransactionImportService {
     int reviewCount = (int) visible.stream().filter(ParsedTransactionDTO::isNeedsReview).count();
 
     return new ImportPreviewResponse(
-        session.getId(), documentType, period[0], period[1], visible, reviewCount);
+        session.getId(), resolvedType, period[0], period[1], visible, reviewCount);
   }
 
   @Transactional
@@ -168,8 +175,20 @@ public class TransactionImportService {
     previewCache.remove(sessionId);
   }
 
-  public List<ImportSession> getHistory(UUID userId) {
-    return importSessionRepository.findByUserIdOrderByCreatedAtDesc(userId);
+  public List<ImportSessionResponse> getHistory(UUID userId) {
+    return importSessionRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+        .map(
+            s ->
+                new ImportSessionResponse(
+                    s.getId(),
+                    s.getDocumentType(),
+                    s.getFileName(),
+                    s.getPeriodStart(),
+                    s.getPeriodEnd(),
+                    s.getStatus(),
+                    s.getCreatedAt(),
+                    transactionRepository.countByImportSessionId(s.getId())))
+        .toList();
   }
 
   private String extractText(byte[] pdfBytes) throws IOException {

@@ -1,24 +1,16 @@
 <div class="page-header">
-  <h1>Import Statement</h1>
-  <p>Upload a Nubank PDF to import transactions</p>
+  <div>
+    <h1>Importar Extrato</h1>
+    <p>Envie um PDF do Nubank — o tipo é detectado automaticamente</p>
+  </div>
+  <button mat-stroked-button (click)="goToHistory()">
+    <mat-icon>history</mat-icon>
+    Histórico
+  </button>
 </div>
 
 <mat-card class="upload-card">
   <mat-card-content>
-    <div class="doc-type-section">
-      <label class="section-label">Document Type</label>
-      <mat-button-toggle-group [(ngModel)]="documentType" class="type-toggle">
-        <mat-button-toggle value="EXTRATO">
-          <mat-icon>account_balance</mat-icon>
-          Bank Statement
-        </mat-button-toggle>
-        <mat-button-toggle value="FATURA">
-          <mat-icon>credit_card</mat-icon>
-          Credit Card Bill
-        </mat-button-toggle>
-      </mat-button-toggle-group>
-    </div>
-
     <div
       class="drop-zone"
       [class.drag-over]="isDragOver"
@@ -29,8 +21,8 @@
     >
       @if (!selectedFile) {
         <mat-icon class="upload-icon">cloud_upload</mat-icon>
-        <p class="drop-text">Drag & drop your PDF here</p>
-        <p class="or-text">or</p>
+        <p class="drop-text">Arraste o PDF aqui</p>
+        <p class="or-text">ou</p>
         <label for="file-input">
           <button
             mat-stroked-button
@@ -38,7 +30,7 @@
             type="button"
             onclick="document.getElementById('file-input').click()"
           >
-            Browse File
+            Selecionar arquivo
           </button>
         </label>
         <input id="file-input" type="file" accept=".pdf" (change)="onFileSelected($event)" class="hidden-input" />
@@ -46,7 +38,7 @@
         <mat-icon class="file-icon">picture_as_pdf</mat-icon>
         <p class="file-name">{{ selectedFile.name }}</p>
         <p class="file-size">{{ (selectedFile.size / 1024).toFixed(1) }} KB</p>
-        <button mat-icon-button (click)="clearFile()" class="remove-btn" title="Remove file">
+        <button mat-icon-button (click)="clearFile()" class="remove-btn" title="Remover arquivo">
           <mat-icon>close</mat-icon>
         </button>
       }
@@ -61,14 +53,14 @@
 
     @if (loading) {
       <mat-progress-bar mode="indeterminate" class="progress-bar"></mat-progress-bar>
-      <p class="loading-text">Parsing PDF, please wait...</p>
+      <p class="loading-text">Processando PDF, aguarde...</p>
     }
   </mat-card-content>
 
   <mat-card-actions align="end">
     <button mat-raised-button color="primary" [disabled]="!selectedFile || loading" (click)="upload()">
       <mat-icon>upload</mat-icon>
-      Upload & Parse
+      Importar
     </button>
   </mat-card-actions>
 </mat-card>

@@ -3,30 +3,19 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { FormsModule } from '@angular/forms';
 import { ImportService } from '../import.service';
 import { ImportPreviewResponse } from '../../../core/models/import.model';
 
 @Component({
   selector: 'app-upload',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    MatCardModule,
-    MatButtonModule,
-    MatButtonToggleModule,
-    MatIconModule,
-    MatProgressBarModule,
-  ],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule],
   templateUrl: './upload.component.html',
   styleUrl: './upload.component.scss',
 })
 export class UploadComponent {
-  documentType: 'EXTRATO' | 'FATURA' = 'EXTRATO';
   selectedFile: File | null = null;
   isDragOver = false;
   loading = false;
@@ -68,7 +57,7 @@ export class UploadComponent {
 
   private setFile(file: File): void {
     if (file.type !== 'application/pdf') {
-      this.errorMessage = 'Only PDF files are accepted';
+      this.errorMessage = 'Apenas arquivos PDF são aceitos';
       return;
     }
     this.selectedFile = file;
@@ -79,12 +68,12 @@ export class UploadComponent {
     if (!this.selectedFile) return;
     this.loading = true;
     this.errorMessage = '';
-    this.importService.parse(this.selectedFile, this.documentType).subscribe({
+    this.importService.parse(this.selectedFile).subscribe({
       next: (preview: ImportPreviewResponse) => {
         this.router.navigate(['/import/preview'], { state: { preview } });
       },
       error: (err) => {
-        this.errorMessage = err.error?.message || 'Failed to parse PDF';
+        this.errorMessage = err.error?.message || 'Falha ao processar o PDF';
         this.loading = false;
       },
     });
@@ -93,5 +82,9 @@ export class UploadComponent {
   clearFile(): void {
     this.selectedFile = null;
     this.errorMessage = '';
+  }
+
+  goToHistory(): void {
+    this.router.navigate(['/import/history']);
   }
 }
