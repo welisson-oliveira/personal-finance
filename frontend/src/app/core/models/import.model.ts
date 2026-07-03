@@ -23,3 +23,14 @@ export interface ImportPreviewResponse {
   transactions: ParsedTransaction[];
   reviewQueueCount: number;
 }
+
+export interface ImportSessionResponse {
+  id: string;
+  documentType: string;
+  fileName: string;
+  periodStart: string;
+  periodEnd: string;
+  status: string;
+  createdAt: string;
+  transactionCount: number;
+}

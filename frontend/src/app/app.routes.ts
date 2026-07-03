@@ -42,6 +42,13 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./feature/import/preview/preview.component').then((m) => m.PreviewComponent),
           },
+          {
+            path: 'history',
+            loadComponent: () =>
+              import('./feature/import/history/import-history.component').then(
+                (m) => m.ImportHistoryComponent
+              ),
+          },
         ],
       },
       {
