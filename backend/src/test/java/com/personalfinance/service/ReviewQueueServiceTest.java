@@ -93,7 +93,7 @@ class ReviewQueueServiceTest {
             .build();
 
     ResolveReviewRequest request =
-        new ResolveReviewRequest(categoryId, "NON_ESSENTIAL", "Loja Desconhecida");
+        new ResolveReviewRequest(categoryId, "NON_ESSENTIAL", "Loja Desconhecida", null);
 
     when(reviewQueueRepository.findById(reviewId)).thenReturn(Optional.of(item));
     when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
@@ -140,7 +140,8 @@ class ReviewQueueServiceTest {
             .status("PENDING")
             .build();
 
-    ResolveReviewRequest request = new ResolveReviewRequest(null, "ESSENTIAL", "Padaria Central");
+    ResolveReviewRequest request =
+        new ResolveReviewRequest(null, "ESSENTIAL", "Padaria Central", null);
 
     when(reviewQueueRepository.findById(reviewId)).thenReturn(Optional.of(item));
     when(merchantRuleRepository.findUserRuleByNormalizedName("Padaria Central", userId))
@@ -187,7 +188,8 @@ class ReviewQueueServiceTest {
             .status("PENDING")
             .build();
 
-    ResolveReviewRequest request = new ResolveReviewRequest(null, "ESSENTIAL", "Padaria Central");
+    ResolveReviewRequest request =
+        new ResolveReviewRequest(null, "ESSENTIAL", "Padaria Central", null);
 
     when(reviewQueueRepository.findById(reviewId)).thenReturn(Optional.of(item));
     MerchantRule savedRule =
@@ -223,7 +225,7 @@ class ReviewQueueServiceTest {
             .status("PENDING")
             .build();
 
-    ResolveReviewRequest request = new ResolveReviewRequest(null, "NON_ESSENTIAL", "iFood");
+    ResolveReviewRequest request = new ResolveReviewRequest(null, "NON_ESSENTIAL", "iFood", null);
     MerchantRule existingRule =
         MerchantRule.builder()
             .id(UUID.randomUUID())
@@ -265,7 +267,8 @@ class ReviewQueueServiceTest {
 
     assertThatThrownBy(
             () ->
-                service.resolve(reviewId, new ResolveReviewRequest(null, "ESSENTIAL", "Any"), user))
+                service.resolve(
+                    reviewId, new ResolveReviewRequest(null, "ESSENTIAL", "Any", null), user))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Review item not found");
   }
@@ -290,7 +293,7 @@ class ReviewQueueServiceTest {
 
     Category category = Category.builder().id(UUID.randomUUID()).name("Alimentação").build();
     ResolveReviewRequest request =
-        new ResolveReviewRequest(category.getId(), "ESSENTIAL", "Padaria X");
+        new ResolveReviewRequest(category.getId(), "ESSENTIAL", "Padaria X", null);
 
     Transaction matchingTx =
         Transaction.builder().id(UUID.randomUUID()).normalizedDescription("padaria x").build();
