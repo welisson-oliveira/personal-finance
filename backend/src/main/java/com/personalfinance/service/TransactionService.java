@@ -27,6 +27,7 @@ public class TransactionService {
   private final TransactionRepository transactionRepository;
   private final CategoryRepository categoryRepository;
 
+  @Transactional(readOnly = true)
   public Page<TransactionResponse> findAll(
       UUID userId, String month, String type, UUID categoryId, Pageable pageable) {
     LocalDate start = null;
