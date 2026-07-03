@@ -1,0 +1,128 @@
+.page-header {
+  margin-bottom: 16px;
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+}
+
+.filter-card {
+  margin-bottom: 16px;
+
+  mat-card-content {
+    padding: 16px !important;
+  }
+}
+
+.filters {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+
+  mat-form-field {
+    width: 180px;
+  }
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+}
+
+.table-card {
+  padding: 0;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.tx-table {
+  width: 100%;
+  min-width: 700px;
+}
+
+.desc-cell {
+  max-width: 280px;
+
+  .desc-main {
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .desc-note {
+    font-size: 0.75rem;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .source-badge {
+    font-size: 0.65rem;
+    background: rgba(63, 81, 181, 0.1);
+    color: #3f51b5;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+}
+
+.amount-header {
+  text-align: right;
+}
+
+.amount-cell {
+  text-align: right;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.income-amount {
+  color: #2e7d32;
+}
+.expense-amount {
+  color: #c62828;
+}
+
+.type-chip {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.income-chip {
+  background: rgba(76, 175, 80, 0.15);
+  color: #2e7d32;
+}
+.expense-chip {
+  background: rgba(244, 67, 54, 0.1);
+  color: #c62828;
+}
+
+.group-chip {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+
+  &.group-essential {
+    background: rgba(63, 81, 181, 0.12);
+    color: #1a237e;
+  }
+  &.group-non_essential {
+    background: rgba(255, 152, 0, 0.15);
+    color: #e65100;
+  }
+  &.group-investment {
+    background: rgba(76, 175, 80, 0.12);
+    color: #1b5e20;
+  }
+}

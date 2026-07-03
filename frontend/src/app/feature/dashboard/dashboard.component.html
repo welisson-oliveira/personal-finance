@@ -1,0 +1,226 @@
+<div class="dashboard-header">
+  <h1>Dashboard</h1>
+  <div class="period-selector">
+    <mat-form-field appearance="outline" class="selector-field">
+      <mat-label>Mês</mat-label>
+      <mat-select [(ngModel)]="selectedMonth" (ngModelChange)="load()">
+        @for (m of months; track m.value) {
+          <mat-option [value]="m.value">{{ m.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="selector-field">
+      <mat-label>Ano</mat-label>
+      <mat-select [(ngModel)]="selectedYear" (ngModelChange)="load()">
+        @for (y of years; track y) {
+          <mat-option [value]="y">{{ y }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+</div>
+
+@if (loading) {
+  <div class="loading-center">
+    <mat-spinner diameter="48"></mat-spinner>
+  </div>
+} @else if (errorMessage) {
+  <p class="error-text">{{ errorMessage }}</p>
+} @else if (data) {
+  <!-- Receita -->
+  <div class="section-title">Receita — {{ monthLabel() }} {{ selectedYear }}</div>
+  <div class="cards-row">
+    <mat-card class="metric-card income">
+      <mat-card-content>
+        <mat-icon>trending_up</mat-icon>
+        <div class="metric-label">Receita Bruta</div>
+        <div class="metric-value">{{ fmt(data.receitaBruta) }}</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="metric-card reimbursement">
+      <mat-card-content>
+        <mat-icon>swap_horiz</mat-icon>
+        <div class="metric-label">Reembolsos</div>
+        <div class="metric-value">{{ fmt(data.reembolsos) }}</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="metric-card real-income">
+      <mat-card-content>
+        <mat-icon>attach_money</mat-icon>
+        <div class="metric-label">Receita Real</div>
+        <div class="metric-value">{{ fmt(data.receitaReal) }}</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="metric-card balance" [class.negative]="data.saldo < 0">
+      <mat-card-content>
+        <mat-icon>account_balance_wallet</mat-icon>
+        <div class="metric-label">Saldo</div>
+        <div class="metric-value">{{ fmt(data.saldo) }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- 50/30/20 -->
+  <div class="section-title">Distribuição 50/30/20</div>
+  <mat-card class="budget-card">
+    <mat-card-content>
+      <div class="budget-row">
+        <div class="budget-label">
+          <span class="dot essential"></span>
+          Essenciais
+          <span class="budget-pct">{{ data.percentualEssenciais | number: '1.1-1' }}%</span>
+          <span class="budget-target">(meta 50%)</span>
+        </div>
+        <div class="budget-values">
+          {{ fmt(data.despesasEssenciais) }}
+        </div>
+      </div>
+      <mat-progress-bar
+        mode="determinate"
+        [value]="clamp(data.percentualEssenciais)"
+        color="primary"
+        class="budget-bar"
+      ></mat-progress-bar>
+
+      <div class="budget-row">
+        <div class="budget-label">
+          <span class="dot non-essential"></span>
+          Não Essenciais
+          <span class="budget-pct">{{ data.percentualNaoEssenciais | number: '1.1-1' }}%</span>
+          <span class="budget-target">(meta 30%)</span>
+        </div>
+        <div class="budget-values">
+          {{ fmt(data.despesasNaoEssenciais) }}
+        </div>
+      </div>
+      <mat-progress-bar
+        mode="determinate"
+        [value]="clamp(data.percentualNaoEssenciais)"
+        color="accent"
+        class="budget-bar"
+      ></mat-progress-bar>
+
+      <div class="budget-row">
+        <div class="budget-label">
+          <span class="dot investment"></span>
+          Investimentos
+          <span class="budget-pct">{{ data.percentualInvestimentos | number: '1.1-1' }}%</span>
+          <span class="budget-target">(meta 20%)</span>
+        </div>
+        <div class="budget-values">
+          {{ fmt(data.investido) }}
+        </div>
+      </div>
+      <mat-progress-bar
+        mode="determinate"
+        [value]="clamp(data.percentualInvestimentos)"
+        color="warn"
+        class="budget-bar"
+      ></mat-progress-bar>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Despesas -->
+  <div class="section-title">Despesas</div>
+  <div class="cards-row">
+    <mat-card class="metric-card essential">
+      <mat-card-content>
+        <mat-icon>home</mat-icon>
+        <div class="metric-label">Essenciais</div>
+        <div class="metric-value">{{ fmt(data.despesasEssenciais) }}</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="metric-card non-essential">
+      <mat-card-content>
+        <mat-icon>local_mall</mat-icon>
+        <div class="metric-label">Não Essenciais</div>
+        <div class="metric-value">{{ fmt(data.despesasNaoEssenciais) }}</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="metric-card total-expenses">
+      <mat-card-content>
+        <mat-icon>receipt</mat-icon>
+        <div class="metric-label">Total Despesas</div>
+        <div class="metric-value">{{ fmt(data.totalDespesas) }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Investimentos -->
+  <div class="section-title">Investimentos</div>
+  <div class="cards-row">
+    <mat-card class="metric-card investment">
+      <mat-card-content>
+        <mat-icon>trending_up</mat-icon>
+        <div class="metric-label">Investido</div>
+        <div class="metric-value">{{ fmt(data.investido) }}</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="metric-card reimbursement">
+      <mat-card-content>
+        <mat-icon>trending_down</mat-icon>
+        <div class="metric-label">Resgatado</div>
+        <div class="metric-value">{{ fmt(data.resgatado) }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Destaques -->
+  @if (data.destaques) {
+    <div class="section-title">Destaques</div>
+    <mat-card class="destaques-card">
+      <mat-card-content>
+        <div class="destaques-grid">
+          @if (data.destaques.maiorSupermercado) {
+            <div class="destaque-item">
+              <mat-icon>shopping_cart</mat-icon>
+              <div>
+                <div class="destaque-label">Maior Supermercado</div>
+                <div class="destaque-value">{{ data.destaques.maiorSupermercado }}</div>
+                <div class="destaque-sub">{{ fmt(data.destaques.maiorSupermercadoValor) }}</div>
+              </div>
+            </div>
+          }
+          @if (data.destaques.maiorDelivery) {
+            <div class="destaque-item">
+              <mat-icon>delivery_dining</mat-icon>
+              <div>
+                <div class="destaque-label">Maior Delivery</div>
+                <div class="destaque-value">{{ data.destaques.maiorDelivery }}</div>
+                <div class="destaque-sub">{{ fmt(data.destaques.maiorDeliveryValor) }}</div>
+              </div>
+            </div>
+          }
+          <div class="destaque-item">
+            <mat-icon>subscriptions</mat-icon>
+            <div>
+              <div class="destaque-label">Assinaturas</div>
+              <div class="destaque-value">{{ data.destaques.quantidadeAssinaturas }}</div>
+            </div>
+          </div>
+          <div class="destaque-item">
+            <mat-icon>shopping_bag</mat-icon>
+            <div>
+              <div class="destaque-label">Compras</div>
+              <div class="destaque-value">{{ data.destaques.quantidadeCompras }}</div>
+            </div>
+          </div>
+          <div class="destaque-item">
+            <mat-icon>send</mat-icon>
+            <div>
+              <div class="destaque-label">PIX Enviados</div>
+              <div class="destaque-value">{{ data.destaques.quantidadePixEnviados }}</div>
+            </div>
+          </div>
+          <div class="destaque-item">
+            <mat-icon>call_received</mat-icon>
+            <div>
+              <div class="destaque-label">PIX Recebidos</div>
+              <div class="destaque-value">{{ data.destaques.quantidadePixRecebidos }}</div>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+}

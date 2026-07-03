@@ -51,6 +51,27 @@ export const routes: Routes = [
             (m) => m.ReviewQueueComponent
           ),
       },
+      {
+        path: 'transactions',
+        loadComponent: () =>
+          import('./feature/transactions/transaction-list/transaction-list.component').then(
+            (m) => m.TransactionListComponent
+          ),
+      },
+      {
+        path: 'categories',
+        loadComponent: () =>
+          import('./feature/categories/category-list/category-list.component').then(
+            (m) => m.CategoryListComponent
+          ),
+      },
+      {
+        path: 'known-persons',
+        loadComponent: () =>
+          import('./feature/known-persons/known-person-list/known-person-list.component').then(
+            (m) => m.KnownPersonListComponent
+          ),
+      },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },
