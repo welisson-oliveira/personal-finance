@@ -1,6 +1,7 @@
 package com.personalfinance.controller;
 
 import com.personalfinance.dto.request.CreateTransactionRequest;
+import com.personalfinance.dto.request.UpdateNotesRequest;
 import com.personalfinance.dto.response.TransactionResponse;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.service.TransactionService;
@@ -45,6 +46,14 @@ public class TransactionController {
       @Valid @RequestBody CreateTransactionRequest request,
       @AuthenticationPrincipal User user) {
     return ResponseEntity.ok(transactionService.update(id, request, user));
+  }
+
+  @PatchMapping("/{id}/notes")
+  public ResponseEntity<TransactionResponse> updateNotes(
+      @PathVariable UUID id,
+      @RequestBody UpdateNotesRequest request,
+      @AuthenticationPrincipal User user) {
+    return ResponseEntity.ok(transactionService.updateNotes(id, user, request.getNotes()));
   }
 
   @DeleteMapping("/{id}")

@@ -13,4 +13,5 @@ export interface ResolveReviewRequest {
   categoryId?: string;
   budgetGroup: string;
   merchantName: string;
+  transactionNotes?: string;
 }
