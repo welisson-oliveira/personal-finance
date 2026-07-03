@@ -90,6 +90,13 @@ public class TransactionService {
   }
 
   @Transactional
+  public TransactionResponse updateNotes(UUID id, User user, String notes) {
+    Transaction tx = findOwned(id, user.getId());
+    tx.setNotes(notes == null || notes.isBlank() ? null : notes);
+    return toResponse(transactionRepository.save(tx));
+  }
+
+  @Transactional
   public void delete(UUID id, User user) {
     Transaction tx = findOwned(id, user.getId());
     transactionRepository.delete(tx);

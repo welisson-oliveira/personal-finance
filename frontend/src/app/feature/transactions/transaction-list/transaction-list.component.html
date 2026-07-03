@@ -53,12 +53,36 @@
         <ng-container matColumnDef="description">
           <th mat-header-cell *matHeaderCellDef>Descrição</th>
           <td mat-cell *matCellDef="let tx" class="desc-cell">
-            <div class="desc-main">{{ tx.normalizedDescription || tx.description }}</div>
-            @if (tx.notes) {
-              <div class="desc-note">{{ tx.notes }}</div>
-            }
-            @if (tx.source !== 'MANUAL') {
-              <span class="source-badge">{{ tx.source }}</span>
+            @if (editingId === tx.id) {
+              <div class="desc-edit-row">
+                <input
+                  class="notes-input"
+                  [(ngModel)]="editingNotes"
+                  placeholder="Apelido..."
+                  (keyup.enter)="saveNotes(tx)"
+                  (keyup.escape)="cancelEdit()"
+                  autofocus
+                />
+                <button mat-icon-button color="primary" (click)="saveNotes(tx)" title="Salvar">
+                  <mat-icon>check</mat-icon>
+                </button>
+                <button mat-icon-button (click)="cancelEdit()" title="Cancelar">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            } @else {
+              <div class="desc-content" (click)="startEdit(tx)">
+                <div class="desc-main">{{ tx.normalizedDescription || tx.description }}</div>
+                @if (tx.notes) {
+                  <div class="desc-note">{{ tx.notes }}</div>
+                } @else {
+                  <div class="desc-note desc-note-placeholder">Adicionar apelido...</div>
+                }
+                @if (tx.source !== 'MANUAL') {
+                  <span class="source-badge">{{ tx.source }}</span>
+                }
+                <mat-icon class="edit-icon">edit</mat-icon>
+              </div>
             }
           </td>
         </ng-container>

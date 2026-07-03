@@ -18,4 +18,6 @@ public class ResolveReviewRequest {
   @NotBlank private String budgetGroup;
 
   @NotBlank private String merchantName;
+
+  private String transactionNotes;
 }

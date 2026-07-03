@@ -67,6 +67,9 @@ export class TransactionListComponent implements OnInit {
     { value: 'EXPENSE', label: 'Despesa' },
   ];
 
+  editingId: string | null = null;
+  editingNotes = '';
+
   constructor(
     private txService: TransactionService,
     private categoryService: CategoryService,
@@ -135,6 +138,31 @@ export class TransactionListComponent implements OnInit {
     });
     ref.afterClosed().subscribe((confirmed: boolean) => {
       if (confirmed) this.delete(tx.id);
+    });
+  }
+
+  startEdit(tx: Transaction): void {
+    this.editingId = tx.id;
+    this.editingNotes = tx.notes || '';
+  }
+
+  cancelEdit(): void {
+    this.editingId = null;
+    this.editingNotes = '';
+  }
+
+  saveNotes(tx: Transaction): void {
+    const notes = this.editingNotes.trim();
+    this.txService.updateNotes(tx.id, notes).subscribe({
+      next: (updated) => {
+        tx.notes = updated.notes;
+        this.editingId = null;
+        this.editingNotes = '';
+        this.snackBar.open('Apelido salvo.', 'Fechar', { duration: 2500 });
+      },
+      error: () => {
+        this.snackBar.open('Erro ao salvar apelido.', 'Fechar', { duration: 3000 });
+      },
     });
   }
 

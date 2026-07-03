@@ -48,6 +48,29 @@
 .desc-cell {
   max-width: 280px;
 
+  .desc-content {
+    position: relative;
+    cursor: pointer;
+    padding-right: 28px;
+
+    .edit-icon {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #999;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    &:hover .edit-icon {
+      opacity: 1;
+    }
+  }
+
   .desc-main {
     font-size: 0.875rem;
     font-weight: 500;
@@ -64,6 +87,15 @@
     text-overflow: ellipsis;
   }
 
+  .desc-note-placeholder {
+    opacity: 0;
+    font-style: italic;
+  }
+
+  .desc-content:hover .desc-note-placeholder {
+    opacity: 0.5;
+  }
+
   .source-badge {
     font-size: 0.65rem;
     background: rgba(63, 81, 181, 0.1);
@@ -71,6 +103,34 @@
     padding: 1px 6px;
     border-radius: 8px;
     font-weight: 600;
+  }
+
+  .desc-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .notes-input {
+      flex: 1;
+      border: none;
+      border-bottom: 2px solid #3f51b5;
+      outline: none;
+      font-size: 0.875rem;
+      padding: 2px 4px;
+      background: transparent;
+      color: inherit;
+      min-width: 0;
+    }
+
+    button.mat-icon-button {
+      width: 28px;
+      height: 28px;
+      line-height: 28px;
+
+      mat-icon {
+        font-size: 18px;
+      }
+    }
   }
 }
 

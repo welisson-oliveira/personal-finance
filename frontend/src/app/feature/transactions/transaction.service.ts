@@ -23,6 +23,10 @@ export class TransactionService {
     return this.http.get<Page<Transaction>>('/api/transactions', { params });
   }
 
+  updateNotes(id: string, notes: string): Observable<Transaction> {
+    return this.http.patch<Transaction>(`/api/transactions/${id}/notes`, { notes });
+  }
+
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`/api/transactions/${id}`);
   }

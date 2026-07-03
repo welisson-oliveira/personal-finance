@@ -84,14 +84,15 @@ public class ReviewQueueService {
           MerchantAlias.builder().merchantRule(rule).alias(rawAlias).build());
     }
 
-    applyRuleToSessionTransactions(item, rule, user.getId());
+    applyRuleToSessionTransactions(item, rule, user.getId(), request.getTransactionNotes());
 
     item.setStatus("REVIEWED");
     item.setResolvedAt(LocalDateTime.now());
     reviewQueueRepository.save(item);
   }
 
-  private void applyRuleToSessionTransactions(ReviewQueue item, MerchantRule rule, UUID userId) {
+  private void applyRuleToSessionTransactions(
+      ReviewQueue item, MerchantRule rule, UUID userId, String transactionNotes) {
     if (item.getImportSession() == null || item.getNormalizedDescription() == null) return;
     UUID sessionId = item.getImportSession().getId();
     List<Transaction> sessionTxs =
@@ -100,6 +101,9 @@ public class ReviewQueueService {
       if (item.getNormalizedDescription().equalsIgnoreCase(tx.getNormalizedDescription())) {
         tx.setCategory(rule.getCategory());
         tx.setBudgetGroup(rule.getExpenseType());
+        if (transactionNotes != null) {
+          tx.setNotes(transactionNotes.isBlank() ? null : transactionNotes);
+        }
         transactionRepository.save(tx);
       }
     }

@@ -32,11 +32,12 @@ export class ResolveDialogComponent {
   categoryId: string | undefined;
   budgetGroup = 'NON_ESSENTIAL';
   merchantName: string;
+  transactionNotes = '';
 
   budgetGroups = [
-    { value: 'ESSENTIAL', label: 'Essential (50%)' },
-    { value: 'NON_ESSENTIAL', label: 'Non-Essential (30%)' },
-    { value: 'INVESTMENT', label: 'Investment (20%)' },
+    { value: 'ESSENTIAL', label: 'Essencial (50%)' },
+    { value: 'NON_ESSENTIAL', label: 'Não Essencial (30%)' },
+    { value: 'INVESTMENT', label: 'Investimento (20%)' },
   ];
 
   constructor(
@@ -52,6 +53,7 @@ export class ResolveDialogComponent {
       categoryId: this.categoryId,
       budgetGroup: this.budgetGroup,
       merchantName: this.merchantName,
+      transactionNotes: this.transactionNotes || undefined,
     };
     this.dialogRef.close(req);
   }
