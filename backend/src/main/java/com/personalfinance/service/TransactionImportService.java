@@ -35,6 +35,7 @@ public class TransactionImportService {
   private final ReviewQueueRepository reviewQueueRepository;
   private final TransactionRepository transactionRepository;
   private final CategoryRepository categoryRepository;
+  private final MerchantDisplayNameRepository merchantDisplayNameRepository;
 
   private final ConcurrentHashMap<UUID, List<ParsedTransactionDTO>> previewCache =
       new ConcurrentHashMap<>();
@@ -125,6 +126,16 @@ public class TransactionImportService {
         category = categoryRepository.findById(dto.getCategoryId()).orElse(null);
       }
 
+      String effectiveName =
+          dto.getNormalizedDescription() != null
+              ? dto.getNormalizedDescription()
+              : dto.getDescription();
+      String resolvedNotes =
+          merchantDisplayNameRepository
+              .findByUserIdAndNormalizedName(user.getId(), effectiveName)
+              .map(MerchantDisplayName::getDisplayName)
+              .orElse(dto.getNotes());
+
       Transaction tx =
           Transaction.builder()
               .user(user)
@@ -136,7 +147,7 @@ public class TransactionImportService {
               .incomeType(dto.getIncomeType())
               .budgetGroup(dto.getBudgetGroup())
               .date(dto.getDate())
-              .notes(dto.getNotes())
+              .notes(resolvedNotes)
               .category(category)
               .source(session.getDocumentType().equals("EXTRATO") ? "EXTRATO" : "FATURA")
               .cardHolder(dto.getCardHolder())

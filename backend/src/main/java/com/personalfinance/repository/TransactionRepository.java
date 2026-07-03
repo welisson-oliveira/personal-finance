@@ -41,6 +41,12 @@ public interface TransactionRepository
   void deleteByImportSessionId(UUID importSessionId);
 
   @Query(
+      "SELECT t FROM Transaction t WHERE t.user.id = :userId "
+          + "AND (t.normalizedDescription = :name OR (t.normalizedDescription IS NULL AND t.description = :name))")
+  List<Transaction> findByUserIdAndEffectiveName(
+      @Param("userId") UUID userId, @Param("name") String name);
+
+  @Query(
       "SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t "
           + "WHERE t.user.id = :userId AND t.type = :type AND t.incomeType = :incomeType "
           + "AND t.date BETWEEN :start AND :end")

@@ -6,7 +6,7 @@
   <div class="form-fields">
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Nome normalizado</mat-label>
-      <input matInput [(ngModel)]="merchantName" required />
+      <input matInput [value]="merchantName" readonly />
       <mat-hint>Como este estabelecimento ficará salvo para futuras importações</mat-hint>
     </mat-form-field>
 
