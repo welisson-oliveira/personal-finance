@@ -8,12 +8,14 @@ import com.personalfinance.model.entity.User;
 import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.CategoryRepository;
 import com.personalfinance.repository.TransactionRepository;
+import com.personalfinance.repository.TransactionSpecifications;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,9 +38,15 @@ public class TransactionService {
     }
     TransactionType txType =
         (type != null && !type.isBlank()) ? TransactionType.valueOf(type) : null;
-    return transactionRepository
-        .findByFilters(userId, start, end, txType, categoryId, pageable)
-        .map(this::toResponse);
+
+    Specification<Transaction> spec =
+        Specification.where(TransactionSpecifications.forUser(userId))
+            .and(TransactionSpecifications.inDateRange(start, end))
+            .and(TransactionSpecifications.ofType(txType))
+            .and(TransactionSpecifications.inCategory(categoryId))
+            .and(TransactionSpecifications.excludingOwnTransfer());
+
+    return transactionRepository.findAll(spec, pageable).map(this::toResponse);
   }
 
   @Transactional
