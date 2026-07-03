@@ -24,4 +24,8 @@ export class ImportService {
   getHistory(): Observable<ImportSessionResponse[]> {
     return this.http.get<ImportSessionResponse[]>('/api/import/history');
   }
+
+  deleteSession(sessionId: string): Observable<void> {
+    return this.http.delete<void>(`/api/import/${sessionId}`);
+  }
 }

@@ -175,6 +175,19 @@ public class TransactionImportService {
     previewCache.remove(sessionId);
   }
 
+  @Transactional
+  public void deleteSession(UUID sessionId, User user) {
+    ImportSession session =
+        importSessionRepository
+            .findById(sessionId)
+            .filter(s -> s.getUser().getId().equals(user.getId()))
+            .orElseThrow(() -> new IllegalArgumentException("Import session not found"));
+    reviewQueueRepository.deleteByImportSessionId(sessionId);
+    transactionRepository.deleteByImportSessionId(sessionId);
+    importSessionRepository.delete(session);
+    previewCache.remove(sessionId);
+  }
+
   public List<ImportSessionResponse> getHistory(UUID userId) {
     return importSessionRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
         .map(

@@ -26,9 +26,11 @@ public class TransactionController {
   public ResponseEntity<Page<TransactionResponse>> list(
       @RequestParam(required = false) String month,
       @RequestParam(required = false) String type,
+      @RequestParam(required = false) UUID categoryId,
       @PageableDefault(size = 50, sort = "date") Pageable pageable,
       @AuthenticationPrincipal User user) {
-    return ResponseEntity.ok(transactionService.findAll(user.getId(), month, type, pageable));
+    return ResponseEntity.ok(
+        transactionService.findAll(user.getId(), month, type, categoryId, pageable));
   }
 
   @PostMapping

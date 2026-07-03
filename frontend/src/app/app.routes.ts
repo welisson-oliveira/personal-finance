@@ -44,10 +44,8 @@ export const routes: Routes = [
           },
           {
             path: 'history',
-            loadComponent: () =>
-              import('./feature/import/history/import-history.component').then(
-                (m) => m.ImportHistoryComponent
-              ),
+            redirectTo: '/import',
+            pathMatch: 'full',
           },
         ],
       },

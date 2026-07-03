@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +15,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { TransactionService } from '../transaction.service';
 import { Page, Transaction } from '../../../core/models/transaction.model';
+import { Category } from '../../../core/models/category.model';
+import { CategoryService } from '../../../core/services/category.service';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 
 @Component({
@@ -40,9 +43,11 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 export class TransactionListComponent implements OnInit {
   page: Page<Transaction> | null = null;
   loading = true;
+  categories: Category[] = [];
 
   filterMonth = '';
   filterType = '';
+  filterCategoryId = '';
   pageIndex = 0;
   pageSize = 20;
 
@@ -64,14 +69,22 @@ export class TransactionListComponent implements OnInit {
 
   constructor(
     private txService: TransactionService,
+    private categoryService: CategoryService,
+    private route: ActivatedRoute,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
-  ) {
-    const now = new Date();
-    this.filterMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  }
+  ) {}
 
   ngOnInit(): void {
+    const monthParam = this.route.snapshot.queryParams['month'];
+    if (monthParam) {
+      this.filterMonth = monthParam;
+    } else {
+      const now = new Date();
+      this.filterMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    this.categoryService.getAll().subscribe((cats) => (this.categories = cats));
     this.load();
   }
 
@@ -81,6 +94,7 @@ export class TransactionListComponent implements OnInit {
       .findAll({
         month: this.filterMonth || undefined,
         type: this.filterType || undefined,
+        categoryId: this.filterCategoryId || undefined,
         page: this.pageIndex,
         size: this.pageSize,
       })
@@ -104,6 +118,14 @@ export class TransactionListComponent implements OnInit {
   applyFilters(): void {
     this.pageIndex = 0;
     this.load();
+  }
+
+  clearFilters(): void {
+    const now = new Date();
+    this.filterMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    this.filterType = '';
+    this.filterCategoryId = '';
+    this.applyFilters();
   }
 
   confirmDelete(tx: Transaction): void {

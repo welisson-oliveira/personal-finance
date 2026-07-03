@@ -3,10 +3,6 @@
     <h1>Importar Extrato</h1>
     <p>Envie um PDF do Nubank — o tipo é detectado automaticamente</p>
   </div>
-  <button mat-stroked-button (click)="goToHistory()">
-    <mat-icon>history</mat-icon>
-    Histórico
-  </button>
 </div>
 
 <mat-card class="upload-card">
@@ -64,3 +60,66 @@
     </button>
   </mat-card-actions>
 </mat-card>
+
+<div class="history-section">
+  <h2 class="history-title">Histórico de Importações</h2>
+
+  @if (historyLoading) {
+    <div class="loading-center">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+  } @else if (groups.length === 0) {
+    <p class="empty-text">Nenhuma importação realizada ainda.</p>
+  } @else {
+    @for (group of groups; track group.label) {
+      <div class="month-group">
+        <h3 class="month-label">{{ group.label }}</h3>
+        <mat-card>
+          @for (session of group.sessions; track session.id; let last = $last) {
+            <div
+              class="session-row"
+              [class.clickable]="session.status === 'CONFIRMED'"
+              (click)="session.status === 'CONFIRMED' && goToTransactions(session)"
+            >
+              <div class="session-icon">
+                <mat-icon>{{ session.documentType === 'EXTRATO' ? 'account_balance' : 'credit_card' }}</mat-icon>
+              </div>
+              <div class="session-info">
+                <div class="session-title">
+                  {{ session.documentType === 'EXTRATO' ? 'Extrato Nubank' : 'Fatura Nubank' }}
+                </div>
+                <div class="session-meta">
+                  <span class="period">{{ formatPeriod(session) }}</span>
+                  <span class="separator">·</span>
+                  <span class="file-name-small">{{ session.fileName }}</span>
+                </div>
+              </div>
+              <div class="session-right">
+                @if (session.status === 'CONFIRMED') {
+                  <span class="tx-count">{{ session.transactionCount }} transações</span>
+                }
+                <mat-chip [color]="statusColor(session.status)" highlighted>
+                  {{ statusLabel(session.status) }}
+                </mat-chip>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="confirmDelete(session, $event)"
+                  title="Excluir importação e transações"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+                @if (session.status === 'CONFIRMED') {
+                  <mat-icon class="nav-arrow">chevron_right</mat-icon>
+                }
+              </div>
+            </div>
+            @if (!last) {
+              <mat-divider></mat-divider>
+            }
+          }
+        </mat-card>
+      </div>
+    }
+  }
+</div>

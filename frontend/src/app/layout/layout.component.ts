@@ -36,7 +36,6 @@ export class LayoutComponent {
     { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
     { label: 'Transações', icon: 'receipt_long', route: '/transactions' },
     { label: 'Importar', icon: 'upload_file', route: '/import' },
-    { label: 'Histórico de Import', icon: 'history', route: '/import/history' },
     { label: 'Fila de Revisão', icon: 'rate_review', route: '/review' },
     { label: 'Categorias', icon: 'category', route: '/categories' },
     { label: 'Pessoas Conhecidas', icon: 'people', route: '/known-persons' },

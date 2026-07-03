@@ -34,7 +34,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
       @Param("end") LocalDate end,
       Pageable pageable);
 
+  @Query(
+      "SELECT t FROM Transaction t WHERE t.user.id = :userId "
+          + "AND (:start IS NULL OR t.date >= :start) "
+          + "AND (:end IS NULL OR t.date <= :end) "
+          + "AND (:type IS NULL OR t.type = :type) "
+          + "AND (:categoryId IS NULL OR t.category.id = :categoryId) "
+          + "AND (t.incomeType IS NULL OR t.incomeType <> 'OWN_TRANSFER') "
+          + "ORDER BY t.date DESC")
+  Page<Transaction> findByFilters(
+      @Param("userId") UUID userId,
+      @Param("start") LocalDate start,
+      @Param("end") LocalDate end,
+      @Param("type") TransactionType type,
+      @Param("categoryId") UUID categoryId,
+      Pageable pageable);
+
   List<Transaction> findByImportSessionIdAndUserId(UUID importSessionId, UUID userId);
+
+  void deleteByImportSessionId(UUID importSessionId);
 
   @Query(
       "SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t "
