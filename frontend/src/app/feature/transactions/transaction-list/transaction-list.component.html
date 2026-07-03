@@ -72,9 +72,9 @@
               </div>
             } @else {
               <div class="desc-content" (click)="startEdit(tx)">
-                <div class="desc-main">{{ tx.normalizedDescription || tx.description }}</div>
+                <div class="desc-main">{{ tx.notes || tx.normalizedDescription || tx.description }}</div>
                 @if (tx.notes) {
-                  <div class="desc-note">{{ tx.notes }}</div>
+                  <div class="desc-note">{{ tx.normalizedDescription || tx.description }}</div>
                 } @else {
                   <div class="desc-note desc-note-placeholder">Adicionar apelido...</div>
                 }
