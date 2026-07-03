@@ -117,6 +117,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- PDFBox -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+
         <!-- H2 for integration tests -->
         <dependency>
             <groupId>com.h2database</groupId>

@@ -1,0 +1,39 @@
+<div class="page-header">
+  <h1>Categorias</h1>
+  <button mat-raised-button color="primary" (click)="openCreate()">
+    <mat-icon>add</mat-icon>
+    Nova Categoria
+  </button>
+</div>
+
+@if (loading) {
+  <div class="loading-center">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+} @else {
+  <mat-card>
+    <mat-list>
+      @for (cat of categories; track cat.id) {
+        <mat-list-item class="cat-item">
+          <mat-icon matListItemIcon>{{ cat.icon || 'label' }}</mat-icon>
+          <span matListItemTitle>{{ cat.name }}</span>
+          <span matListItemLine *ngIf="cat.global" class="global-badge">Global</span>
+          <div matListItemMeta class="item-actions">
+            <button mat-icon-button [disabled]="cat.global" (click)="openEdit(cat)" title="Editar">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" [disabled]="cat.global" (click)="confirmDelete(cat)" title="Excluir">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </mat-list-item>
+        <mat-divider></mat-divider>
+      }
+      @if (categories.length === 0) {
+        <mat-list-item>
+          <span matListItemTitle>Nenhuma categoria encontrada.</span>
+        </mat-list-item>
+      }
+    </mat-list>
+  </mat-card>
+}

@@ -1,0 +1,50 @@
+<div class="page-header">
+  <h1>Review Queue</h1>
+  <p>Classify unknown merchants so they are auto-classified next time</p>
+</div>
+
+@if (loading) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+} @else if (items.length === 0) {
+  <mat-card class="empty-card">
+    <mat-card-content class="empty-content">
+      <mat-icon class="empty-icon">check_circle</mat-icon>
+      <h2>All caught up!</h2>
+      <p>No transactions need review at the moment.</p>
+    </mat-card-content>
+  </mat-card>
+} @else {
+  <div class="items-count">{{ items.length }} item(s) pending review</div>
+
+  <div class="items-list">
+    @for (item of items; track item.id) {
+      <mat-card class="item-card">
+        <mat-card-content>
+          <div class="item-main">
+            <div class="item-info">
+              <div class="item-description">
+                {{ item.normalizedDescription || item.rawDescription }}
+              </div>
+              @if (item.normalizedDescription && item.normalizedDescription !== item.rawDescription) {
+                <div class="item-raw">Original: {{ item.rawDescription }}</div>
+              }
+              <div class="item-meta">
+                <span class="item-date">{{ item.transactionDate | date: 'dd/MM/yyyy' }}</span>
+                <span class="item-amount">R$ {{ item.amount | number: '1.2-2' }}</span>
+                @if (item.suggestedCategoryName) {
+                  <span class="suggested-category">Suggested: {{ item.suggestedCategoryName }}</span>
+                }
+              </div>
+            </div>
+            <button mat-raised-button color="primary" (click)="openResolveDialog(item)">
+              <mat-icon>edit</mat-icon>
+              Classify
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+}

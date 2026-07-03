@@ -1,0 +1,96 @@
+.sidenav-container {
+  height: 100vh;
+}
+
+.sidenav {
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  background-color: #fafafa;
+  border-right: 1px solid #e0e0e0;
+}
+
+.sidenav-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #3f51b5;
+  color: white;
+
+  .brand-icon {
+    font-size: 28px;
+    height: 28px;
+    width: 28px;
+  }
+
+  .brand-name {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+mat-nav-list {
+  flex: 1;
+  padding-top: 8px;
+}
+
+.active-link {
+  background-color: rgba(63, 81, 181, 0.1);
+  color: #3f51b5;
+
+  mat-icon {
+    color: #3f51b5;
+  }
+}
+
+.sidenav-footer {
+  padding: 16px;
+  border-top: 1px solid #e0e0e0;
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: #666;
+    margin-bottom: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .logout-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+  }
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+
+  .toolbar-spacer {
+    flex: 1;
+  }
+
+  .user-name {
+    font-size: 0.875rem;
+  }
+}
+
+.content-wrapper {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}

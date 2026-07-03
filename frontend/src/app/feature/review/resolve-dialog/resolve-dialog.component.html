@@ -1,0 +1,38 @@
+<h2 mat-dialog-title>Classify Merchant</h2>
+
+<mat-dialog-content>
+  <p class="raw-desc">{{ data.item.rawDescription }}</p>
+
+  <div class="form-fields">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Merchant Name (normalized)</mat-label>
+      <input matInput [(ngModel)]="merchantName" required />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Category</mat-label>
+      <mat-select [(ngModel)]="categoryId">
+        <mat-option [value]="undefined">None</mat-option>
+        @for (cat of data.categories; track cat.id) {
+          <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Budget Group</mat-label>
+      <mat-select [(ngModel)]="budgetGroup" required>
+        @for (bg of budgetGroups; track bg.value) {
+          <mat-option [value]="bg.value">{{ bg.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-raised-button color="primary" (click)="confirm()" [disabled]="!merchantName || !budgetGroup">
+    Save & Learn
+  </button>
+</mat-dialog-actions>

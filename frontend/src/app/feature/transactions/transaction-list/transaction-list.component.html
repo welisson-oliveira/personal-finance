@@ -1,0 +1,130 @@
+<div class="page-header">
+  <h1>Transações</h1>
+</div>
+
+<mat-card class="filter-card">
+  <mat-card-content>
+    <div class="filters">
+      <mat-form-field appearance="outline">
+        <mat-label>Mês</mat-label>
+        <input matInput type="month" [(ngModel)]="filterMonth" (change)="applyFilters()" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo</mat-label>
+        <mat-select [(ngModel)]="filterType" (ngModelChange)="applyFilters()">
+          @for (opt of typeOptions; track opt.value) {
+            <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-stroked-button (click)="filterMonth = ''; filterType = ''; applyFilters()">
+        <mat-icon>clear</mat-icon>
+        Limpar
+      </button>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+@if (loading) {
+  <div class="loading-center">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+} @else if (page) {
+  <mat-card class="table-card">
+    <div class="table-wrapper">
+      <table mat-table [dataSource]="page.content" class="tx-table">
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>Data</th>
+          <td mat-cell *matCellDef="let tx">{{ tx.date | date: 'dd/MM/yyyy' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="description">
+          <th mat-header-cell *matHeaderCellDef>Descrição</th>
+          <td mat-cell *matCellDef="let tx" class="desc-cell">
+            <div class="desc-main">{{ tx.normalizedDescription || tx.description }}</div>
+            @if (tx.notes) {
+              <div class="desc-note">{{ tx.notes }}</div>
+            }
+            @if (tx.source !== 'MANUAL') {
+              <span class="source-badge">{{ tx.source }}</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="category">
+          <th mat-header-cell *matHeaderCellDef>Categoria</th>
+          <td mat-cell *matCellDef="let tx">{{ tx.categoryName || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef>Tipo</th>
+          <td mat-cell *matCellDef="let tx">
+            <span
+              class="type-chip"
+              [class.income-chip]="tx.type === 'INCOME'"
+              [class.expense-chip]="tx.type === 'EXPENSE'"
+            >
+              {{ tx.type === 'INCOME' ? 'Receita' : 'Despesa' }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="budgetGroup">
+          <th mat-header-cell *matHeaderCellDef>Grupo</th>
+          <td mat-cell *matCellDef="let tx">
+            @if (tx.budgetGroup) {
+              <span class="group-chip group-{{ tx.budgetGroup | lowercase }}">
+                {{
+                  tx.budgetGroup === 'ESSENTIAL'
+                    ? 'Essencial'
+                    : tx.budgetGroup === 'NON_ESSENTIAL'
+                      ? 'Não Essencial'
+                      : 'Investimento'
+                }}
+              </span>
+            } @else {
+              —
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="amount">
+          <th mat-header-cell *matHeaderCellDef class="amount-header">Valor</th>
+          <td
+            mat-cell
+            *matCellDef="let tx"
+            class="amount-cell"
+            [class.income-amount]="tx.type === 'INCOME'"
+            [class.expense-amount]="tx.type === 'EXPENSE'"
+          >
+            {{ tx.type === 'EXPENSE' ? '- ' : '+ ' }}{{ fmt(tx.shared && tx.userShare ? tx.userShare : tx.amount) }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let tx">
+            @if (tx.source === 'MANUAL') {
+              <button mat-icon-button color="warn" (click)="confirmDelete(tx)" title="Excluir">
+                <mat-icon>delete</mat-icon>
+              </button>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </div>
+
+    <mat-paginator
+      [length]="page.totalElements"
+      [pageSize]="pageSize"
+      [pageIndex]="pageIndex"
+      [pageSizeOptions]="[10, 20, 50]"
+      (page)="onPageChange($event)"
+    ></mat-paginator>
+  </mat-card>
+}

@@ -1,0 +1,233 @@
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+}
+
+.period-selector {
+  display: flex;
+  gap: 12px;
+}
+
+.selector-field {
+  width: 140px;
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 64px;
+}
+
+.error-text {
+  color: #f44336;
+  text-align: center;
+}
+
+.section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 24px 0 12px;
+}
+
+.cards-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.metric-card {
+  mat-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 16px !important;
+  }
+
+  mat-icon {
+    font-size: 24px;
+    height: 24px;
+    width: 24px;
+    margin-bottom: 4px;
+  }
+
+  .metric-label {
+    font-size: 0.75rem;
+    color: #777;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .metric-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  &.income mat-icon,
+  &.income .metric-value {
+    color: #2e7d32;
+  }
+
+  &.real-income mat-icon,
+  &.real-income .metric-value {
+    color: #1565c0;
+  }
+
+  &.reimbursement mat-icon,
+  &.reimbursement .metric-value {
+    color: #6a1b9a;
+  }
+
+  &.balance .metric-value {
+    color: #1565c0;
+  }
+  &.balance.negative .metric-value {
+    color: #c62828;
+  }
+
+  &.essential mat-icon,
+  &.essential .metric-value {
+    color: #1565c0;
+  }
+
+  &.non-essential mat-icon,
+  &.non-essential .metric-value {
+    color: #e65100;
+  }
+
+  &.total-expenses mat-icon,
+  &.total-expenses .metric-value {
+    color: #b71c1c;
+  }
+
+  &.investment mat-icon,
+  &.investment .metric-value {
+    color: #1b5e20;
+  }
+}
+
+.budget-card {
+  margin-bottom: 8px;
+
+  mat-card-content {
+    padding: 20px !important;
+  }
+}
+
+.budget-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.budget-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.budget-pct {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.budget-target {
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.budget-values {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #444;
+}
+
+.budget-bar {
+  height: 8px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+
+  &.essential {
+    background-color: #3f51b5;
+  }
+  &.non-essential {
+    background-color: #ff9800;
+  }
+  &.investment {
+    background-color: #f44336;
+  }
+}
+
+.destaques-card mat-card-content {
+  padding: 20px !important;
+}
+
+.destaques-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 24px;
+}
+
+.destaque-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  mat-icon {
+    color: #3f51b5;
+    font-size: 24px;
+    height: 24px;
+    width: 24px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .destaque-label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+
+  .destaque-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #222;
+  }
+
+  .destaque-sub {
+    font-size: 0.8rem;
+    color: #666;
+  }
+}

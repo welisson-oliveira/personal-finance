@@ -1,0 +1,74 @@
+<div class="page-header">
+  <h1>Import Statement</h1>
+  <p>Upload a Nubank PDF to import transactions</p>
+</div>
+
+<mat-card class="upload-card">
+  <mat-card-content>
+    <div class="doc-type-section">
+      <label class="section-label">Document Type</label>
+      <mat-button-toggle-group [(ngModel)]="documentType" class="type-toggle">
+        <mat-button-toggle value="EXTRATO">
+          <mat-icon>account_balance</mat-icon>
+          Bank Statement
+        </mat-button-toggle>
+        <mat-button-toggle value="FATURA">
+          <mat-icon>credit_card</mat-icon>
+          Credit Card Bill
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+
+    <div
+      class="drop-zone"
+      [class.drag-over]="isDragOver"
+      [class.has-file]="selectedFile"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
+    >
+      @if (!selectedFile) {
+        <mat-icon class="upload-icon">cloud_upload</mat-icon>
+        <p class="drop-text">Drag & drop your PDF here</p>
+        <p class="or-text">or</p>
+        <label for="file-input">
+          <button
+            mat-stroked-button
+            color="primary"
+            type="button"
+            onclick="document.getElementById('file-input').click()"
+          >
+            Browse File
+          </button>
+        </label>
+        <input id="file-input" type="file" accept=".pdf" (change)="onFileSelected($event)" class="hidden-input" />
+      } @else {
+        <mat-icon class="file-icon">picture_as_pdf</mat-icon>
+        <p class="file-name">{{ selectedFile.name }}</p>
+        <p class="file-size">{{ (selectedFile.size / 1024).toFixed(1) }} KB</p>
+        <button mat-icon-button (click)="clearFile()" class="remove-btn" title="Remove file">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (errorMessage) {
+      <div class="error-message">
+        <mat-icon>error</mat-icon>
+        {{ errorMessage }}
+      </div>
+    }
+
+    @if (loading) {
+      <mat-progress-bar mode="indeterminate" class="progress-bar"></mat-progress-bar>
+      <p class="loading-text">Parsing PDF, please wait...</p>
+    }
+  </mat-card-content>
+
+  <mat-card-actions align="end">
+    <button mat-raised-button color="primary" [disabled]="!selectedFile || loading" (click)="upload()">
+      <mat-icon>upload</mat-icon>
+      Upload & Parse
+    </button>
+  </mat-card-actions>
+</mat-card>
