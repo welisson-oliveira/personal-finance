@@ -115,6 +115,22 @@ Angular Material (indigo-pink theme) is the UI component library. New feature mo
 
 HTTP calls to the backend go to `/api/` — in dev this requires a proxy config (`proxy.conf.json`); in production the Nginx reverse proxy in `frontend/nginx.conf` forwards `/api/` to `http://backend:8080/api/`.
 
+## Git Flow — Branching Rules
+
+This project follows Git Flow strictly. **Always follow these rules:**
+
+- **Feature branches** branch from `develop` and merge back into `develop` via PR.
+  ```bash
+  git fetch origin
+  git checkout -b feature/<name> origin/develop
+  ```
+- **`develop`** is the integration branch — all feature PRs must target `develop`.
+- **`main`** receives code only via release branches or hotfixes — **never** direct feature merges.
+- **NEVER open a PR targeting `main` for a feature or bugfix.** Always set the base branch to `develop`.
+- After creating a branch, verify its base: `git log --oneline origin/develop..HEAD`
+
+> CI tip: the GitHub Actions workflow runs on PRs to both `develop` and `main`.
+
 ## Environment Setup
 
 Copy `.env.example` to `.env` in the project root before running Docker Compose. The backend reads `SPRING_PROFILES_ACTIVE`, `DB_*`, and `JWT_SECRET` from the environment. For local dev without Docker, export those vars or rely on the defaults in `application-dev.yml`.
