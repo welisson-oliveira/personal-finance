@@ -47,4 +47,10 @@ public class ImportController {
   public ResponseEntity<List<ImportSessionResponse>> history(@AuthenticationPrincipal User user) {
     return ResponseEntity.ok(importService.getHistory(user.getId()));
   }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> delete(@PathVariable UUID id, @AuthenticationPrincipal User user) {
+    importService.deleteSession(id, user);
+    return ResponseEntity.noContent().build();
+  }
 }

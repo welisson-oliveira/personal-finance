@@ -19,7 +19,17 @@
         </mat-select>
       </mat-form-field>
 
-      <button mat-stroked-button (click)="filterMonth = ''; filterType = ''; applyFilters()">
+      <mat-form-field appearance="outline">
+        <mat-label>Categoria</mat-label>
+        <mat-select [(ngModel)]="filterCategoryId" (ngModelChange)="applyFilters()">
+          <mat-option value="">Todas</mat-option>
+          @for (cat of categories; track cat.id) {
+            <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-stroked-button (click)="clearFilters()">
         <mat-icon>clear</mat-icon>
         Limpar
       </button>

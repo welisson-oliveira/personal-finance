@@ -26,22 +26,18 @@ public class TransactionService {
   private final CategoryRepository categoryRepository;
 
   public Page<TransactionResponse> findAll(
-      UUID userId, String month, String type, Pageable pageable) {
-    if (month != null) {
+      UUID userId, String month, String type, UUID categoryId, Pageable pageable) {
+    LocalDate start = null;
+    LocalDate end = null;
+    if (month != null && !month.isBlank()) {
       YearMonth ym = YearMonth.parse(month);
-      LocalDate start = ym.atDay(1);
-      LocalDate end = ym.atEndOfMonth();
-      return transactionRepository
-          .findByUserIdAndMonthExcludingOwnTransfer(userId, start, end, pageable)
-          .map(this::toResponse);
+      start = ym.atDay(1);
+      end = ym.atEndOfMonth();
     }
-    if (type != null) {
-      return transactionRepository
-          .findByUserIdAndTypeOrderByDateDesc(userId, TransactionType.valueOf(type), pageable)
-          .map(this::toResponse);
-    }
+    TransactionType txType =
+        (type != null && !type.isBlank()) ? TransactionType.valueOf(type) : null;
     return transactionRepository
-        .findByUserIdOrderByDateDesc(userId, pageable)
+        .findByFilters(userId, start, end, txType, categoryId, pageable)
         .map(this::toResponse);
   }
 

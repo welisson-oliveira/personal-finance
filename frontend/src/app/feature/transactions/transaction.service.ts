@@ -10,12 +10,14 @@ export class TransactionService {
   findAll(filters: {
     month?: string;
     type?: string;
+    categoryId?: string;
     page?: number;
     size?: number;
   }): Observable<Page<Transaction>> {
     let params = new HttpParams();
     if (filters.month) params = params.set('month', filters.month);
     if (filters.type) params = params.set('type', filters.type);
+    if (filters.categoryId) params = params.set('categoryId', filters.categoryId);
     if (filters.page != null) params = params.set('page', filters.page);
     if (filters.size != null) params = params.set('size', filters.size);
     return this.http.get<Page<Transaction>>('/api/transactions', { params });

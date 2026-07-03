@@ -113,3 +113,119 @@
   font-size: 0.875rem;
   margin-top: 8px;
 }
+
+.history-section {
+  margin-top: 40px;
+}
+
+.history-title {
+  margin: 0 0 20px;
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+.empty-text {
+  color: #888;
+  font-size: 0.95rem;
+}
+
+.month-group {
+  margin-bottom: 32px;
+}
+
+.month-label {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #555;
+  text-transform: capitalize;
+}
+
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  transition: background-color 0.15s;
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+  }
+}
+
+.session-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(63, 81, 181, 0.1);
+  color: #3f51b5;
+  flex-shrink: 0;
+
+  mat-icon {
+    font-size: 20px;
+    height: 20px;
+    width: 20px;
+  }
+}
+
+.session-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.session-title {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.session-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 2px;
+}
+
+.file-name-small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.separator {
+  color: #ccc;
+}
+
+.session-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tx-count {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.nav-arrow {
+  color: #bdbdbd;
+  font-size: 20px;
+  height: 20px;
+  width: 20px;
+}
