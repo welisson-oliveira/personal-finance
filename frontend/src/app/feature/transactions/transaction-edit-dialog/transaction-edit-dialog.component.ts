@@ -74,8 +74,23 @@ export class TransactionEditDialogComponent {
     this.categoryId = tx.categoryId || '';
   }
 
+  get isIncome(): boolean {
+    return this.type === 'INCOME';
+  }
+
   get valid(): boolean {
     return !!this.description.trim() && this.amount != null && this.amount > 0 && !!this.date;
+  }
+
+  onTypeChange(): void {
+    // Income has an income type but no budget group/category;
+    // expense has budget group/category but no income type.
+    if (this.isIncome) {
+      this.budgetGroup = '';
+      this.categoryId = '';
+    } else {
+      this.incomeType = '';
+    }
   }
 
   confirm(): void {
@@ -86,9 +101,9 @@ export class TransactionEditDialogComponent {
       amount: this.amount!,
       type: this.type,
       date: this.date,
-      categoryId: this.categoryId || undefined,
-      budgetGroup: this.budgetGroup || undefined,
-      incomeType: this.incomeType || undefined,
+      categoryId: this.isIncome ? undefined : this.categoryId || undefined,
+      budgetGroup: this.isIncome ? undefined : this.budgetGroup || undefined,
+      incomeType: this.isIncome ? this.incomeType || undefined : undefined,
       notes: tx.notes,
       shared: tx.shared,
       totalAmount: tx.totalAmount,
