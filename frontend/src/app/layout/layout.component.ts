@@ -7,6 +7,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../core/auth/auth.service';
+import { MonthSelectorComponent } from './month-selector/month-selector.component';
 
 interface NavItem {
   label: string;
@@ -27,6 +28,7 @@ interface NavItem {
     MatListModule,
     MatIconModule,
     MatButtonModule,
+    MonthSelectorComponent,
   ],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',

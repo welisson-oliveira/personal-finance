@@ -9,6 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { ImportService } from '../import.service';
 import { ImportSessionResponse } from '../../../core/models/import.model';
+import { PeriodService } from '../../../core/services/period.service';
 
 interface MonthGroup {
   label: string;
@@ -36,7 +37,8 @@ export class ImportHistoryComponent implements OnInit {
 
   constructor(
     private importService: ImportService,
-    private router: Router
+    private router: Router,
+    private period: PeriodService
   ) {}
 
   ngOnInit(): void {
@@ -91,7 +93,8 @@ export class ImportHistoryComponent implements OnInit {
     if (session.periodStart) {
       const d = new Date(session.periodStart + 'T00:00:00');
       const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      this.router.navigate(['/transactions'], { queryParams: { month } });
+      this.period.setFromMonthString(month);
+      this.router.navigate(['/transactions']);
     }
   }
 

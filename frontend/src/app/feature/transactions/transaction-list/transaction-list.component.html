@@ -6,11 +6,6 @@
   <mat-card-content>
     <div class="filters">
       <mat-form-field appearance="outline">
-        <mat-label>Mês</mat-label>
-        <input matInput type="month" [(ngModel)]="filterMonth" (change)="applyFilters()" />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
         <mat-label>Tipo</mat-label>
         <mat-select [(ngModel)]="filterType" (ngModelChange)="applyFilters()">
           @for (opt of typeOptions; track opt.value) {

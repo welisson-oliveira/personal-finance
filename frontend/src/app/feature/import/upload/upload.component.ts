@@ -13,6 +13,7 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { ImportService } from '../import.service';
 import { ImportPreviewResponse, ImportSessionResponse } from '../../../core/models/import.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { PeriodService } from '../../../core/services/period.service';
 
 interface MonthGroup {
   label: string;
@@ -50,7 +51,8 @@ export class UploadComponent implements OnInit {
     private importService: ImportService,
     private router: Router,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private period: PeriodService
   ) {}
 
   ngOnInit(): void {
@@ -168,7 +170,8 @@ export class UploadComponent implements OnInit {
     if (session.periodStart) {
       const d = new Date(session.periodStart + 'T00:00:00');
       const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      this.router.navigate(['/transactions'], { queryParams: { month } });
+      this.period.setFromMonthString(month);
+      this.router.navigate(['/transactions']);
     }
   }
 
