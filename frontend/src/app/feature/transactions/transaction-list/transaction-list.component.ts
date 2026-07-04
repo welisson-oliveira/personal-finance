@@ -61,10 +61,18 @@ export class TransactionListComponent implements OnInit {
     'description',
     'category',
     'type',
+    'incomeType',
     'budgetGroup',
     'amount',
     'actions',
   ];
+
+  incomeTypeLabels: Record<string, string> = {
+    INCOME: 'Receita real',
+    REIMBURSEMENT: 'Reembolso',
+    OWN_TRANSFER: 'Transf. própria',
+    INVESTMENT: 'Investimento',
+  };
 
   typeOptions = [
     { value: '', label: 'Todos' },
