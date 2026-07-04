@@ -144,7 +144,7 @@
       ></mat-progress-bar>
 
       @if (hasBase()) {
-        <p class="budget-base-info">Base do cálculo: {{ fmt(data.rendaBase) }}</p>
+        <p class="budget-base-info">Base do cálculo: {{ fmt(data.rendaBase) }} ({{ baseLabel() }})</p>
       }
     </mat-card-content>
   </mat-card>

@@ -62,12 +62,11 @@ public class DashboardService {
 
     BigDecimal saldo = receitaReal.subtract(totalDespesas);
 
-    // 50/30/20 base: configured monthly net income, falling back to the month's real income
+    // 50/30/20 base: month's registered income, falling back to the configured net salary
     BigDecimal rendaBase =
-        (user.getMonthlyNetIncome() != null
-                && user.getMonthlyNetIncome().compareTo(BigDecimal.ZERO) > 0)
-            ? user.getMonthlyNetIncome()
-            : receitaReal;
+        receitaReal.compareTo(BigDecimal.ZERO) > 0
+            ? receitaReal
+            : (user.getMonthlyNetIncome() != null ? user.getMonthlyNetIncome() : BigDecimal.ZERO);
 
     BigDecimal percentualEssenciais = percent(despesasEssenciais, rendaBase);
     BigDecimal percentualNaoEssenciais = percent(despesasNaoEssenciais, rendaBase);

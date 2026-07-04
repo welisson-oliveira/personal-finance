@@ -95,6 +95,11 @@ export class DashboardComponent implements OnInit {
     return (this.data?.rendaBase ?? 0) > 0;
   }
 
+  baseLabel(): string {
+    if (!this.data) return '';
+    return this.data.receitaReal > 0 ? 'renda do mês' : 'salário configurado';
+  }
+
   monthLabel(): string {
     return this.months.find((m) => m.value === this.selectedMonth)?.label ?? '';
   }
