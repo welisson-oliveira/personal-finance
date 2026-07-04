@@ -1,0 +1,26 @@
+.source-info {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0 0 16px;
+  word-break: break-word;
+}
+
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 420px;
+}
+
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.half-width {
+  flex: 1;
+}
