@@ -11,6 +11,12 @@
   <button mat-icon-button (click)="period.next()" title="Próximo mês">
     <mat-icon>chevron_right</mat-icon>
   </button>
+
+  @if (!period.isCurrentMonth()) {
+    <button mat-icon-button (click)="period.goToCurrent()" title="Mês atual">
+      <mat-icon>today</mat-icon>
+    </button>
+  }
 </div>
 
 <mat-menu #periodMenu="matMenu" class="period-menu">

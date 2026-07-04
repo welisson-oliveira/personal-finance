@@ -8,13 +8,14 @@
 .form-fields {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 12px;
   min-width: 420px;
 }
 
 .field-row {
   display: flex;
   gap: 12px;
+  align-items: flex-start;
 }
 
 .full-width {

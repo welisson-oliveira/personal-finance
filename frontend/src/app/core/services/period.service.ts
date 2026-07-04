@@ -60,6 +60,16 @@ export class PeriodService {
     }
   }
 
+  isCurrentMonth(): boolean {
+    const now = new Date();
+    return this.year() === now.getFullYear() && this.month() === now.getMonth() + 1;
+  }
+
+  goToCurrent(): void {
+    const now = new Date();
+    this.set(now.getFullYear(), now.getMonth() + 1);
+  }
+
   prev(): void {
     const { year, month } = this.state();
     if (month === 1) this.set(year - 1, 12);
