@@ -41,6 +41,9 @@ public class AuthController {
   }
 
   private AuthResponse buildResponse(String token, User user) {
-    return new AuthResponse(token, new UserResponse(user.getId(), user.getName(), user.getEmail()));
+    return new AuthResponse(
+        token,
+        new UserResponse(
+            user.getId(), user.getName(), user.getEmail(), user.getMonthlyNetIncome()));
   }
 }

@@ -13,6 +13,7 @@ export interface UserResponse {
   id: string;
   name: string;
   email: string;
+  monthlyNetIncome?: number | null;
 }
 
 export interface AuthResponse {

@@ -27,6 +27,7 @@ public class DashboardResponse {
   private BigDecimal resgatado;
 
   private BigDecimal saldo;
+  private BigDecimal rendaBase;
   private BigDecimal percentualEssenciais;
   private BigDecimal percentualNaoEssenciais;
   private BigDecimal percentualInvestimentos;

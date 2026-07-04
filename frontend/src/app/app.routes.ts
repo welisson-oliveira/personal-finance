@@ -77,6 +77,11 @@ export const routes: Routes = [
             (m) => m.KnownPersonListComponent
           ),
       },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./feature/settings/settings.component').then((m) => m.SettingsComponent),
+      },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

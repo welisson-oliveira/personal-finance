@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.personalfinance.dto.response.DashboardResponse;
+import com.personalfinance.model.entity.User;
 import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.MerchantRuleRepository;
 import com.personalfinance.repository.TransactionRepository;
@@ -57,7 +58,7 @@ class DashboardServiceTest {
     when(transactionRepository.countPixEnviadosInPeriod(userId, start, end)).thenReturn(2L);
     when(transactionRepository.countPixRecebidosInPeriod(userId, start, end)).thenReturn(3L);
 
-    DashboardResponse result = service.getMonthly(userId, 2026, 5);
+    DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
 
     assertThat(result.getReceitaBruta()).isEqualByComparingTo("3000.00");
     assertThat(result.getReembolsos()).isEqualByComparingTo("500.00");
@@ -99,7 +100,7 @@ class DashboardServiceTest {
     when(transactionRepository.countPixEnviadosInPeriod(userId, start, end)).thenReturn(0L);
     when(transactionRepository.countPixRecebidosInPeriod(userId, start, end)).thenReturn(0L);
 
-    DashboardResponse result = service.getMonthly(userId, 2026, 5);
+    DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
 
     assertThat(result.getPercentualEssenciais()).isEqualByComparingTo("50.00");
     assertThat(result.getPercentualNaoEssenciais()).isEqualByComparingTo("30.00");
@@ -131,10 +132,53 @@ class DashboardServiceTest {
     when(transactionRepository.countPixEnviadosInPeriod(any(), any(), any())).thenReturn(0L);
     when(transactionRepository.countPixRecebidosInPeriod(any(), any(), any())).thenReturn(0L);
 
-    DashboardResponse result = service.getMonthly(userId, 2026, 5);
+    DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
 
     assertThat(result.getPercentualEssenciais()).isEqualByComparingTo(BigDecimal.ZERO);
     assertThat(result.getPercentualNaoEssenciais()).isEqualByComparingTo(BigDecimal.ZERO);
     assertThat(result.getPercentualInvestimentos()).isEqualByComparingTo(BigDecimal.ZERO);
+    assertThat(result.getRendaBase()).isEqualByComparingTo(BigDecimal.ZERO);
+  }
+
+  @Test
+  void monthly_uses_configured_net_income_as_percentage_base() {
+    UUID userId = UUID.randomUUID();
+    LocalDate start = LocalDate.of(2026, 5, 1);
+    LocalDate end = LocalDate.of(2026, 5, 31);
+
+    // Month has almost no registered income, but expenses exist
+    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
+            userId, TransactionType.INCOME, "INCOME", start, end))
+        .thenReturn(new BigDecimal("3.97"));
+    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
+            userId, TransactionType.INCOME, "REIMBURSEMENT", start, end))
+        .thenReturn(BigDecimal.ZERO);
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "ESSENTIAL", start, end))
+        .thenReturn(new BigDecimal("2500.00"));
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "NON_ESSENTIAL", start, end))
+        .thenReturn(new BigDecimal("1500.00"));
+    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
+            userId, TransactionType.EXPENSE, "INVESTMENT", start, end))
+        .thenReturn(new BigDecimal("1000.00"));
+    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
+            userId, TransactionType.INCOME, "INVESTMENT", start, end))
+        .thenReturn(BigDecimal.ZERO);
+    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
+        .thenReturn(List.of());
+    when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
+    when(transactionRepository.countExpensesInPeriod(userId, start, end)).thenReturn(0L);
+    when(transactionRepository.countPixEnviadosInPeriod(userId, start, end)).thenReturn(0L);
+    when(transactionRepository.countPixRecebidosInPeriod(userId, start, end)).thenReturn(0L);
+
+    User user = User.builder().id(userId).monthlyNetIncome(new BigDecimal("5000.00")).build();
+
+    DashboardResponse result = service.getMonthly(user, 2026, 5);
+
+    assertThat(result.getRendaBase()).isEqualByComparingTo("5000.00");
+    assertThat(result.getPercentualEssenciais()).isEqualByComparingTo("50.00");
+    assertThat(result.getPercentualNaoEssenciais()).isEqualByComparingTo("30.00");
+    assertThat(result.getPercentualInvestimentos()).isEqualByComparingTo("20.00");
   }
 }
