@@ -1,0 +1,78 @@
+<h2 mat-dialog-title>Editar Transação</h2>
+
+<mat-dialog-content>
+  @if (data.tx.source !== 'MANUAL') {
+    <p class="source-info">
+      Importada de {{ data.tx.source === 'EXTRATO' ? 'extrato' : 'fatura' }} — descrição original: "{{
+        data.tx.description
+      }}"
+    </p>
+  }
+
+  <div class="form-fields">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Descrição</mat-label>
+      <input matInput [(ngModel)]="description" required />
+    </mat-form-field>
+
+    <div class="field-row">
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Valor</mat-label>
+        <span matTextPrefix>R$&nbsp;</span>
+        <input matInput type="text" inputmode="numeric" appCurrencyMask [(ngModel)]="amount" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Data</mat-label>
+        <input matInput type="date" [(ngModel)]="date" required />
+      </mat-form-field>
+    </div>
+
+    <div class="field-row">
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Tipo</mat-label>
+        <mat-select [(ngModel)]="type">
+          @for (t of types; track t.value) {
+            <mat-option [value]="t.value">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Tipo de entrada</mat-label>
+        <mat-select [(ngModel)]="incomeType">
+          @for (it of incomeTypes; track it.value) {
+            <mat-option [value]="it.value">{{ it.label }}</mat-option>
+          }
+        </mat-select>
+        <mat-hint>Reembolsos e transferências próprias não contam como receita</mat-hint>
+      </mat-form-field>
+    </div>
+
+    <div class="field-row">
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Grupo de orçamento</mat-label>
+        <mat-select [(ngModel)]="budgetGroup">
+          @for (bg of budgetGroups; track bg.value) {
+            <mat-option [value]="bg.value">{{ bg.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Categoria</mat-label>
+        <mat-select [(ngModel)]="categoryId">
+          <mat-option value="">Nenhuma</mat-option>
+          @for (cat of data.categories; track cat.id) {
+            <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="confirm()" [disabled]="!valid">Salvar</button>
+</mat-dialog-actions>

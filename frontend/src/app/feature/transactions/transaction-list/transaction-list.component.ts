@@ -14,10 +14,15 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { TransactionService } from '../transaction.service';
-import { Page, Transaction } from '../../../core/models/transaction.model';
+import {
+  Page,
+  Transaction,
+  UpdateTransactionRequest,
+} from '../../../core/models/transaction.model';
 import { Category } from '../../../core/models/category.model';
 import { CategoryService } from '../../../core/services/category.service';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { TransactionEditDialogComponent } from '../transaction-edit-dialog/transaction-edit-dialog.component';
 
 @Component({
   selector: 'app-transaction-list',
@@ -138,6 +143,27 @@ export class TransactionListComponent implements OnInit {
     });
     ref.afterClosed().subscribe((confirmed: boolean) => {
       if (confirmed) this.delete(tx.id);
+    });
+  }
+
+  openEditDialog(tx: Transaction): void {
+    const ref = this.dialog.open(TransactionEditDialogComponent, {
+      data: { tx, categories: this.categories },
+      width: '520px',
+    });
+    ref.afterClosed().subscribe((req: UpdateTransactionRequest | undefined) => {
+      if (!req) return;
+      this.txService.update(tx.id, req).subscribe({
+        next: () => {
+          this.snackBar.open('Transação atualizada.', 'Fechar', { duration: 2500 });
+          this.load();
+        },
+        error: (err) => {
+          this.snackBar.open(err.error?.message || 'Erro ao atualizar transação.', 'Fechar', {
+            duration: 4000,
+          });
+        },
+      });
     });
   }
 

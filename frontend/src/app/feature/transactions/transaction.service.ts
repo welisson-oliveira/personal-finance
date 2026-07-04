@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Page, Transaction } from '../../core/models/transaction.model';
+import { Page, Transaction, UpdateTransactionRequest } from '../../core/models/transaction.model';
 
 @Injectable({ providedIn: 'root' })
 export class TransactionService {
@@ -21,6 +21,10 @@ export class TransactionService {
     if (filters.page != null) params = params.set('page', filters.page);
     if (filters.size != null) params = params.set('size', filters.size);
     return this.http.get<Page<Transaction>>('/api/transactions', { params });
+  }
+
+  update(id: string, request: UpdateTransactionRequest): Observable<Transaction> {
+    return this.http.put<Transaction>(`/api/transactions/${id}`, request);
   }
 
   updateNotes(id: string, notes: string): Observable<Transaction> {
