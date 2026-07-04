@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SettingsService } from './settings.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { CurrencyMaskDirective } from '../../shared/currency-mask/currency-mask.directive';
 
 @Component({
   selector: 'app-settings',
@@ -24,6 +25,7 @@ import { AuthService } from '../../core/auth/auth.service';
     MatIconModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    CurrencyMaskDirective,
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
