@@ -31,44 +31,48 @@
     <div class="field-row">
       <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
         <mat-label>Tipo</mat-label>
-        <mat-select [(ngModel)]="type">
+        <mat-select [(ngModel)]="type" (ngModelChange)="onTypeChange()">
           @for (t of types; track t.value) {
             <mat-option [value]="t.value">{{ t.label }}</mat-option>
           }
         </mat-select>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
-        <mat-label>Tipo de entrada</mat-label>
-        <mat-select [(ngModel)]="incomeType">
-          @for (it of incomeTypes; track it.value) {
-            <mat-option [value]="it.value">{{ it.label }}</mat-option>
-          }
-        </mat-select>
-        <mat-hint>Reembolsos e transferências próprias não contam como receita</mat-hint>
-      </mat-form-field>
+      @if (isIncome) {
+        <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
+          <mat-label>Tipo de entrada</mat-label>
+          <mat-select [(ngModel)]="incomeType">
+            @for (it of incomeTypes; track it.value) {
+              <mat-option [value]="it.value">{{ it.label }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Reembolsos e transferências próprias não contam como receita</mat-hint>
+        </mat-form-field>
+      } @else {
+        <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
+          <mat-label>Grupo de orçamento</mat-label>
+          <mat-select [(ngModel)]="budgetGroup">
+            @for (bg of budgetGroups; track bg.value) {
+              <mat-option [value]="bg.value">{{ bg.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
     </div>
 
-    <div class="field-row">
-      <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
-        <mat-label>Grupo de orçamento</mat-label>
-        <mat-select [(ngModel)]="budgetGroup">
-          @for (bg of budgetGroups; track bg.value) {
-            <mat-option [value]="bg.value">{{ bg.label }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
-        <mat-label>Categoria</mat-label>
-        <mat-select [(ngModel)]="categoryId">
-          <mat-option value="">Nenhuma</mat-option>
-          @for (cat of data.categories; track cat.id) {
-            <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    </div>
+    @if (!isIncome) {
+      <div class="field-row">
+        <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+          <mat-label>Categoria</mat-label>
+          <mat-select [(ngModel)]="categoryId">
+            <mat-option value="">Nenhuma</mat-option>
+            @for (cat of data.categories; track cat.id) {
+              <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    }
   </div>
 </mat-dialog-content>
 
