@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -23,6 +23,7 @@ import { Category } from '../../../core/models/category.model';
 import { CategoryService } from '../../../core/services/category.service';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { TransactionEditDialogComponent } from '../transaction-edit-dialog/transaction-edit-dialog.component';
+import { PeriodService } from '../../../core/services/period.service';
 
 @Component({
   selector: 'app-transaction-list',
@@ -50,7 +51,6 @@ export class TransactionListComponent implements OnInit {
   loading = true;
   categories: Category[] = [];
 
-  filterMonth = '';
   filterType = '';
   filterCategoryId = '';
   pageIndex = 0;
@@ -80,27 +80,29 @@ export class TransactionListComponent implements OnInit {
     private categoryService: CategoryService,
     private route: ActivatedRoute,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
-  ) {}
+    private snackBar: MatSnackBar,
+    public period: PeriodService
+  ) {
+    effect(() => {
+      this.period.period();
+      this.pageIndex = 0;
+      this.load();
+    });
+  }
 
   ngOnInit(): void {
     const monthParam = this.route.snapshot.queryParams['month'];
     if (monthParam) {
-      this.filterMonth = monthParam;
-    } else {
-      const now = new Date();
-      this.filterMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      this.period.setFromMonthString(monthParam);
     }
-
     this.categoryService.getAll().subscribe((cats) => (this.categories = cats));
-    this.load();
   }
 
   load(): void {
     this.loading = true;
     this.txService
       .findAll({
-        month: this.filterMonth || undefined,
+        month: this.period.monthString(),
         type: this.filterType || undefined,
         categoryId: this.filterCategoryId || undefined,
         page: this.pageIndex,
@@ -129,8 +131,6 @@ export class TransactionListComponent implements OnInit {
   }
 
   clearFilters(): void {
-    const now = new Date();
-    this.filterMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     this.filterType = '';
     this.filterCategoryId = '';
     this.applyFilters();

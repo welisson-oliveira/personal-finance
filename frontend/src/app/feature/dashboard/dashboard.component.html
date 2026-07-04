@@ -1,23 +1,5 @@
 <div class="dashboard-header">
   <h1>Dashboard</h1>
-  <div class="period-selector">
-    <mat-form-field appearance="outline" class="selector-field">
-      <mat-label>Mês</mat-label>
-      <mat-select [(ngModel)]="selectedMonth" (ngModelChange)="load()">
-        @for (m of months; track m.value) {
-          <mat-option [value]="m.value">{{ m.label }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="selector-field">
-      <mat-label>Ano</mat-label>
-      <mat-select [(ngModel)]="selectedYear" (ngModelChange)="load()">
-        @for (y of years; track y) {
-          <mat-option [value]="y">{{ y }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-  </div>
 </div>
 
 @if (loading) {
@@ -28,7 +10,7 @@
   <p class="error-text">{{ errorMessage }}</p>
 } @else if (data) {
   <!-- Receita -->
-  <div class="section-title">Receita — {{ monthLabel() }} {{ selectedYear }}</div>
+  <div class="section-title">Receita — {{ period.label() }}</div>
   <div class="cards-row">
     <mat-card class="metric-card income">
       <mat-card-content>
