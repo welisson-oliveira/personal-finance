@@ -1,8 +1,10 @@
 package com.personalfinance.service;
 
 import com.personalfinance.dto.request.RegisterRequest;
+import com.personalfinance.dto.request.UpdateProfileRequest;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.repository.UserRepository;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -34,6 +36,15 @@ public class UserService implements UserDetailsService {
             .email(request.email())
             .password(passwordEncoder.encode(request.password()))
             .build();
+    return userRepository.save(user);
+  }
+
+  public User updateProfile(UUID userId, UpdateProfileRequest request) {
+    User user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    user.setMonthlyNetIncome(request.getMonthlyNetIncome());
     return userRepository.save(user);
   }
 }

@@ -21,6 +21,7 @@ export interface DashboardResponse {
   investido: number;
   resgatado: number;
   saldo: number;
+  rendaBase: number;
   percentualEssenciais: number;
   percentualNaoEssenciais: number;
   percentualInvestimentos: number;

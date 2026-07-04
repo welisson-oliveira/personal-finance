@@ -21,6 +21,6 @@ public class DashboardController {
   @GetMapping("/monthly")
   public ResponseEntity<DashboardResponse> monthly(
       @RequestParam int year, @RequestParam int month, @AuthenticationPrincipal User user) {
-    return ResponseEntity.ok(dashboardService.getMonthly(user.getId(), year, month));
+    return ResponseEntity.ok(dashboardService.getMonthly(user, year, month));
   }
 }

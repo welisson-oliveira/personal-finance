@@ -1,6 +1,7 @@
 package com.personalfinance.model.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -32,6 +33,9 @@ public class User implements UserDetails {
 
   @Column(nullable = false)
   private String name;
+
+  @Column(name = "monthly_net_income")
+  private BigDecimal monthlyNetIncome;
 
   @CreationTimestamp
   @Column(updatable = false)

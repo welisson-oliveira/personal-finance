@@ -64,11 +64,24 @@
   <div class="section-title">Distribuição 50/30/20</div>
   <mat-card class="budget-card">
     <mat-card-content>
+      @if (!hasBase()) {
+        <p class="budget-no-base">
+          <mat-icon>info_outline</mat-icon>
+          Sem base de renda para o cálculo —
+          <a routerLink="/settings">configure seu salário líquido</a> ou importe o extrato do mês.
+        </p>
+      }
       <div class="budget-row">
         <div class="budget-label">
           <span class="dot essential"></span>
           Essenciais
-          <span class="budget-pct">{{ data.percentualEssenciais | number: '1.1-1' }}%</span>
+          @if (hasBase()) {
+            <span class="budget-pct" [class.over]="data.percentualEssenciais > 100"
+              >{{ data.percentualEssenciais | number: '1.1-1' }}%</span
+            >
+          } @else {
+            <span class="budget-pct">—</span>
+          }
           <span class="budget-target">(meta 50%)</span>
         </div>
         <div class="budget-values">
@@ -77,7 +90,7 @@
       </div>
       <mat-progress-bar
         mode="determinate"
-        [value]="clamp(data.percentualEssenciais)"
+        [value]="hasBase() ? clamp(data.percentualEssenciais) : 0"
         color="primary"
         class="budget-bar"
       ></mat-progress-bar>
@@ -86,7 +99,13 @@
         <div class="budget-label">
           <span class="dot non-essential"></span>
           Não Essenciais
-          <span class="budget-pct">{{ data.percentualNaoEssenciais | number: '1.1-1' }}%</span>
+          @if (hasBase()) {
+            <span class="budget-pct" [class.over]="data.percentualNaoEssenciais > 100"
+              >{{ data.percentualNaoEssenciais | number: '1.1-1' }}%</span
+            >
+          } @else {
+            <span class="budget-pct">—</span>
+          }
           <span class="budget-target">(meta 30%)</span>
         </div>
         <div class="budget-values">
@@ -95,7 +114,7 @@
       </div>
       <mat-progress-bar
         mode="determinate"
-        [value]="clamp(data.percentualNaoEssenciais)"
+        [value]="hasBase() ? clamp(data.percentualNaoEssenciais) : 0"
         color="accent"
         class="budget-bar"
       ></mat-progress-bar>
@@ -104,7 +123,13 @@
         <div class="budget-label">
           <span class="dot investment"></span>
           Investimentos
-          <span class="budget-pct">{{ data.percentualInvestimentos | number: '1.1-1' }}%</span>
+          @if (hasBase()) {
+            <span class="budget-pct" [class.over]="data.percentualInvestimentos > 100"
+              >{{ data.percentualInvestimentos | number: '1.1-1' }}%</span
+            >
+          } @else {
+            <span class="budget-pct">—</span>
+          }
           <span class="budget-target">(meta 20%)</span>
         </div>
         <div class="budget-values">
@@ -113,10 +138,14 @@
       </div>
       <mat-progress-bar
         mode="determinate"
-        [value]="clamp(data.percentualInvestimentos)"
+        [value]="hasBase() ? clamp(data.percentualInvestimentos) : 0"
         color="warn"
         class="budget-bar"
       ></mat-progress-bar>
+
+      @if (hasBase()) {
+        <p class="budget-base-info">Base do cálculo: {{ fmt(data.rendaBase) }} ({{ baseLabel() }})</p>
+      }
     </mat-card-content>
   </mat-card>
 

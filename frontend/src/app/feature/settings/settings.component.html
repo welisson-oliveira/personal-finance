@@ -1,0 +1,29 @@
+<h1>Configurações</h1>
+
+@if (loading) {
+  <div class="loading-center">
+    <mat-spinner diameter="48"></mat-spinner>
+  </div>
+} @else {
+  <mat-card class="settings-card">
+    <mat-card-header>
+      <mat-card-title>Orçamento</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="settings-hint">
+        Usado como base do cálculo da distribuição 50/30/20 no dashboard enquanto o mês não tiver renda registrada nas
+        transações (ex: salário no extrato importado). Quando houver renda no mês, ela tem prioridade.
+      </p>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Salário líquido mensal (R$)</mat-label>
+        <input matInput type="number" min="0" step="0.01" [(ngModel)]="monthlyNetIncome" placeholder="Ex: 5000.00" />
+        <mat-icon matSuffix>payments</mat-icon>
+      </mat-form-field>
+    </mat-card-content>
+    <mat-card-actions align="end">
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">
+        {{ saving ? 'Salvando...' : 'Salvar' }}
+      </button>
+    </mat-card-actions>
+  </mat-card>
+}

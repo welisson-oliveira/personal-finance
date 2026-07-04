@@ -39,6 +39,7 @@ export class LayoutComponent {
     { label: 'Fila de Revisão', icon: 'rate_review', route: '/review' },
     { label: 'Categorias', icon: 'category', route: '/categories' },
     { label: 'Pessoas Conhecidas', icon: 'people', route: '/known-persons' },
+    { label: 'Configurações', icon: 'settings', route: '/settings' },
   ];
 
   constructor(

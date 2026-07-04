@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -17,6 +18,7 @@ import { DashboardResponse } from '../../core/models/dashboard.model';
   imports: [
     CommonModule,
     FormsModule,
+    RouterLink,
     MatCardModule,
     MatIconModule,
     MatProgressBarModule,
@@ -87,6 +89,15 @@ export class DashboardComponent implements OnInit {
 
   clamp(val: number): number {
     return Math.min(100, Math.max(0, val ?? 0));
+  }
+
+  hasBase(): boolean {
+    return (this.data?.rendaBase ?? 0) > 0;
+  }
+
+  baseLabel(): string {
+    if (!this.data) return '';
+    return this.data.receitaReal > 0 ? 'renda do mês' : 'salário configurado';
   }
 
   monthLabel(): string {

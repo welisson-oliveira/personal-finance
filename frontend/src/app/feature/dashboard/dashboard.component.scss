@@ -147,6 +147,40 @@
 .budget-pct {
   font-weight: 700;
   font-size: 1rem;
+
+  &.over {
+    color: #d32f2f;
+  }
+}
+
+.budget-no-base {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #856404;
+  background: #fff3cd;
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin: 0 0 16px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  a {
+    color: inherit;
+    font-weight: 600;
+  }
+}
+
+.budget-base-info {
+  font-size: 0.75rem;
+  color: #999;
+  margin: 12px 0 0;
+  text-align: right;
 }
 
 .budget-target {

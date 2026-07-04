@@ -3,6 +3,7 @@ package com.personalfinance.service;
 import com.personalfinance.dto.response.DashboardResponse;
 import com.personalfinance.dto.response.DashboardResponse.Destaques;
 import com.personalfinance.model.entity.Transaction;
+import com.personalfinance.model.entity.User;
 import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.MerchantRuleRepository;
 import com.personalfinance.repository.TransactionRepository;
@@ -25,7 +26,8 @@ public class DashboardService {
   private final TransactionRepository transactionRepository;
   private final MerchantRuleRepository merchantRuleRepository;
 
-  public DashboardResponse getMonthly(UUID userId, int year, int month) {
+  public DashboardResponse getMonthly(User user, int year, int month) {
+    UUID userId = user.getId();
     YearMonth ym = YearMonth.of(year, month);
     LocalDate start = ym.atDay(1);
     LocalDate end = ym.atEndOfMonth();
@@ -60,9 +62,15 @@ public class DashboardService {
 
     BigDecimal saldo = receitaReal.subtract(totalDespesas);
 
-    BigDecimal percentualEssenciais = percent(despesasEssenciais, receitaReal);
-    BigDecimal percentualNaoEssenciais = percent(despesasNaoEssenciais, receitaReal);
-    BigDecimal percentualInvestimentos = percent(investido, receitaReal);
+    // 50/30/20 base: month's registered income, falling back to the configured net salary
+    BigDecimal rendaBase =
+        receitaReal.compareTo(BigDecimal.ZERO) > 0
+            ? receitaReal
+            : (user.getMonthlyNetIncome() != null ? user.getMonthlyNetIncome() : BigDecimal.ZERO);
+
+    BigDecimal percentualEssenciais = percent(despesasEssenciais, rendaBase);
+    BigDecimal percentualNaoEssenciais = percent(despesasNaoEssenciais, rendaBase);
+    BigDecimal percentualInvestimentos = percent(investido, rendaBase);
 
     Destaques destaques = buildDestaques(userId, start, end);
 
@@ -78,6 +86,7 @@ public class DashboardService {
         .investido(investido)
         .resgatado(resgatado)
         .saldo(saldo)
+        .rendaBase(rendaBase)
         .percentualEssenciais(percentualEssenciais)
         .percentualNaoEssenciais(percentualNaoEssenciais)
         .percentualInvestimentos(percentualInvestimentos)
