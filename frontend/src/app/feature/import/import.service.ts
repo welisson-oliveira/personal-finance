@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ImportPreviewResponse, ImportSessionResponse } from '../../core/models/import.model';
+import { ImportPreviewResponse, ImportSessionResponse, ParsedTransaction } from '../../core/models/import.model';
 
 @Injectable({ providedIn: 'root' })
 export class ImportService {
@@ -13,8 +13,8 @@ export class ImportService {
     return this.http.post<ImportPreviewResponse>('/api/import/parse', form);
   }
 
-  confirm(sessionId: string): Observable<void> {
-    return this.http.post<void>(`/api/import/${sessionId}/confirm`, {});
+  confirm(sessionId: string, transactions: ParsedTransaction[]): Observable<void> {
+    return this.http.post<void>(`/api/import/${sessionId}/confirm`, transactions);
   }
 
   cancel(sessionId: string): Observable<void> {

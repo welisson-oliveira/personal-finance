@@ -2,6 +2,7 @@ package com.personalfinance.controller;
 
 import com.personalfinance.dto.response.ImportPreviewResponse;
 import com.personalfinance.dto.response.ImportSessionResponse;
+import com.personalfinance.dto.response.ParsedTransactionDTO;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.service.TransactionImportService;
 import java.io.IOException;
@@ -32,8 +33,11 @@ public class ImportController {
   }
 
   @PostMapping("/{id}/confirm")
-  public ResponseEntity<Void> confirm(@PathVariable UUID id, @AuthenticationPrincipal User user) {
-    importService.confirm(id, user);
+  public ResponseEntity<Void> confirm(
+      @PathVariable UUID id,
+      @RequestBody List<ParsedTransactionDTO> transactions,
+      @AuthenticationPrincipal User user) {
+    importService.confirm(id, transactions, user);
     return ResponseEntity.ok().build();
   }
 

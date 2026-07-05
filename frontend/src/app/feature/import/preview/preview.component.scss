@@ -144,3 +144,20 @@
 .needs-review-row {
   background-color: rgba(255, 152, 0, 0.05);
 }
+
+.excluded-row {
+  opacity: 0.45;
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.auto-class-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background-color: rgba(63, 81, 181, 0.12);
+  color: #3f51b5;
+  margin-left: 4px;
+  vertical-align: middle;
+  white-space: nowrap;
+}

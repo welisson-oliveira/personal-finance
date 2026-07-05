@@ -13,6 +13,8 @@ export interface ParsedTransaction {
   notes?: string;
   knownPersonId?: string;
   needsReview: boolean;
+  included: boolean;
+  autoClassification?: string;
 }
 
 export interface ImportPreviewResponse {

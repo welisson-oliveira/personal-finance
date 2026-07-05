@@ -7,7 +7,7 @@
         <span class="period"
           >{{ preview.periodStart | date: 'MMM d' }} – {{ preview.periodEnd | date: 'MMM d, yyyy' }}</span
         >
-        <span class="count">{{ preview.transactions.length }} transactions</span>
+        <span class="count">{{ includedCount() }} / {{ preview.transactions.length }} transactions</span>
         @if (needsReviewCount() > 0) {
           <span class="review-badge">{{ needsReviewCount() }} need review</span>
         }
@@ -29,6 +29,14 @@
   <mat-card class="table-card">
     <div class="table-wrapper">
       <table mat-table [dataSource]="preview.transactions" class="preview-table">
+
+        <ng-container matColumnDef="included">
+          <th mat-header-cell *matHeaderCellDef>Incluir</th>
+          <td mat-cell *matCellDef="let tx">
+            <mat-checkbox [(ngModel)]="tx.included"></mat-checkbox>
+          </td>
+        </ng-container>
+
         <ng-container matColumnDef="date">
           <th mat-header-cell *matHeaderCellDef>Date</th>
           <td mat-cell *matCellDef="let tx">{{ tx.date | date: 'dd/MM' }}</td>
@@ -43,6 +51,12 @@
             }
             @if (tx.installmentInfo) {
               <div class="desc-sub installment">Parcel {{ tx.installmentInfo }}</div>
+            }
+            @if (tx.autoClassification) {
+              <span
+                class="auto-class-badge"
+                [matTooltip]="autoClassificationLabel(tx.autoClassification)"
+              >{{ autoClassificationLabel(tx.autoClassification) }}</span>
             }
             @if (tx.needsReview) {
               <mat-icon class="review-icon" title="Needs review">warning</mat-icon>
@@ -125,7 +139,12 @@
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.needs-review-row]="row.needsReview"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumns"
+          [class.needs-review-row]="row.needsReview && row.included"
+          [class.excluded-row]="!row.included"
+        ></tr>
       </table>
     </div>
   </mat-card>

@@ -84,12 +84,6 @@ public class TransactionImportService {
       }
     }
 
-    List<ParsedTransactionDTO> visible =
-        rawTx.stream()
-            .filter(tx -> !"OWN_TRANSFER".equals(tx.getIncomeType()))
-            .filter(tx -> !"INVESTMENT".equals(tx.getIncomeType()))
-            .toList();
-
     ImportSession session =
         importSessionRepository.save(
             ImportSession.builder()
@@ -102,23 +96,24 @@ public class TransactionImportService {
                 .status("PENDING")
                 .build());
 
-    previewCache.put(session.getId(), visible);
+    previewCache.put(session.getId(), rawTx);
 
-    int reviewCount = (int) visible.stream().filter(ParsedTransactionDTO::isNeedsReview).count();
+    int reviewCount = (int) rawTx.stream().filter(ParsedTransactionDTO::isNeedsReview).count();
 
     return new ImportPreviewResponse(
-        session.getId(), resolvedType, period[0], period[1], visible, reviewCount);
+        session.getId(), resolvedType, period[0], period[1], rawTx, reviewCount);
   }
 
   @Transactional
-  public void confirm(UUID sessionId, User user) {
+  public void confirm(UUID sessionId, List<ParsedTransactionDTO> clientList, User user) {
     ImportSession session =
         importSessionRepository
             .findById(sessionId)
             .filter(s -> s.getUser().getId().equals(user.getId()))
             .orElseThrow(() -> new IllegalArgumentException("Import session not found"));
 
-    List<ParsedTransactionDTO> txList = previewCache.getOrDefault(sessionId, List.of());
+    List<ParsedTransactionDTO> txList =
+        clientList.stream().filter(ParsedTransactionDTO::isIncluded).toList();
 
     for (ParsedTransactionDTO dto : txList) {
       Category category = null;
