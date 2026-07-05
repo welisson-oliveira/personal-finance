@@ -45,8 +45,8 @@ class DashboardServiceTest {
     when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
             userId, "NON_ESSENTIAL", start, end))
         .thenReturn(new BigDecimal("800.00"));
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.EXPENSE, "INVESTMENT", start, end))
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "INVESTMENT", start, end))
         .thenReturn(BigDecimal.ZERO);
     when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
             userId, TransactionType.INCOME, "INVESTMENT", start, end))
@@ -87,8 +87,8 @@ class DashboardServiceTest {
     when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
             userId, "NON_ESSENTIAL", start, end))
         .thenReturn(new BigDecimal("1200.00"));
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.EXPENSE, "INVESTMENT", start, end))
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "INVESTMENT", start, end))
         .thenReturn(new BigDecimal("800.00"));
     when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
             userId, TransactionType.INCOME, "INVESTMENT", start, end))
@@ -112,6 +112,65 @@ class DashboardServiceTest {
             .add(result.getPercentualNaoEssenciais())
             .add(result.getPercentualInvestimentos());
     assertThat(soma).isLessThanOrEqualTo(new BigDecimal("100.00"));
+  }
+
+  @Test
+  void monthly_investido_uses_budget_group_not_income_type() {
+    UUID userId = UUID.randomUUID();
+    LocalDate start = LocalDate.of(2026, 5, 1);
+    LocalDate end = LocalDate.of(2026, 5, 31);
+
+    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
+            any(), any(), any(), any(), any()))
+        .thenReturn(BigDecimal.ZERO);
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "ESSENTIAL", start, end))
+        .thenReturn(BigDecimal.ZERO);
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "NON_ESSENTIAL", start, end))
+        .thenReturn(BigDecimal.ZERO);
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "INVESTMENT", start, end))
+        .thenReturn(new BigDecimal("1500.00"));
+    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
+        .thenReturn(List.of());
+    when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
+    when(transactionRepository.countExpensesInPeriod(any(), any(), any())).thenReturn(0L);
+    when(transactionRepository.countPixEnviadosInPeriod(any(), any(), any())).thenReturn(0L);
+    when(transactionRepository.countPixRecebidosInPeriod(any(), any(), any())).thenReturn(0L);
+
+    DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
+
+    assertThat(result.getInvestido()).isEqualByComparingTo("1500.00");
+  }
+
+  @Test
+  void monthly_resgatado_uses_income_type_investment() {
+    UUID userId = UUID.randomUUID();
+    LocalDate start = LocalDate.of(2026, 5, 1);
+    LocalDate end = LocalDate.of(2026, 5, 31);
+
+    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
+            userId, TransactionType.INCOME, "INCOME", start, end))
+        .thenReturn(BigDecimal.ZERO);
+    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
+            userId, TransactionType.INCOME, "REIMBURSEMENT", start, end))
+        .thenReturn(BigDecimal.ZERO);
+    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
+            userId, TransactionType.INCOME, "INVESTMENT", start, end))
+        .thenReturn(new BigDecimal("2000.00"));
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(any(), any(), any(), any()))
+        .thenReturn(BigDecimal.ZERO);
+    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
+        .thenReturn(List.of());
+    when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
+    when(transactionRepository.countExpensesInPeriod(any(), any(), any())).thenReturn(0L);
+    when(transactionRepository.countPixEnviadosInPeriod(any(), any(), any())).thenReturn(0L);
+    when(transactionRepository.countPixRecebidosInPeriod(any(), any(), any())).thenReturn(0L);
+
+    DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
+
+    assertThat(result.getResgatado()).isEqualByComparingTo("2000.00");
   }
 
   @Test
@@ -159,8 +218,8 @@ class DashboardServiceTest {
     when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
             userId, "NON_ESSENTIAL", start, end))
         .thenReturn(new BigDecimal("1500.00"));
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.EXPENSE, "INVESTMENT", start, end))
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "INVESTMENT", start, end))
         .thenReturn(new BigDecimal("1000.00"));
     when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
             userId, TransactionType.INCOME, "INVESTMENT", start, end))
@@ -201,8 +260,8 @@ class DashboardServiceTest {
     when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
             userId, "NON_ESSENTIAL", start, end))
         .thenReturn(new BigDecimal("1200.00"));
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.EXPENSE, "INVESTMENT", start, end))
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "INVESTMENT", start, end))
         .thenReturn(new BigDecimal("800.00"));
     when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
             userId, TransactionType.INCOME, "INVESTMENT", start, end))

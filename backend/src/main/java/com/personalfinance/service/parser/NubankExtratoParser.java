@@ -104,6 +104,18 @@ public class NubankExtratoParser {
           collecting = false;
           descLines = new ArrayList<>();
         }
+        BigDecimal internalAmount = extractTrailing(line);
+        if (internalAmount != null && currentDate != null) {
+          transactions.add(
+              ParsedTransactionDTO.builder()
+                  .date(currentDate)
+                  .description(line)
+                  .amount(internalAmount)
+                  .type(incomeBlock ? "INCOME" : "EXPENSE")
+                  .autoClassification("INTERNAL")
+                  .included(false)
+                  .build());
+        }
         continue;
       }
 

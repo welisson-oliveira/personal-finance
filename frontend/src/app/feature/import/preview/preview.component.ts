@@ -13,6 +13,8 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ImportPreviewResponse, ParsedTransaction } from '../../../core/models/import.model';
 import { Category } from '../../../core/models/category.model';
 import { ImportService } from '../import.service';
@@ -35,6 +37,8 @@ import { CategoryService } from '../../../core/services/category.service';
     MatProgressBarModule,
     MatSnackBarModule,
     MatBadgeModule,
+    MatCheckboxModule,
+    MatTooltipModule,
   ],
   templateUrl: './preview.component.html',
   styleUrl: './preview.component.scss',
@@ -45,6 +49,7 @@ export class PreviewComponent implements OnInit {
   loading = false;
 
   displayedColumns = [
+    'included',
     'date',
     'description',
     'amount',
@@ -89,10 +94,23 @@ export class PreviewComponent implements OnInit {
     this.categoryService.getAll().subscribe({ next: (cats) => (this.categories = cats) });
   }
 
+  includedCount(): number {
+    return this.preview?.transactions.filter((t) => t.included).length ?? 0;
+  }
+
+  autoClassificationLabel(ac: string | undefined): string {
+    const labels: Record<string, string> = {
+      OWN_TRANSFER: 'Transferência própria',
+      INVESTMENT: 'Investimento',
+      INTERNAL: 'Transação interna',
+    };
+    return ac ? (labels[ac] ?? ac) : '';
+  }
+
   confirm(): void {
     if (!this.preview) return;
     this.loading = true;
-    this.importService.confirm(this.preview.sessionId).subscribe({
+    this.importService.confirm(this.preview.sessionId, this.preview.transactions).subscribe({
       next: () => {
         this.snackBar.open('Import confirmed successfully!', 'Close', { duration: 3000 });
         this.router.navigate(['/dashboard']);
