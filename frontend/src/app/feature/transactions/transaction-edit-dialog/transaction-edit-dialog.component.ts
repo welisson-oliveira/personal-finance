@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { Transaction, UpdateTransactionRequest } from '../../../core/models/transaction.model';
 import { Category } from '../../../core/models/category.model';
 import { CurrencyMaskDirective } from '../../../shared/currency-mask/currency-mask.directive';
+import { CategorySelectComponent } from '../../../shared/category-select/category-select.component';
 
 interface DialogData {
   tx: Transaction;
@@ -27,6 +28,7 @@ interface DialogData {
     MatSelectModule,
     MatInputModule,
     CurrencyMaskDirective,
+    CategorySelectComponent,
   ],
   templateUrl: './transaction-edit-dialog.component.html',
   styleUrl: './transaction-edit-dialog.component.scss',

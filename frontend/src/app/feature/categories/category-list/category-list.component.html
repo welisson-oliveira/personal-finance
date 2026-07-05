@@ -15,7 +15,7 @@
     <mat-list>
       @for (cat of categories; track cat.id) {
         <mat-list-item class="cat-item">
-          <mat-icon matListItemIcon>{{ cat.icon || 'label' }}</mat-icon>
+          <mat-icon matListItemIcon [style.color]="cat.color || null">{{ cat.icon || 'label' }}</mat-icon>
           <span matListItemTitle>{{ cat.name }}</span>
           <span matListItemLine *ngIf="cat.global" class="global-badge">Global</span>
           <div matListItemMeta class="item-actions">

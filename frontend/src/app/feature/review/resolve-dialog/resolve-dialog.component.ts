@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { ReviewQueueItem, ResolveReviewRequest } from '../../../core/models/review.model';
 import { Category } from '../../../core/models/category.model';
+import { CategorySelectComponent } from '../../../shared/category-select/category-select.component';
 
 interface DialogData {
   item: ReviewQueueItem;
@@ -25,6 +26,7 @@ interface DialogData {
     MatFormFieldModule,
     MatSelectModule,
     MatInputModule,
+    CategorySelectComponent,
   ],
   templateUrl: './resolve-dialog.component.html',
   styleUrl: './resolve-dialog.component.scss',
@@ -51,7 +53,7 @@ export class ResolveDialogComponent {
 
   confirm(): void {
     const req: ResolveReviewRequest = {
-      categoryId: this.categoryId,
+      categoryId: this.categoryId || undefined,
       budgetGroup: this.budgetGroup,
       merchantName: this.merchantName,
       transactionNotes: this.transactionNotes || undefined,

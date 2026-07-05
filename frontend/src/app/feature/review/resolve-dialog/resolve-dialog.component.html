@@ -10,15 +10,7 @@
       <mat-hint>Como este estabelecimento ficará salvo para futuras importações</mat-hint>
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Categoria</mat-label>
-      <mat-select [(ngModel)]="categoryId">
-        <mat-option [value]="undefined">Nenhuma</mat-option>
-        @for (cat of data.categories; track cat.id) {
-          <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+    <app-category-select [categories]="data.categories" [(value)]="categoryId" />
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Grupo de orçamento</mat-label>
