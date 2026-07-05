@@ -3,6 +3,9 @@ package com.personalfinance.service;
 import com.personalfinance.dto.response.ParsedTransactionDTO;
 import com.personalfinance.model.entity.KnownPerson;
 import com.personalfinance.repository.KnownPersonRepository;
+import com.personalfinance.repository.TransactionRepository;
+import com.personalfinance.service.MerchantNormalizationService;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +16,8 @@ import org.springframework.stereotype.Service;
 public class IncomeClassificationService {
 
   private final KnownPersonRepository knownPersonRepository;
+  private final TransactionRepository transactionRepository;
+  private final MerchantNormalizationService normalizationService;
 
   public void classify(ParsedTransactionDTO tx, UUID userId, String accountHolderName) {
     if (!"INCOME".equals(tx.getType())) return;
@@ -23,6 +28,8 @@ public class IncomeClassificationService {
         && accountHolderName != null
         && descLower.contains(accountHolderName.toLowerCase())) {
       tx.setIncomeType("OWN_TRANSFER");
+      tx.setAutoClassification("OWN_TRANSFER");
+      tx.setIncluded(false);
       return;
     }
 
@@ -38,7 +45,13 @@ public class IncomeClassificationService {
       }
     }
 
-    tx.setIncomeType("INCOME");
+    String normalized = normalizationService.normalize(tx.getDescription());
+    transactionRepository.findByUserIdAndEffectiveName(userId, normalized).stream()
+        .filter(t -> t.getIncomeType() != null && !"OWN_TRANSFER".equals(t.getIncomeType()))
+        .max(Comparator.comparing(t -> t.getDate()))
+        .ifPresentOrElse(
+            t -> tx.setIncomeType(t.getIncomeType()),
+            () -> tx.setIncomeType("INCOME"));
   }
 
   private boolean nameMatches(String descLower, String personName) {
