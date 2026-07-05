@@ -120,15 +120,20 @@ class DashboardServiceTest {
     LocalDate start = LocalDate.of(2026, 5, 1);
     LocalDate end = LocalDate.of(2026, 5, 31);
 
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(any(), any(), any(), any(), any()))
+    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
+            any(), any(), any(), any(), any()))
         .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(userId, "ESSENTIAL", start, end))
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "ESSENTIAL", start, end))
         .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(userId, "NON_ESSENTIAL", start, end))
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "NON_ESSENTIAL", start, end))
         .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(userId, "INVESTMENT", start, end))
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "INVESTMENT", start, end))
         .thenReturn(new BigDecimal("1500.00"));
-    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end)).thenReturn(List.of());
+    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
+        .thenReturn(List.of());
     when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
     when(transactionRepository.countExpensesInPeriod(any(), any(), any())).thenReturn(0L);
     when(transactionRepository.countPixEnviadosInPeriod(any(), any(), any())).thenReturn(0L);
@@ -156,7 +161,8 @@ class DashboardServiceTest {
         .thenReturn(new BigDecimal("2000.00"));
     when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(any(), any(), any(), any()))
         .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end)).thenReturn(List.of());
+    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
+        .thenReturn(List.of());
     when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
     when(transactionRepository.countExpensesInPeriod(any(), any(), any())).thenReturn(0L);
     when(transactionRepository.countPixEnviadosInPeriod(any(), any(), any())).thenReturn(0L);

@@ -55,8 +55,7 @@ class TransactionImportServiceTest {
             .documentType("EXTRATO")
             .status("PENDING")
             .build();
-    when(importSessionRepository.findById(session.getId()))
-        .thenReturn(Optional.of(session));
+    when(importSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
     lenient().when(importSessionRepository.save(any())).thenReturn(session);
     lenient()
         .when(merchantDisplayNameRepository.findByUserIdAndNormalizedName(any(), any()))

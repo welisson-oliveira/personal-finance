@@ -4,7 +4,6 @@ import com.personalfinance.dto.response.ParsedTransactionDTO;
 import com.personalfinance.model.entity.KnownPerson;
 import com.personalfinance.repository.KnownPersonRepository;
 import com.personalfinance.repository.TransactionRepository;
-import com.personalfinance.service.MerchantNormalizationService;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -50,8 +49,7 @@ public class IncomeClassificationService {
         .filter(t -> t.getIncomeType() != null && !"OWN_TRANSFER".equals(t.getIncomeType()))
         .max(Comparator.comparing(t -> t.getDate()))
         .ifPresentOrElse(
-            t -> tx.setIncomeType(t.getIncomeType()),
-            () -> tx.setIncomeType("INCOME"));
+            t -> tx.setIncomeType(t.getIncomeType()), () -> tx.setIncomeType("INCOME"));
   }
 
   private boolean nameMatches(String descLower, String personName) {

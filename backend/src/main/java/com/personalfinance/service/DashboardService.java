@@ -53,7 +53,8 @@ public class DashboardService {
     BigDecimal totalDespesas = despesasEssenciais.add(despesasNaoEssenciais);
 
     BigDecimal investido =
-        transactionRepository.sumExpenseByBudgetGroupAndDateBetween(userId, "INVESTMENT", start, end);
+        transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "INVESTMENT", start, end);
 
     BigDecimal resgatado =
         transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(

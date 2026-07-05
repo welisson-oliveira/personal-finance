@@ -102,10 +102,7 @@ describe('PreviewComponent', () => {
 
     component.confirm();
 
-    expect(importServiceSpy.confirm).toHaveBeenCalledWith(
-      'sess-001',
-      mockPreview.transactions
-    );
+    expect(importServiceSpy.confirm).toHaveBeenCalledWith('sess-001', mockPreview.transactions);
   });
 
   it('autoClassificationLabel returns Portuguese label for OWN_TRANSFER', () => {

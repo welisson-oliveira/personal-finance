@@ -1,7 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ImportPreviewResponse, ImportSessionResponse, ParsedTransaction } from '../../core/models/import.model';
+import {
+  ImportPreviewResponse,
+  ImportSessionResponse,
+  ParsedTransaction,
+} from '../../core/models/import.model';
 
 @Injectable({ providedIn: 'root' })
 export class ImportService {
