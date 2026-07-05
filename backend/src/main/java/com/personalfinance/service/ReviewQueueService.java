@@ -107,8 +107,8 @@ public class ReviewQueueService {
       merchantDisplayNameRepository.save(mdn);
     }
 
-    // Apply rule to this session's transactions
-    applyRuleToSessionTransactions(item, rule, user.getId(), cleanNotes);
+    // Apply the rule to every existing transaction with this name (any session, past or present)
+    applyRuleToAllTransactions(normalizedName, rule, user.getId(), cleanNotes);
 
     // Resolve all other pending queue items with the same normalized name
     List<ReviewQueue> siblings =
@@ -116,7 +116,6 @@ public class ReviewQueueService {
             user.getId(), normalizedName, "PENDING");
     for (ReviewQueue sibling : siblings) {
       if (sibling.getId().equals(reviewId)) continue;
-      applyRuleToSessionTransactions(sibling, rule, user.getId(), cleanNotes);
       sibling.setStatus("REVIEWED");
       sibling.setResolvedAt(LocalDateTime.now());
       reviewQueueRepository.save(sibling);
@@ -127,22 +126,18 @@ public class ReviewQueueService {
     reviewQueueRepository.save(item);
   }
 
-  private void applyRuleToSessionTransactions(
-      ReviewQueue item, MerchantRule rule, UUID userId, String transactionNotes) {
-    if (item.getImportSession() == null || item.getNormalizedDescription() == null) return;
-    UUID sessionId = item.getImportSession().getId();
-    List<Transaction> sessionTxs =
-        transactionRepository.findByImportSessionIdAndUserId(sessionId, userId);
-    for (Transaction tx : sessionTxs) {
-      if (item.getNormalizedDescription().equalsIgnoreCase(tx.getNormalizedDescription())) {
-        tx.setCategory(rule.getCategory());
-        tx.setBudgetGroup(rule.getExpenseType());
-        if (transactionNotes != null) {
-          tx.setNotes(transactionNotes.isBlank() ? null : transactionNotes);
-        }
-        transactionRepository.save(tx);
+  private void applyRuleToAllTransactions(
+      String normalizedName, MerchantRule rule, UUID userId, String transactionNotes) {
+    List<Transaction> matching =
+        transactionRepository.findByUserIdAndEffectiveName(userId, normalizedName);
+    for (Transaction tx : matching) {
+      tx.setCategory(rule.getCategory());
+      tx.setBudgetGroup(rule.getExpenseType());
+      if (transactionNotes != null) {
+        tx.setNotes(transactionNotes);
       }
     }
+    transactionRepository.saveAll(matching);
   }
 
   private ReviewQueueItemResponse toResponse(ReviewQueue item) {
