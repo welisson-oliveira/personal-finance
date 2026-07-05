@@ -113,8 +113,6 @@ class ReviewQueueServiceTest {
     when(merchantRuleRepository.save(any())).thenReturn(savedRule);
     when(merchantAliasRepository.findByAliasIgnoreCase("Loja Desconhecida"))
         .thenReturn(Optional.empty());
-    when(transactionRepository.findByImportSessionIdAndUserId(session.getId(), userId))
-        .thenReturn(List.of());
 
     service.resolve(reviewId, request, user);
 
@@ -158,8 +156,6 @@ class ReviewQueueServiceTest {
     when(merchantRuleRepository.save(any())).thenReturn(savedRule);
     when(merchantAliasRepository.findByAliasIgnoreCase("Padaria Central"))
         .thenReturn(Optional.empty());
-    when(transactionRepository.findByImportSessionIdAndUserId(session.getId(), userId))
-        .thenReturn(List.of());
 
     service.resolve(reviewId, request, user);
 
@@ -199,8 +195,6 @@ class ReviewQueueServiceTest {
     when(merchantRuleRepository.save(any())).thenReturn(savedRule);
     when(merchantAliasRepository.findByAliasIgnoreCase("Padaria Central Ltda"))
         .thenReturn(Optional.empty());
-    when(transactionRepository.findByImportSessionIdAndUserId(session.getId(), userId))
-        .thenReturn(List.of());
 
     service.resolve(reviewId, request, user);
 
@@ -241,8 +235,6 @@ class ReviewQueueServiceTest {
     when(merchantRuleRepository.save(any())).thenReturn(existingRule);
     when(merchantAliasRepository.findByAliasIgnoreCase("iFood - NuPay"))
         .thenReturn(Optional.of(MerchantAlias.builder().alias("iFood - NuPay").build()));
-    when(transactionRepository.findByImportSessionIdAndUserId(session.getId(), userId))
-        .thenReturn(List.of());
 
     service.resolve(reviewId, request, user);
 
@@ -274,7 +266,7 @@ class ReviewQueueServiceTest {
   }
 
   @Test
-  void resolve_applies_rule_to_matching_session_transactions() {
+  void resolve_applies_rule_to_all_matching_transactions() {
     UUID reviewId = UUID.randomUUID();
     UUID sessionId = UUID.randomUUID();
     ImportSession session = ImportSession.builder().id(sessionId).build();
@@ -295,8 +287,9 @@ class ReviewQueueServiceTest {
     ResolveReviewRequest request =
         new ResolveReviewRequest(category.getId(), "ESSENTIAL", "Padaria X", null);
 
+    // A transaction with the same name from any session (e.g. an older, already confirmed one)
     Transaction matchingTx =
-        Transaction.builder().id(UUID.randomUUID()).normalizedDescription("padaria x").build();
+        Transaction.builder().id(UUID.randomUUID()).normalizedDescription("Padaria X").build();
 
     MerchantRule savedRule =
         MerchantRule.builder()
@@ -314,12 +307,12 @@ class ReviewQueueServiceTest {
         .thenReturn(Optional.empty());
     when(merchantRuleRepository.save(any())).thenReturn(savedRule);
     when(merchantAliasRepository.findByAliasIgnoreCase("Padaria X")).thenReturn(Optional.empty());
-    when(transactionRepository.findByImportSessionIdAndUserId(sessionId, userId))
+    when(transactionRepository.findByUserIdAndEffectiveName(userId, "Padaria X"))
         .thenReturn(List.of(matchingTx));
 
     service.resolve(reviewId, request, user);
 
-    verify(transactionRepository).save(matchingTx);
+    verify(transactionRepository).saveAll(List.of(matchingTx));
     assertThat(matchingTx.getCategory()).isEqualTo(category);
     assertThat(matchingTx.getBudgetGroup()).isEqualTo("ESSENTIAL");
   }

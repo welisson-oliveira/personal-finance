@@ -4,11 +4,13 @@ import com.personalfinance.dto.request.CreateTransactionRequest;
 import com.personalfinance.dto.response.TransactionResponse;
 import com.personalfinance.model.entity.Category;
 import com.personalfinance.model.entity.MerchantDisplayName;
+import com.personalfinance.model.entity.MerchantRule;
 import com.personalfinance.model.entity.Transaction;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.CategoryRepository;
 import com.personalfinance.repository.MerchantDisplayNameRepository;
+import com.personalfinance.repository.MerchantRuleRepository;
 import com.personalfinance.repository.TransactionRepository;
 import com.personalfinance.repository.TransactionSpecifications;
 import java.time.LocalDate;
@@ -31,6 +33,7 @@ public class TransactionService {
   private final TransactionRepository transactionRepository;
   private final CategoryRepository categoryRepository;
   private final MerchantDisplayNameRepository merchantDisplayNameRepository;
+  private final MerchantRuleRepository merchantRuleRepository;
 
   @Transactional(readOnly = true)
   public Page<TransactionResponse> findAll(
@@ -92,7 +95,52 @@ public class TransactionService {
     tx.setShared(request.isShared());
     tx.setTotalAmount(request.getTotalAmount());
     tx.setUserShare(request.getUserShare());
-    return toResponse(transactionRepository.save(tx));
+    Transaction saved = transactionRepository.save(tx);
+    propagateClassification(saved, user);
+    return toResponse(saved);
+  }
+
+  /**
+   * Propagates the classification (category, budget group, income type) of an edited transaction to
+   * every other transaction with the same effective name for this user, and learns a merchant rule
+   * so future imports are classified the same way.
+   */
+  private void propagateClassification(Transaction source, User user) {
+    String effectiveName =
+        source.getNormalizedDescription() != null
+            ? source.getNormalizedDescription()
+            : source.getDescription();
+    if (effectiveName == null || effectiveName.isBlank()) return;
+
+    List<Transaction> matching =
+        transactionRepository.findByUserIdAndEffectiveName(user.getId(), effectiveName);
+    for (Transaction t : matching) {
+      if (t.getId().equals(source.getId())) continue;
+      t.setCategory(source.getCategory());
+      t.setBudgetGroup(source.getBudgetGroup());
+      t.setIncomeType(source.getIncomeType());
+    }
+    transactionRepository.saveAll(matching);
+
+    // Learn for future imports (merchant rules classify expenses by budget group + category)
+    if (source.getType() == TransactionType.EXPENSE && source.getBudgetGroup() != null) {
+      MerchantRule rule =
+          merchantRuleRepository
+              .findUserRuleByNormalizedName(effectiveName, user.getId())
+              .orElseGet(
+                  () ->
+                      MerchantRule.builder()
+                          .user(user)
+                          .merchantName(source.getDescription())
+                          .normalizedName(effectiveName)
+                          .createdBy("USER")
+                          .build());
+      rule.setCategory(source.getCategory());
+      rule.setExpenseType(source.getBudgetGroup());
+      rule.setConfidence(100);
+      rule.setCreatedBy("USER");
+      merchantRuleRepository.save(rule);
+    }
   }
 
   @Transactional
