@@ -17,6 +17,7 @@ public class ReviewQueueItemResponse {
   private UUID id;
   private String rawDescription;
   private String normalizedDescription;
+  private String type;
   private BigDecimal amount;
   private LocalDate transactionDate;
   private UUID suggestedCategoryId;

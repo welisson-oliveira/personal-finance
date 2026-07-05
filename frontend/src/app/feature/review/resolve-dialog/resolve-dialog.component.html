@@ -4,22 +4,42 @@
   <p class="raw-desc">{{ data.item.rawDescription }}</p>
 
   <div class="form-fields">
+    <div class="type-toggle">
+      <span class="type-label">Tipo</span>
+      <mat-button-toggle-group [(ngModel)]="type" hideSingleSelectionIndicator>
+        <mat-button-toggle value="EXPENSE">Despesa</mat-button-toggle>
+        <mat-button-toggle value="INCOME">Receita</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Nome normalizado</mat-label>
       <input matInput [value]="merchantName" readonly />
       <mat-hint>Como este estabelecimento ficará salvo para futuras importações</mat-hint>
     </mat-form-field>
 
-    <app-category-select [categories]="data.categories" [(value)]="categoryId" />
+    @if (isIncome) {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Tipo de entrada</mat-label>
+        <mat-select [(ngModel)]="incomeType" required>
+          @for (it of incomeTypes; track it.value) {
+            <mat-option [value]="it.value">{{ it.label }}</mat-option>
+          }
+        </mat-select>
+        <mat-hint>Reembolsos e transferências próprias não contam como receita</mat-hint>
+      </mat-form-field>
+    } @else {
+      <app-category-select [categories]="data.categories" [(value)]="categoryId" />
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Grupo de orçamento</mat-label>
-      <mat-select [(ngModel)]="budgetGroup" required>
-        @for (bg of budgetGroups; track bg.value) {
-          <mat-option [value]="bg.value">{{ bg.label }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Grupo de orçamento</mat-label>
+        <mat-select [(ngModel)]="budgetGroup" required>
+          @for (bg of budgetGroups; track bg.value) {
+            <mat-option [value]="bg.value">{{ bg.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Apelido (opcional)</mat-label>
@@ -31,7 +51,5 @@
 
 <mat-dialog-actions align="end">
   <button mat-button (click)="cancel()">Cancelar</button>
-  <button mat-raised-button color="primary" (click)="confirm()" [disabled]="!merchantName || !budgetGroup">
-    Salvar e Aprender
-  </button>
+  <button mat-raised-button color="primary" (click)="confirm()" [disabled]="!valid">Salvar e Aprender</button>
 </mat-dialog-actions>

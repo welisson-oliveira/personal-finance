@@ -162,6 +162,7 @@ public class TransactionImportService {
                 .importSession(session)
                 .rawDescription(dto.getDescription())
                 .normalizedDescription(dto.getNormalizedDescription())
+                .type(dto.getType())
                 .amount(dto.getAmount())
                 .transactionDate(dto.getDate())
                 .status("PENDING")
