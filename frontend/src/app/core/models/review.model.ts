@@ -2,6 +2,7 @@ export interface ReviewQueueItem {
   id: string;
   rawDescription: string;
   normalizedDescription?: string;
+  type?: string;
   amount: number;
   transactionDate: string;
   suggestedCategoryId?: string;
@@ -11,7 +12,9 @@ export interface ReviewQueueItem {
 
 export interface ResolveReviewRequest {
   categoryId?: string;
-  budgetGroup: string;
+  budgetGroup?: string;
   merchantName: string;
   transactionNotes?: string;
+  type: string;
+  incomeType?: string;
 }

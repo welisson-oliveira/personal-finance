@@ -14,3 +14,16 @@
 .full-width {
   width: 100%;
 }
+
+.type-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  .type-label {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 600;
+  }
+}

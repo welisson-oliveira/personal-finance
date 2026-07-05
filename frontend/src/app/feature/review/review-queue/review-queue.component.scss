@@ -116,3 +116,19 @@
     border-radius: 10px;
   }
 }
+
+.type-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+
+  &.income-badge {
+    background: rgba(76, 175, 80, 0.15);
+    color: #2e7d32;
+  }
+  &.expense-badge {
+    background: rgba(244, 67, 54, 0.1);
+    color: #c62828;
+  }
+}

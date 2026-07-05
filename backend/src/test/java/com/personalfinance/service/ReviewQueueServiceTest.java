@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.personalfinance.dto.request.ResolveReviewRequest;
 import com.personalfinance.dto.response.ReviewQueueItemResponse;
 import com.personalfinance.model.entity.*;
+import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -93,7 +94,8 @@ class ReviewQueueServiceTest {
             .build();
 
     ResolveReviewRequest request =
-        new ResolveReviewRequest(categoryId, "NON_ESSENTIAL", "Loja Desconhecida", null);
+        new ResolveReviewRequest(
+            categoryId, "NON_ESSENTIAL", "Loja Desconhecida", null, "EXPENSE", null);
 
     when(reviewQueueRepository.findById(reviewId)).thenReturn(Optional.of(item));
     when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
@@ -139,7 +141,7 @@ class ReviewQueueServiceTest {
             .build();
 
     ResolveReviewRequest request =
-        new ResolveReviewRequest(null, "ESSENTIAL", "Padaria Central", null);
+        new ResolveReviewRequest(null, "ESSENTIAL", "Padaria Central", null, "EXPENSE", null);
 
     when(reviewQueueRepository.findById(reviewId)).thenReturn(Optional.of(item));
     when(merchantRuleRepository.findUserRuleByNormalizedName("Padaria Central", userId))
@@ -185,7 +187,7 @@ class ReviewQueueServiceTest {
             .build();
 
     ResolveReviewRequest request =
-        new ResolveReviewRequest(null, "ESSENTIAL", "Padaria Central", null);
+        new ResolveReviewRequest(null, "ESSENTIAL", "Padaria Central", null, "EXPENSE", null);
 
     when(reviewQueueRepository.findById(reviewId)).thenReturn(Optional.of(item));
     MerchantRule savedRule =
@@ -219,7 +221,8 @@ class ReviewQueueServiceTest {
             .status("PENDING")
             .build();
 
-    ResolveReviewRequest request = new ResolveReviewRequest(null, "NON_ESSENTIAL", "iFood", null);
+    ResolveReviewRequest request =
+        new ResolveReviewRequest(null, "NON_ESSENTIAL", "iFood", null, "EXPENSE", null);
     MerchantRule existingRule =
         MerchantRule.builder()
             .id(UUID.randomUUID())
@@ -260,7 +263,9 @@ class ReviewQueueServiceTest {
     assertThatThrownBy(
             () ->
                 service.resolve(
-                    reviewId, new ResolveReviewRequest(null, "ESSENTIAL", "Any", null), user))
+                    reviewId,
+                    new ResolveReviewRequest(null, "ESSENTIAL", "Any", null, "EXPENSE", null),
+                    user))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Review item not found");
   }
@@ -285,7 +290,7 @@ class ReviewQueueServiceTest {
 
     Category category = Category.builder().id(UUID.randomUUID()).name("Alimentação").build();
     ResolveReviewRequest request =
-        new ResolveReviewRequest(category.getId(), "ESSENTIAL", "Padaria X", null);
+        new ResolveReviewRequest(category.getId(), "ESSENTIAL", "Padaria X", null, "EXPENSE", null);
 
     // A transaction with the same name from any session (e.g. an older, already confirmed one)
     Transaction matchingTx =
@@ -315,5 +320,49 @@ class ReviewQueueServiceTest {
     verify(transactionRepository).saveAll(List.of(matchingTx));
     assertThat(matchingTx.getCategory()).isEqualTo(category);
     assertThat(matchingTx.getBudgetGroup()).isEqualTo("ESSENTIAL");
+    assertThat(matchingTx.getType()).isEqualTo(TransactionType.EXPENSE);
+  }
+
+  @Test
+  void resolve_as_income_sets_income_type_and_clears_expense_fields() {
+    UUID reviewId = UUID.randomUUID();
+    ReviewQueue item =
+        ReviewQueue.builder()
+            .id(reviewId)
+            .user(user)
+            .rawDescription("PIX Recebido Fulano")
+            .normalizedDescription("PIX Recebido Fulano")
+            .type("EXPENSE") // wrongly inferred as expense
+            .amount(new BigDecimal("200.00"))
+            .transactionDate(LocalDate.of(2026, 5, 12))
+            .status("PENDING")
+            .build();
+
+    ResolveReviewRequest request =
+        new ResolveReviewRequest(
+            null, null, "PIX Recebido Fulano", null, "INCOME", "REIMBURSEMENT");
+
+    Transaction matchingTx =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .normalizedDescription("PIX Recebido Fulano")
+            .type(TransactionType.EXPENSE)
+            .budgetGroup("NON_ESSENTIAL")
+            .build();
+
+    when(reviewQueueRepository.findById(reviewId)).thenReturn(Optional.of(item));
+    when(transactionRepository.findByUserIdAndEffectiveName(userId, "PIX Recebido Fulano"))
+        .thenReturn(List.of(matchingTx));
+
+    service.resolve(reviewId, request, user);
+
+    // Income is not learned as a merchant rule/alias
+    verify(merchantRuleRepository, never()).save(any());
+    verify(merchantAliasRepository, never()).save(any());
+    // The transaction is switched to income and expense-only fields are cleared
+    assertThat(matchingTx.getType()).isEqualTo(TransactionType.INCOME);
+    assertThat(matchingTx.getIncomeType()).isEqualTo("REIMBURSEMENT");
+    assertThat(matchingTx.getBudgetGroup()).isNull();
+    assertThat(matchingTx.getCategory()).isNull();
   }
 }

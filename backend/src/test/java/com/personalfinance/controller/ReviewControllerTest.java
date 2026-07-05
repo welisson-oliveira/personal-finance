@@ -81,7 +81,7 @@ class ReviewControllerTest {
                 .build());
 
     ResolveReviewRequest request =
-        new ResolveReviewRequest(null, "NON_ESSENTIAL", "Lanchonete Nova", null);
+        new ResolveReviewRequest(null, "NON_ESSENTIAL", "Lanchonete Nova", null, "EXPENSE", null);
 
     mockMvc
         .perform(
@@ -121,7 +121,7 @@ class ReviewControllerTest {
                 .build());
 
     ResolveReviewRequest request =
-        new ResolveReviewRequest(null, "NON_ESSENTIAL", "Burger King", null);
+        new ResolveReviewRequest(null, "NON_ESSENTIAL", "Burger King", null, "EXPENSE", null);
 
     mockMvc
         .perform(
@@ -155,7 +155,7 @@ class ReviewControllerTest {
                 .build());
 
     ResolveReviewRequest request =
-        new ResolveReviewRequest(null, "ESSENTIAL", "Secret Purchase", null);
+        new ResolveReviewRequest(null, "ESSENTIAL", "Secret Purchase", null, "EXPENSE", null);
 
     mockMvc
         .perform(

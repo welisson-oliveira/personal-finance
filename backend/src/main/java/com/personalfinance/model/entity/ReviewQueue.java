@@ -35,6 +35,9 @@ public class ReviewQueue {
   @Column(name = "normalized_description", length = 255)
   private String normalizedDescription;
 
+  @Column(length = 20)
+  private String type;
+
   @Column(nullable = false, precision = 19, scale = 2)
   private BigDecimal amount;
 

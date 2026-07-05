@@ -31,6 +31,13 @@
                 <div class="item-raw">Original: {{ item.rawDescription }}</div>
               }
               <div class="item-meta">
+                <span
+                  class="type-badge"
+                  [class.income-badge]="item.type === 'INCOME'"
+                  [class.expense-badge]="item.type !== 'INCOME'"
+                >
+                  {{ item.type === 'INCOME' ? 'Receita' : 'Despesa' }}
+                </span>
                 <span class="item-date">{{ item.transactionDate | date: 'dd/MM/yyyy' }}</span>
                 <span class="item-amount">R$ {{ item.amount | number: '1.2-2' }}</span>
                 @if (item.suggestedCategoryName) {

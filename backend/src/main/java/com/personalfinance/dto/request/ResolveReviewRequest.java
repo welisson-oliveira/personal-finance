@@ -15,9 +15,16 @@ public class ResolveReviewRequest {
 
   private UUID categoryId;
 
-  @NotBlank private String budgetGroup;
+  // Budget group is required for expenses; not used for income
+  private String budgetGroup;
 
   @NotBlank private String merchantName;
 
   private String transactionNotes;
+
+  // INCOME or EXPENSE — lets the user correct a wrong type inference
+  private String type;
+
+  // Only for income (INCOME / REIMBURSEMENT / OWN_TRANSFER / INVESTMENT)
+  private String incomeType;
 }
