@@ -40,20 +40,29 @@ class NubankExtratoParserTest {
   }
 
   @Test
-  void rdb_transactions_are_filtered() {
-    List<ParsedTransactionDTO> txs = result.transactions();
-    assertThat(txs)
-        .noneMatch(t -> t.getDescription().contains("Resgate RDB"))
-        .noneMatch(
-            t ->
-                t.getDescription().toLowerCase().contains("aplica")
-                    && t.getDescription().contains("RDB"));
+  void rdb_transactions_are_present_as_internal_excluded() {
+    List<ParsedTransactionDTO> rdbs =
+        result.transactions().stream()
+            .filter(
+                t ->
+                    t.getDescription().contains("Resgate RDB")
+                        || (t.getDescription().toLowerCase().contains("aplica")
+                            && t.getDescription().contains("RDB")))
+            .toList();
+    assertThat(rdbs).isNotEmpty();
+    assertThat(rdbs).allMatch(t -> !t.isIncluded());
+    assertThat(rdbs).allMatch(t -> "INTERNAL".equals(t.getAutoClassification()));
   }
 
   @Test
-  void pagamento_fatura_is_filtered() {
-    assertThat(result.transactions())
-        .noneMatch(t -> t.getDescription().startsWith("Pagamento de fatura"));
+  void pagamento_fatura_when_present_is_marked_as_internal_excluded() {
+    result.transactions().stream()
+        .filter(t -> t.getDescription().startsWith("Pagamento de fatura"))
+        .forEach(
+            t -> {
+              assertThat(t.isIncluded()).isFalse();
+              assertThat(t.getAutoClassification()).isEqualTo("INTERNAL");
+            });
   }
 
   @Test
