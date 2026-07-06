@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Transaction, UpdateTransactionRequest } from '../../../core/models/transaction.model';
 import { Category } from '../../../core/models/category.model';
 import { CurrencyMaskDirective } from '../../../shared/currency-mask/currency-mask.directive';
@@ -29,6 +30,7 @@ interface DialogData {
     MatInputModule,
     CurrencyMaskDirective,
     CategorySelectComponent,
+    MatTooltipModule,
   ],
   templateUrl: './transaction-edit-dialog.component.html',
   styleUrl: './transaction-edit-dialog.component.scss',
@@ -48,18 +50,46 @@ export class TransactionEditDialogComponent {
   ];
 
   incomeTypes = [
-    { value: '', label: 'Nenhum' },
-    { value: 'INCOME', label: 'Receita real' },
-    { value: 'REIMBURSEMENT', label: 'Reembolso' },
-    { value: 'OWN_TRANSFER', label: 'Transferência própria' },
-    { value: 'INVESTMENT', label: 'Investimento' },
+    { value: '', label: 'Nenhum', tooltip: '' },
+    {
+      value: 'INCOME',
+      label: 'Receita real',
+      tooltip: 'Entrada de dinheiro que conta para o orçamento mensal',
+    },
+    {
+      value: 'REIMBURSEMENT',
+      label: 'Reembolso',
+      tooltip: 'Devolução de um gasto já registrado. Não entra no cálculo de receita',
+    },
+    {
+      value: 'OWN_TRANSFER',
+      label: 'Transferência própria',
+      tooltip: 'Movimentação entre contas próprias. Ignorada no cálculo de receita',
+    },
+    {
+      value: 'INVESTMENT',
+      label: 'Investimento',
+      tooltip: 'Resgate de aplicação financeira. Não conta como receita do mês',
+    },
   ];
 
   budgetGroups = [
-    { value: '', label: 'Nenhum' },
-    { value: 'ESSENTIAL', label: 'Essencial (50%)' },
-    { value: 'NON_ESSENTIAL', label: 'Não Essencial (30%)' },
-    { value: 'INVESTMENT', label: 'Investimento (20%)' },
+    { value: '', label: 'Nenhum', tooltip: '' },
+    {
+      value: 'ESSENTIAL',
+      label: 'Essencial (50%)',
+      tooltip: 'Gastos necessários: moradia, alimentação, transporte, saúde. Meta: 50%',
+    },
+    {
+      value: 'NON_ESSENTIAL',
+      label: 'Não Essencial (30%)',
+      tooltip: 'Lazer, assinaturas, compras não prioritárias. Meta: 30%',
+    },
+    {
+      value: 'INVESTMENT',
+      label: 'Investimento (20%)',
+      tooltip: 'Aportes em reservas e aplicações financeiras. Meta: 20%',
+    },
   ];
 
   constructor(

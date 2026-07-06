@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ReviewService } from '../review.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { ReviewQueueItem, ResolveReviewRequest } from '../../../core/models/review.model';
@@ -30,6 +31,7 @@ import { ResolveDialogComponent } from '../resolve-dialog/resolve-dialog.compone
     MatInputModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    MatTooltipModule,
     MatDialogModule,
   ],
   templateUrl: './review-queue.component.html',

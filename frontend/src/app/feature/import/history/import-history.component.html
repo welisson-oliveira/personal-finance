@@ -46,7 +46,17 @@
               @if (session.status === 'CONFIRMED') {
                 <span class="tx-count">{{ session.transactionCount }} transações</span>
               }
-              <mat-chip [color]="statusColor(session.status)" highlighted>
+              <mat-chip
+                [color]="statusColor(session.status)"
+                highlighted
+                [matTooltip]="
+                  session.status === 'CONFIRMED'
+                    ? 'Transações importadas e registradas'
+                    : session.status === 'CANCELLED'
+                      ? 'Importação descartada pelo usuário'
+                      : 'Aguardando sua confirmação no preview'
+                "
+              >
                 {{ statusLabel(session.status) }}
               </mat-chip>
               @if (session.status === 'CONFIRMED') {

@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DashboardService } from './dashboard.service';
 import { DashboardResponse } from '../../core/models/dashboard.model';
 import { PeriodService } from '../../core/services/period.service';
@@ -21,6 +22,7 @@ import { PeriodService } from '../../core/services/period.service';
     MatProgressBarModule,
     MatButtonModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
