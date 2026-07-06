@@ -218,19 +218,28 @@ public class NubankExtratoParser {
       BigDecimal amount,
       List<ParsedTransactionDTO> transactions) {
     if (date == null || descLines.isEmpty()) return;
-    String firstLine = descLines.get(0);
-    String type = incomeBlock ? "INCOME" : "EXPENSE";
-    boolean openBanking =
-        firstLine.contains("via")
-            && descLines.size() > 1
-            && descLines.stream().anyMatch(l -> l.contains("Open Banking"));
+    String description = String.join(" ", descLines).replaceAll("\\s+", " ").trim();
+    String type = resolveType(description, incomeBlock);
     transactions.add(
         ParsedTransactionDTO.builder()
             .date(date)
-            .description(String.join(" ", descLines).replaceAll("\\s+", " ").trim())
+            .description(description)
             .amount(amount)
             .type(type)
             .build());
+  }
+
+  /**
+   * The Nubank statement groups lines under "Total de entradas/saídas" headers, but that section
+   * can be mis-detected for a given line. The transfer wording itself is authoritative: "recebida"
+   * means money in (INCOME), "enviada" means money out (EXPENSE). Fall back to the section
+   * otherwise.
+   */
+  private String resolveType(String description, boolean incomeBlock) {
+    String lower = description.toLowerCase();
+    if (lower.contains("recebida") || lower.contains("recebido")) return "INCOME";
+    if (lower.contains("enviada") || lower.contains("enviado")) return "EXPENSE";
+    return incomeBlock ? "INCOME" : "EXPENSE";
   }
 
   private boolean isBoilerplate(String line, String holderName) {

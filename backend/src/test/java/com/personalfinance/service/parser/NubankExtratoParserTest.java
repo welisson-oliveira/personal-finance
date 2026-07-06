@@ -126,4 +126,39 @@ class NubankExtratoParserTest {
   void at_least_twenty_transactions_present() {
     assertThat(result.transactions()).hasSizeGreaterThanOrEqualTo(20);
   }
+
+  @Test
+  void received_transfer_under_saidas_section_is_income() {
+    // Reproduces the bug: a "recebida" transfer that falls under a "saídas" block
+    String text =
+        String.join(
+            "\n",
+            "Movimentações",
+            "10 MAI 2026 Total de saídas -",
+            "Transferência recebida pelo Pix ROSANGELA ELISABETH SANTOS OLIVEIRA",
+            "100,00");
+    NubankExtratoParser.ParseResult r = new NubankExtratoParser().parse(text, HOLDER);
+
+    assertThat(r.transactions())
+        .anyMatch(
+            t ->
+                t.getDescription().contains("ROSANGELA")
+                    && "INCOME".equals(t.getType())
+                    && t.getAmount().compareTo(new BigDecimal("100.00")) == 0);
+  }
+
+  @Test
+  void sent_transfer_under_entradas_section_is_expense() {
+    String text =
+        String.join(
+            "\n",
+            "Movimentações",
+            "10 MAI 2026 Total de entradas +",
+            "Transferência enviada pelo Pix FULANO DE TAL",
+            "50,00");
+    NubankExtratoParser.ParseResult r = new NubankExtratoParser().parse(text, HOLDER);
+
+    assertThat(r.transactions())
+        .anyMatch(t -> t.getDescription().contains("FULANO") && "EXPENSE".equals(t.getType()));
+  }
 }
