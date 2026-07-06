@@ -101,7 +101,13 @@
                 <mat-chip
                   [color]="statusColor(session.status)"
                   highlighted
-                  [matTooltip]="session.status === 'CONFIRMED' ? 'Transações importadas e registradas' : session.status === 'CANCELLED' ? 'Importação descartada pelo usuário' : 'Aguardando sua confirmação no preview'"
+                  [matTooltip]="
+                    session.status === 'CONFIRMED'
+                      ? 'Transações importadas e registradas'
+                      : session.status === 'CANCELLED'
+                        ? 'Importação descartada pelo usuário'
+                        : 'Aguardando sua confirmação no preview'
+                  "
                 >
                   {{ statusLabel(session.status) }}
                 </mat-chip>

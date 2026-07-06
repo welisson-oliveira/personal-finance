@@ -5,8 +5,13 @@
       <div class="meta">
         <span
           class="badge"
-          [matTooltip]="preview.documentType === 'EXTRATO' ? 'Extrato da conta corrente Nubank' : 'Fatura do cartão de crédito Nubank'"
-        >{{ preview.documentType }}</span>
+          [matTooltip]="
+            preview.documentType === 'EXTRATO'
+              ? 'Extrato da conta corrente Nubank'
+              : 'Fatura do cartão de crédito Nubank'
+          "
+          >{{ preview.documentType }}</span
+        >
         <span class="period"
           >{{ preview.periodStart | date: 'MMM d' }} – {{ preview.periodEnd | date: 'MMM d, yyyy' }}</span
         >
@@ -55,16 +60,16 @@
               <div class="desc-sub installment">Parcel {{ tx.installmentInfo }}</div>
             }
             @if (tx.autoClassification) {
-              <span
-                class="auto-class-badge"
-                [matTooltip]="autoClassificationTooltip(tx.autoClassification)"
-              >{{ autoClassificationLabel(tx.autoClassification) }}</span>
+              <span class="auto-class-badge" [matTooltip]="autoClassificationTooltip(tx.autoClassification)">{{
+                autoClassificationLabel(tx.autoClassification)
+              }}</span>
             }
             @if (tx.needsReview) {
               <mat-icon
                 class="review-icon"
                 matTooltip="Classificação automática não encontrada. Revise na fila após confirmar"
-              >warning</mat-icon>
+                >warning</mat-icon
+              >
             }
           </td>
         </ng-container>

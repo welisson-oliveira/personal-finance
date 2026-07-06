@@ -76,8 +76,13 @@
                 @if (tx.source !== 'MANUAL') {
                   <span
                     class="source-badge"
-                    [matTooltip]="tx.source === 'EXTRATO' ? 'Importada do extrato da conta corrente' : 'Importada da fatura do cartão de crédito'"
-                  >{{ tx.source }}</span>
+                    [matTooltip]="
+                      tx.source === 'EXTRATO'
+                        ? 'Importada do extrato da conta corrente'
+                        : 'Importada da fatura do cartão de crédito'
+                    "
+                    >{{ tx.source }}</span
+                  >
                 }
                 <mat-icon class="edit-icon">edit</mat-icon>
               </div>
