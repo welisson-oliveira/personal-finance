@@ -35,6 +35,7 @@
                   class="type-badge"
                   [class.income-badge]="item.type === 'INCOME'"
                   [class.expense-badge]="item.type !== 'INCOME'"
+                  [matTooltip]="item.type === 'INCOME' ? 'Entrada de dinheiro' : 'Saída de dinheiro'"
                 >
                   {{ item.type === 'INCOME' ? 'Receita' : 'Despesa' }}
                 </span>

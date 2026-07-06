@@ -12,28 +12,45 @@
   <!-- Receita -->
   <div class="section-title">Receita — {{ period.label() }}</div>
   <div class="cards-row">
-    <mat-card class="metric-card income">
+    <mat-card
+      class="metric-card income"
+      matTooltip="Total de receitas classificadas como 'Receita real' no período"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>trending_up</mat-icon>
         <div class="metric-label">Receita Bruta</div>
         <div class="metric-value">{{ fmt(data.receitaBruta) }}</div>
       </mat-card-content>
     </mat-card>
-    <mat-card class="metric-card reimbursement">
+    <mat-card
+      class="metric-card reimbursement"
+      matTooltip="Devoluções recebidas. Não entram no cálculo de receita real"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>swap_horiz</mat-icon>
         <div class="metric-label">Reembolsos</div>
         <div class="metric-value">{{ fmt(data.reembolsos) }}</div>
       </mat-card-content>
     </mat-card>
-    <mat-card class="metric-card real-income">
+    <mat-card
+      class="metric-card real-income"
+      matTooltip="Receita bruta do período. Base para a distribuição 50/30/20"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>attach_money</mat-icon>
         <div class="metric-label">Receita Real</div>
         <div class="metric-value">{{ fmt(data.receitaReal) }}</div>
       </mat-card-content>
     </mat-card>
-    <mat-card class="metric-card balance" [class.negative]="data.saldo < 0">
+    <mat-card
+      class="metric-card balance"
+      [class.negative]="data.saldo < 0"
+      matTooltip="Receita real menos o total de despesas do período"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>account_balance_wallet</mat-icon>
         <div class="metric-label">Saldo</div>
@@ -54,7 +71,10 @@
         </p>
       }
       <div class="budget-row">
-        <div class="budget-label">
+        <div
+          class="budget-label"
+          matTooltip="Gastos necessários: moradia, alimentação, transporte, saúde. Meta: até 50% da renda"
+        >
           <span class="dot essential"></span>
           Essenciais
           @if (hasBase()) {
@@ -78,7 +98,10 @@
       ></mat-progress-bar>
 
       <div class="budget-row">
-        <div class="budget-label">
+        <div
+          class="budget-label"
+          matTooltip="Lazer, assinaturas, compras não prioritárias. Meta: até 30% da renda"
+        >
           <span class="dot non-essential"></span>
           Não Essenciais
           @if (hasBase()) {
@@ -102,7 +125,10 @@
       ></mat-progress-bar>
 
       <div class="budget-row">
-        <div class="budget-label">
+        <div
+          class="budget-label"
+          matTooltip="Aportes e reservas financeiras. Meta: ao menos 20% da renda"
+        >
           <span class="dot investment"></span>
           Investimentos
           @if (hasBase()) {
@@ -134,21 +160,33 @@
   <!-- Despesas -->
   <div class="section-title">Despesas</div>
   <div class="cards-row">
-    <mat-card class="metric-card essential">
+    <mat-card
+      class="metric-card essential"
+      matTooltip="Gastos necessários: moradia, alimentação, transporte, saúde"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>home</mat-icon>
         <div class="metric-label">Essenciais</div>
         <div class="metric-value">{{ fmt(data.despesasEssenciais) }}</div>
       </mat-card-content>
     </mat-card>
-    <mat-card class="metric-card non-essential">
+    <mat-card
+      class="metric-card non-essential"
+      matTooltip="Lazer, assinaturas, compras não prioritárias"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>local_mall</mat-icon>
         <div class="metric-label">Não Essenciais</div>
         <div class="metric-value">{{ fmt(data.despesasNaoEssenciais) }}</div>
       </mat-card-content>
     </mat-card>
-    <mat-card class="metric-card total-expenses">
+    <mat-card
+      class="metric-card total-expenses"
+      matTooltip="Soma de todas as despesas do período"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>receipt</mat-icon>
         <div class="metric-label">Total Despesas</div>
@@ -160,14 +198,22 @@
   <!-- Investimentos -->
   <div class="section-title">Investimentos</div>
   <div class="cards-row">
-    <mat-card class="metric-card investment">
+    <mat-card
+      class="metric-card investment"
+      matTooltip="Despesas com grupo 'Investimento' no período"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>trending_up</mat-icon>
         <div class="metric-label">Investido</div>
         <div class="metric-value">{{ fmt(data.investido) }}</div>
       </mat-card-content>
     </mat-card>
-    <mat-card class="metric-card reimbursement">
+    <mat-card
+      class="metric-card reimbursement"
+      matTooltip="Receitas classificadas como resgate de investimento"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>trending_down</mat-icon>
         <div class="metric-label">Resgatado</div>

@@ -13,6 +13,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TransactionService } from '../transaction.service';
 import {
   Page,
@@ -42,6 +43,7 @@ import { PeriodService } from '../../../core/services/period.service';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatDialogModule,
+    MatTooltipModule,
   ],
   templateUrl: './transaction-list.component.html',
   styleUrl: './transaction-list.component.scss',
@@ -72,6 +74,19 @@ export class TransactionListComponent implements OnInit {
     REIMBURSEMENT: 'Reembolso',
     OWN_TRANSFER: 'Transf. própria',
     INVESTMENT: 'Investimento',
+  };
+
+  incomeTypeTooltips: Record<string, string> = {
+    INCOME: 'Entrada de dinheiro que conta para o orçamento mensal',
+    REIMBURSEMENT: 'Devolução de um gasto já registrado. Não entra no cálculo de receita',
+    OWN_TRANSFER: 'Movimentação entre contas próprias. Ignorada no cálculo de receita',
+    INVESTMENT: 'Resgate de aplicação financeira. Não conta como receita do mês',
+  };
+
+  budgetGroupTooltips: Record<string, string> = {
+    ESSENTIAL: 'Gastos necessários: moradia, alimentação, transporte, saúde. Meta 50/30/20: 50%',
+    NON_ESSENTIAL: 'Lazer, assinaturas, compras não prioritárias. Meta 50/30/20: 30%',
+    INVESTMENT: 'Aportes em reservas e aplicações financeiras. Meta 50/30/20: 20%',
   };
 
   typeOptions = [

@@ -3,7 +3,10 @@
     <div class="header-info">
       <h1>Import Preview</h1>
       <div class="meta">
-        <span class="badge">{{ preview.documentType }}</span>
+        <span
+          class="badge"
+          [matTooltip]="preview.documentType === 'EXTRATO' ? 'Extrato da conta corrente Nubank' : 'Fatura do cartão de crédito Nubank'"
+        >{{ preview.documentType }}</span>
         <span class="period"
           >{{ preview.periodStart | date: 'MMM d' }} – {{ preview.periodEnd | date: 'MMM d, yyyy' }}</span
         >
@@ -52,12 +55,16 @@
               <div class="desc-sub installment">Parcel {{ tx.installmentInfo }}</div>
             }
             @if (tx.autoClassification) {
-              <span class="auto-class-badge" [matTooltip]="autoClassificationLabel(tx.autoClassification)">{{
-                autoClassificationLabel(tx.autoClassification)
-              }}</span>
+              <span
+                class="auto-class-badge"
+                [matTooltip]="autoClassificationTooltip(tx.autoClassification)"
+              >{{ autoClassificationLabel(tx.autoClassification) }}</span>
             }
             @if (tx.needsReview) {
-              <mat-icon class="review-icon" title="Needs review">warning</mat-icon>
+              <mat-icon
+                class="review-icon"
+                matTooltip="Classificação automática não encontrada. Revise na fila após confirmar"
+              >warning</mat-icon>
             }
           </td>
         </ng-container>
@@ -75,25 +82,28 @@
         </ng-container>
 
         <ng-container matColumnDef="type">
-          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <th mat-header-cell *matHeaderCellDef>Tipo</th>
           <td mat-cell *matCellDef="let tx">
             <span
               class="type-chip"
               [class.income-chip]="tx.type === 'INCOME'"
               [class.expense-chip]="tx.type === 'EXPENSE'"
+              [matTooltip]="tx.type === 'INCOME' ? 'Entrada de dinheiro' : 'Saída de dinheiro'"
             >
-              {{ tx.type }}
+              {{ tx.type === 'INCOME' ? 'Receita' : 'Despesa' }}
             </span>
           </td>
         </ng-container>
 
         <ng-container matColumnDef="incomeType">
-          <th mat-header-cell *matHeaderCellDef>Income Type</th>
+          <th mat-header-cell *matHeaderCellDef>Tipo de entrada</th>
           <td mat-cell *matCellDef="let tx">
             @if (tx.type === 'INCOME') {
               <mat-select [(ngModel)]="tx.incomeType" class="inline-select">
                 @for (opt of incomeTypes; track opt.value) {
-                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  <mat-option [value]="opt.value" [matTooltip]="opt.tooltip" matTooltipPosition="right">
+                    {{ opt.label }}
+                  </mat-option>
                 }
               </mat-select>
             } @else {
@@ -103,12 +113,14 @@
         </ng-container>
 
         <ng-container matColumnDef="budgetGroup">
-          <th mat-header-cell *matHeaderCellDef>Budget Group</th>
+          <th mat-header-cell *matHeaderCellDef>Grupo</th>
           <td mat-cell *matCellDef="let tx">
             @if (tx.type === 'EXPENSE') {
               <mat-select [(ngModel)]="tx.budgetGroup" class="inline-select">
                 @for (opt of budgetGroups; track opt.value) {
-                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  <mat-option [value]="opt.value" [matTooltip]="opt.tooltip" matTooltipPosition="right">
+                    {{ opt.label }}
+                  </mat-option>
                 }
               </mat-select>
             } @else {

@@ -10,6 +10,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ImportService } from '../import.service';
 import { ImportPreviewResponse, ImportSessionResponse } from '../../../core/models/import.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
@@ -34,6 +35,7 @@ interface MonthGroup {
     MatDividerModule,
     MatSnackBarModule,
     MatDialogModule,
+    MatTooltipModule,
   ],
   templateUrl: './upload.component.html',
   styleUrl: './upload.component.scss',

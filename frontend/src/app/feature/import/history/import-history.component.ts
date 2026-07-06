@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ImportService } from '../import.service';
 import { ImportSessionResponse } from '../../../core/models/import.model';
 import { PeriodService } from '../../../core/services/period.service';
@@ -27,6 +28,7 @@ interface MonthGroup {
     MatChipsModule,
     MatProgressSpinnerModule,
     MatDividerModule,
+    MatTooltipModule,
   ],
   templateUrl: './import-history.component.html',
   styleUrl: './import-history.component.scss',

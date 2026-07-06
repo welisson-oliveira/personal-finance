@@ -7,6 +7,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ReviewQueueItem, ResolveReviewRequest } from '../../../core/models/review.model';
 import { Category } from '../../../core/models/category.model';
 import { CategorySelectComponent } from '../../../shared/category-select/category-select.component';
@@ -28,6 +29,7 @@ interface DialogData {
     MatFormFieldModule,
     MatSelectModule,
     MatInputModule,
+    MatTooltipModule,
     CategorySelectComponent,
   ],
   templateUrl: './resolve-dialog.component.html',
@@ -42,16 +44,44 @@ export class ResolveDialogComponent {
   transactionNotes = '';
 
   budgetGroups = [
-    { value: 'ESSENTIAL', label: 'Essencial (50%)' },
-    { value: 'NON_ESSENTIAL', label: 'Não Essencial (30%)' },
-    { value: 'INVESTMENT', label: 'Investimento (20%)' },
+    {
+      value: 'ESSENTIAL',
+      label: 'Essencial (50%)',
+      tooltip: 'Gastos necessários: moradia, alimentação, transporte, saúde. Meta: 50%',
+    },
+    {
+      value: 'NON_ESSENTIAL',
+      label: 'Não Essencial (30%)',
+      tooltip: 'Lazer, assinaturas, compras não prioritárias. Meta: 30%',
+    },
+    {
+      value: 'INVESTMENT',
+      label: 'Investimento (20%)',
+      tooltip: 'Aportes em reservas e aplicações financeiras. Meta: 20%',
+    },
   ];
 
   incomeTypes = [
-    { value: 'INCOME', label: 'Receita real' },
-    { value: 'REIMBURSEMENT', label: 'Reembolso' },
-    { value: 'OWN_TRANSFER', label: 'Transferência própria' },
-    { value: 'INVESTMENT', label: 'Investimento' },
+    {
+      value: 'INCOME',
+      label: 'Receita real',
+      tooltip: 'Entrada de dinheiro que conta para o orçamento mensal',
+    },
+    {
+      value: 'REIMBURSEMENT',
+      label: 'Reembolso',
+      tooltip: 'Devolução de um gasto já registrado. Não entra no cálculo de receita',
+    },
+    {
+      value: 'OWN_TRANSFER',
+      label: 'Transferência própria',
+      tooltip: 'Movimentação entre contas próprias. Ignorada no cálculo de receita',
+    },
+    {
+      value: 'INVESTMENT',
+      label: 'Investimento',
+      tooltip: 'Resgate de aplicação financeira. Não conta como receita do mês',
+    },
   ];
 
   constructor(

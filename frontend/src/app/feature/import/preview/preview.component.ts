@@ -61,16 +61,44 @@ export class PreviewComponent implements OnInit {
   ];
 
   incomeTypes = [
-    { value: 'INCOME', label: 'Income' },
-    { value: 'REIMBURSEMENT', label: 'Reimbursement' },
-    { value: 'OWN_TRANSFER', label: 'Own Transfer' },
-    { value: 'INVESTMENT', label: 'Investment' },
+    {
+      value: 'INCOME',
+      label: 'Receita real',
+      tooltip: 'Entrada de dinheiro que conta para o orçamento mensal',
+    },
+    {
+      value: 'REIMBURSEMENT',
+      label: 'Reembolso',
+      tooltip: 'Devolução de um gasto já registrado. Não entra no cálculo de receita',
+    },
+    {
+      value: 'OWN_TRANSFER',
+      label: 'Transf. própria',
+      tooltip: 'Movimentação entre contas próprias. Ignorada no cálculo de receita',
+    },
+    {
+      value: 'INVESTMENT',
+      label: 'Investimento',
+      tooltip: 'Resgate de aplicação financeira. Não conta como receita do mês',
+    },
   ];
 
   budgetGroups = [
-    { value: 'ESSENTIAL', label: 'Essential' },
-    { value: 'NON_ESSENTIAL', label: 'Non-Essential' },
-    { value: 'INVESTMENT', label: 'Investment' },
+    {
+      value: 'ESSENTIAL',
+      label: 'Essencial',
+      tooltip: 'Gastos necessários: moradia, alimentação, transporte, saúde. Meta: 50%',
+    },
+    {
+      value: 'NON_ESSENTIAL',
+      label: 'Não Essencial',
+      tooltip: 'Lazer, assinaturas, compras não prioritárias. Meta: 30%',
+    },
+    {
+      value: 'INVESTMENT',
+      label: 'Investimento',
+      tooltip: 'Aportes em reservas e aplicações financeiras. Meta: 20%',
+    },
   ];
 
   constructor(
@@ -105,6 +133,18 @@ export class PreviewComponent implements OnInit {
       INTERNAL: 'Transação interna',
     };
     return ac ? (labels[ac] ?? ac) : '';
+  }
+
+  autoClassificationTooltip(ac: string | undefined): string {
+    const tooltips: Record<string, string> = {
+      OWN_TRANSFER:
+        'Transferência entre contas próprias detectada automaticamente. Não será contabilizada como receita',
+      INVESTMENT:
+        'Resgate de aplicação detectado automaticamente. Não será contabilizado como receita do mês',
+      INTERNAL:
+        'Transação interna (fatura ou RDB). Desmarcada para evitar dupla contagem — inclua apenas se souber o que está fazendo',
+    };
+    return ac ? (tooltips[ac] ?? ac) : '';
   }
 
   confirm(): void {

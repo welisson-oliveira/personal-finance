@@ -23,7 +23,9 @@
         <mat-label>Tipo de entrada</mat-label>
         <mat-select [(ngModel)]="incomeType" required>
           @for (it of incomeTypes; track it.value) {
-            <mat-option [value]="it.value">{{ it.label }}</mat-option>
+            <mat-option [value]="it.value" [matTooltip]="it.tooltip" matTooltipPosition="right">
+              {{ it.label }}
+            </mat-option>
           }
         </mat-select>
         <mat-hint>Reembolsos e transferências próprias não contam como receita</mat-hint>
@@ -35,9 +37,12 @@
         <mat-label>Grupo de orçamento</mat-label>
         <mat-select [(ngModel)]="budgetGroup" required>
           @for (bg of budgetGroups; track bg.value) {
-            <mat-option [value]="bg.value">{{ bg.label }}</mat-option>
+            <mat-option [value]="bg.value" [matTooltip]="bg.tooltip" matTooltipPosition="right">
+              {{ bg.label }}
+            </mat-option>
           }
         </mat-select>
+        <mat-hint>Regra 50/30/20: Essencial → Não Essencial → Investimento</mat-hint>
       </mat-form-field>
     }
 
