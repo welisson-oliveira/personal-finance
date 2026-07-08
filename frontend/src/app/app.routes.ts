@@ -71,6 +71,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'budget-goals',
+        loadComponent: () =>
+          import('./feature/budget-goals/budget-goal-list/budget-goal-list.component').then(
+            (m) => m.BudgetGoalListComponent
+          ),
+      },
+      {
         path: 'known-persons',
         loadComponent: () =>
           import('./feature/known-persons/known-person-list/known-person-list.component').then(

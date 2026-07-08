@@ -69,6 +69,17 @@ public interface TransactionRepository
       @Param("end") LocalDate end);
 
   @Query(
+      "SELECT COALESCE(SUM(CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END), 0) "
+          + "FROM Transaction t "
+          + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.category.id = :categoryId "
+          + "AND t.date BETWEEN :start AND :end")
+  BigDecimal sumExpenseByCategoryAndDateBetween(
+      @Param("userId") UUID userId,
+      @Param("categoryId") UUID categoryId,
+      @Param("start") LocalDate start,
+      @Param("end") LocalDate end);
+
+  @Query(
       "SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t "
           + "WHERE t.user.id = :userId AND t.type = :type AND t.date BETWEEN :start AND :end")
   BigDecimal sumByUserIdAndTypeAndDateBetween(

@@ -40,6 +40,7 @@ export class LayoutComponent {
     { label: 'Importar', icon: 'upload_file', route: '/import' },
     { label: 'Fila de Revisão', icon: 'rate_review', route: '/review' },
     { label: 'Categorias', icon: 'category', route: '/categories' },
+    { label: 'Metas', icon: 'savings', route: '/budget-goals' },
     { label: 'Pessoas Conhecidas', icon: 'people', route: '/known-persons' },
     { label: 'Configurações', icon: 'settings', route: '/settings' },
   ];
