@@ -42,11 +42,6 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./feature/import/preview/preview.component').then((m) => m.PreviewComponent),
           },
-          {
-            path: 'history',
-            redirectTo: '/import',
-            pathMatch: 'full',
-          },
         ],
       },
       {
