@@ -40,7 +40,7 @@ class NubankExtratoParserTest {
   }
 
   @Test
-  void rdb_transactions_are_present_as_internal_excluded() {
+  void rdb_transactions_are_classified_as_investment_and_included() {
     List<ParsedTransactionDTO> rdbs =
         result.transactions().stream()
             .filter(
@@ -50,8 +50,20 @@ class NubankExtratoParserTest {
                             && t.getDescription().contains("RDB")))
             .toList();
     assertThat(rdbs).isNotEmpty();
-    assertThat(rdbs).allMatch(t -> !t.isIncluded());
-    assertThat(rdbs).allMatch(t -> "INTERNAL".equals(t.getAutoClassification()));
+    // RDB now feeds the dashboard: aporte = despesa/Investimento; resgate = receita/Investimento
+    assertThat(rdbs).allMatch(ParsedTransactionDTO::isIncluded);
+    assertThat(rdbs).allMatch(t -> "INVESTMENT".equals(t.getAutoClassification()));
+    assertThat(rdbs)
+        .allSatisfy(
+            t -> {
+              if (t.getDescription().toLowerCase().startsWith("resgate")) {
+                assertThat(t.getType()).isEqualTo("INCOME");
+                assertThat(t.getIncomeType()).isEqualTo("INVESTMENT");
+              } else {
+                assertThat(t.getType()).isEqualTo("EXPENSE");
+                assertThat(t.getBudgetGroup()).isEqualTo("INVESTMENT");
+              }
+            });
   }
 
   @Test

@@ -66,6 +66,11 @@ public class TransactionImportService {
     }
 
     for (ParsedTransactionDTO tx : rawTx) {
+      // RDB (INVESTMENT) is already fully classified by the parser — keep it as-is
+      if ("INVESTMENT".equals(tx.getAutoClassification())) {
+        tx.setNormalizedDescription(normalizationService.normalize(tx.getDescription()));
+        continue;
+      }
       if ("INCOME".equals(tx.getType())) {
         incomeClassifier.classify(tx, user.getId(), holderName);
       } else {

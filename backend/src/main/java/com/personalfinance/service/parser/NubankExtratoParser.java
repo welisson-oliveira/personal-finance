@@ -98,7 +98,33 @@ public class NubankExtratoParser {
         continue;
       }
 
-      if (isRdb(line) || isPagamentoFatura(line)) {
+      if (isRdb(line)) {
+        if (collecting) {
+          emitFromAccumulated(descLines, currentDate, incomeBlock, transactions);
+          collecting = false;
+          descLines = new ArrayList<>();
+        }
+        BigDecimal rdbAmount = extractTrailing(line);
+        if (rdbAmount != null && currentDate != null) {
+          // Resgate RDB = money back (income, resgatado); Aplicação RDB = aporte (expense,
+          // investido)
+          boolean isResgate = line.toLowerCase().startsWith("resgate");
+          transactions.add(
+              ParsedTransactionDTO.builder()
+                  .date(currentDate)
+                  .description(line)
+                  .amount(rdbAmount)
+                  .type(isResgate ? "INCOME" : "EXPENSE")
+                  .incomeType(isResgate ? "INVESTMENT" : null)
+                  .budgetGroup(isResgate ? null : "INVESTMENT")
+                  .autoClassification("INVESTMENT")
+                  .included(true)
+                  .build());
+        }
+        continue;
+      }
+
+      if (isPagamentoFatura(line)) {
         if (collecting) {
           emitFromAccumulated(descLines, currentDate, incomeBlock, transactions);
           collecting = false;
