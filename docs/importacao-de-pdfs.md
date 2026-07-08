@@ -25,7 +25,7 @@ Upload de extrato/fatura Nubank (PDF) → parse + classificação automática �
 ### Parsers (`service/parser/`)
 
 - **`DocumentTypeDetector`** — heurística `detect(text)` → `FATURA` (período vigente, vencimento…) ou `EXTRATO` (total de entradas/saídas, conta…).
-- **`NubankExtratoParser`** — percorre linhas após "Movimenta…", rastreia blocos entradas/saídas; trata RDB e "Pagamento de fatura" como `INTERNAL` (`included=false`), crédito em conta, boletos, transferências multilinha; nomes de mês PT. **`resolveType` sobrepõe o bloco pela palavra "recebida"/"enviada"** (correção de tipo — ver [PR #31]). Retorna `ParseResult(periodStart, periodEnd, transactions)`.
+- **`NubankExtratoParser`** — percorre linhas após "Movimenta…", rastreia blocos entradas/saídas; trata "Pagamento de fatura" como `INTERNAL` (`included=false`), crédito em conta, boletos, transferências multilinha; nomes de mês PT. **RDB vira investimento** (`autoClassification=INVESTMENT`, `included=true`): Aplicação RDB → Despesa com `budgetGroup=INVESTMENT` (alimenta `investido`); Resgate RDB → Receita com `incomeType=INVESTMENT` (alimenta `resgatado`). **`resolveType` sobrepõe o bloco pela palavra "recebida"/"enviada"** (correção de tipo). Retorna `ParseResult(periodStart, periodEnd, transactions)`.
 - **`NubankFaturaParser`** — período + ano do vencimento (trata virada de ano); seções por portador ("Welisson W Oliveira", "Rosangela Oliveira"); filtra "Pagamentos"; parcela `Parcela n/n` → `installmentInfo`; estorno (`-R$`) → `INCOME`.
 
 ### Endpoints — `ImportController` (`/api/import`)
@@ -54,7 +54,8 @@ Upload PDF → parse+classificação → preview (usuário ajusta tipo/categoria
 
 ## Regras de domínio
 
-- `OWN_TRANSFER` e transações `INTERNAL` (RDB, pagamento de fatura) chegam ao preview com `included=false` — visíveis mas desmarcadas.
+- `OWN_TRANSFER` e transações `INTERNAL` (pagamento de fatura) chegam ao preview com `included=false` — visíveis mas desmarcadas.
+- RDB (`Aplicação`/`Resgate`) chega classificado como investimento e **marcado para incluir** (alimenta o dashboard). O `parseAndPreview` preserva essa classificação (não roda os classificadores por cima quando `autoClassification=INVESTMENT`).
 - Classificação de estabelecimento e aprendizado: ver [classificacao-e-aprendizado.md](./classificacao-e-aprendizado.md).
 - Pré-preenchimento de apelido no import vem de `merchant_display_names` (ver [transacoes.md](./transacoes.md)).
 

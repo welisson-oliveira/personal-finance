@@ -13,8 +13,8 @@ Retorna `DashboardResponse`. Cálculos (mês corrente do usuário):
 | `receitaReal`                                        | **hoje = `receitaBruta`** (reembolsos calculados à parte, não somados)                                               |
 | `despesasEssenciais` / `despesasNaoEssenciais`       | soma de despesas por `budget_group` (usa `userShare` quando `shared`)                                                |
 | `totalDespesas`                                      | essenciais + não essenciais                                                                                          |
-| `investido`                                          | despesas com **`budget_group=INVESTMENT`**                                                                           |
-| `resgatado`                                          | receitas com **`income_type=INVESTMENT`**                                                                            |
+| `investido`                                          | despesas com **`budget_group=INVESTMENT`** (ex: Aplicação RDB do extrato)                                            |
+| `resgatado`                                          | receitas com **`income_type=INVESTMENT`** (ex: Resgate RDB do extrato)                                               |
 | `saldo`                                              | receitaReal − totalDespesas                                                                                          |
 | `rendaBase`                                          | base do 50/30/20: renda real do mês; **se 0, cai para `monthlyNetIncome`** do usuário                                |
 | `percentual{Essenciais,NaoEssenciais,Investimentos}` | cada grupo / `rendaBase`                                                                                             |
