@@ -61,6 +61,26 @@ class IncomeClassificationServiceTest {
   }
 
   @Test
+  void classify_known_person_always_review_leaves_income_type_null_and_flags_review() {
+    ParsedTransactionDTO tx = dto("Transferência recebida pelo Pix Carlos Eduardo Lima 750,00");
+    KnownPerson person =
+        KnownPerson.builder()
+            .id(UUID.randomUUID())
+            .name("Carlos Eduardo Lima")
+            .defaultIncomeType("ALWAYS_REVIEW")
+            .active(true)
+            .build();
+    when(knownPersonRepository.findByUserIdAndActiveTrue(USER_ID)).thenReturn(List.of(person));
+
+    service.classify(tx, USER_ID, HOLDER);
+
+    // ALWAYS_REVIEW is not a valid income_type — must not be persisted; goes to review instead
+    assertThat(tx.getIncomeType()).isNull();
+    assertThat(tx.isNeedsReview()).isTrue();
+    assertThat(tx.getKnownPersonId()).isEqualTo(person.getId());
+  }
+
+  @Test
   void classify_uses_history_when_previous_transaction_exists() {
     ParsedTransactionDTO tx = dto("Salário Empresa XYZ");
     when(knownPersonRepository.findByUserIdAndActiveTrue(USER_ID)).thenReturn(List.of());

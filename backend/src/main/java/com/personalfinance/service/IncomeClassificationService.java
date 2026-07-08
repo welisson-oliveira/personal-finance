@@ -35,10 +35,17 @@ public class IncomeClassificationService {
     List<KnownPerson> persons = knownPersonRepository.findByUserIdAndActiveTrue(userId);
     for (KnownPerson person : persons) {
       if (nameMatches(descLower, person.getName())) {
-        tx.setIncomeType(person.getDefaultIncomeType());
         tx.setKnownPersonId(person.getId());
         if (person.getDefaultLabel() != null) {
           tx.setNotes(person.getDefaultLabel());
+        }
+        // ALWAYS_REVIEW is not a valid transaction income_type — it means "let the user decide".
+        // Send it to the review queue with no income type instead of persisting an invalid value.
+        if ("ALWAYS_REVIEW".equals(person.getDefaultIncomeType())) {
+          tx.setIncomeType(null);
+          tx.setNeedsReview(true);
+        } else {
+          tx.setIncomeType(person.getDefaultIncomeType());
         }
         return;
       }
