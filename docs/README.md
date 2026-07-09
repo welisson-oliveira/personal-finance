@@ -14,6 +14,7 @@ Esta pasta documenta a aplicação **por feature de negócio**, cruzando backend
 | Fila de revisão             | [fila-de-revisao.md](./fila-de-revisao.md)                         | itens pendentes de classificação e aprendizado                               |
 | Transações                  | [transacoes.md](./transacoes.md)                                   | lista, edição, apelido, exclusão de transações                               |
 | Dashboard                   | [dashboard.md](./dashboard.md)                                     | métricas 50/30/20, destaques, seletor de mês global                          |
+| Relatórios                  | [relatorios.md](./relatorios.md)                                   | evolução mensal e gasto por categoria (gráficos)                             |
 | Categorias                  | [categorias.md](./categorias.md)                                   | CRUD de categorias, seletor com busca, merchant rules (leitura)              |
 | Metas de orçamento          | [metas-de-orcamento.md](./metas-de-orcamento.md)                   | teto de gasto por categoria e acompanhamento mensal                          |
 | Pessoas conhecidas          | [pessoas-conhecidas.md](./pessoas-conhecidas.md)                   | pessoas de PIX e o tratamento padrão de entrada                              |
