@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.personalfinance.dto.response.ImportPreviewResponse;
 import com.personalfinance.dto.response.ParsedTransactionDTO;
 import com.personalfinance.model.entity.ImportSession;
 import com.personalfinance.model.entity.Transaction;
@@ -164,5 +167,47 @@ class TransactionImportServiceTest {
 
     verify(transactionRepository, never()).save(any());
     verify(reviewQueueRepository, never()).save(any());
+  }
+
+  @Test
+  void getPreview_returns_persisted_transactions_for_pending_session() throws Exception {
+    ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    ParsedTransactionDTO tx =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 6, 10))
+            .description("Loja Desconhecida")
+            .amount(BigDecimal.valueOf(50))
+            .type("EXPENSE")
+            .needsReview(true)
+            .build();
+    session.setPeriodStart(LocalDate.of(2026, 6, 1));
+    session.setPeriodEnd(LocalDate.of(2026, 6, 30));
+    session.setPreviewJson(mapper.writeValueAsString(List.of(tx)));
+
+    ImportPreviewResponse preview = service.getPreview(session.getId(), user);
+
+    assertThat(preview.sessionId()).isEqualTo(session.getId());
+    assertThat(preview.transactions()).hasSize(1);
+    assertThat(preview.transactions().get(0).getDescription()).isEqualTo("Loja Desconhecida");
+    assertThat(preview.transactions().get(0).getDate()).isEqualTo(LocalDate.of(2026, 6, 10));
+    assertThat(preview.reviewQueueCount()).isEqualTo(1);
+  }
+
+  @Test
+  void getPreview_throws_when_session_not_pending() {
+    session.setStatus("CONFIRMED");
+    session.setPreviewJson("[]");
+
+    assertThatThrownBy(() -> service.getPreview(session.getId(), user))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void getPreview_throws_when_preview_json_missing() {
+    session.setStatus("PENDING");
+    session.setPreviewJson(null);
+
+    assertThatThrownBy(() -> service.getPreview(session.getId(), user))
+        .isInstanceOf(IllegalStateException.class);
   }
 }

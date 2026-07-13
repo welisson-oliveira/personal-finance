@@ -32,6 +32,12 @@ public class ImportController {
     return ResponseEntity.status(HttpStatus.CREATED).body(preview);
   }
 
+  @GetMapping("/{id}/preview")
+  public ResponseEntity<ImportPreviewResponse> preview(
+      @PathVariable UUID id, @AuthenticationPrincipal User user) {
+    return ResponseEntity.ok(importService.getPreview(id, user));
+  }
+
   @PostMapping("/{id}/confirm")
   public ResponseEntity<Void> confirm(
       @PathVariable UUID id,

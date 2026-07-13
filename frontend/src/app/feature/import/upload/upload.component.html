@@ -78,8 +78,8 @@
           @for (session of group.sessions; track session.id; let last = $last) {
             <div
               class="session-row"
-              [class.clickable]="session.status === 'CONFIRMED'"
-              (click)="session.status === 'CONFIRMED' && goToTransactions(session)"
+              [class.clickable]="session.status === 'CONFIRMED' || session.status === 'PENDING'"
+              (click)="onSessionClick(session)"
             >
               <div class="session-icon">
                 <mat-icon>{{ session.documentType === 'EXTRATO' ? 'account_balance' : 'credit_card' }}</mat-icon>
@@ -106,11 +106,28 @@
                       ? 'Transações importadas e registradas'
                       : session.status === 'CANCELLED'
                         ? 'Importação descartada pelo usuário'
-                        : 'Aguardando sua confirmação no preview'
+                        : 'Aguardando sua confirmação — clique em Retomar para continuar'
                   "
                 >
                   {{ statusLabel(session.status) }}
                 </mat-chip>
+                @if (session.status === 'PENDING') {
+                  <button
+                    mat-stroked-button
+                    color="primary"
+                    class="resume-btn"
+                    (click)="resumeSession(session, $event)"
+                    [disabled]="resumingId === session.id"
+                    matTooltip="Reabrir o preview e confirmar esta importação"
+                  >
+                    @if (resumingId === session.id) {
+                      <mat-spinner diameter="18"></mat-spinner>
+                    } @else {
+                      <mat-icon>play_arrow</mat-icon>
+                      Retomar
+                    }
+                  </button>
+                }
                 <button
                   mat-icon-button
                   color="warn"

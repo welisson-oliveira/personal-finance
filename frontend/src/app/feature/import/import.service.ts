@@ -17,6 +17,10 @@ export class ImportService {
     return this.http.post<ImportPreviewResponse>('/api/import/parse', form);
   }
 
+  getPreview(sessionId: string): Observable<ImportPreviewResponse> {
+    return this.http.get<ImportPreviewResponse>(`/api/import/${sessionId}/preview`);
+  }
+
   confirm(sessionId: string, transactions: ParsedTransaction[]): Observable<void> {
     return this.http.post<void>(`/api/import/${sessionId}/confirm`, transactions);
   }
