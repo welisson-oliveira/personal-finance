@@ -53,7 +53,7 @@ DTOs (`dto/request`, `dto/response`) cruzam a fronteira do controller; **entidad
 | `test`         | H2 em memória (modo PostgreSQL)    | desabilitado | `create-drop` |
 
 Env vars: `SPRING_PROFILES_ACTIVE`, `JWT_SECRET`, `JWT_EXPIRATION_MS`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
-Migrations em `backend/src/main/resources/db/migration/` (V1…V9). `jpa.open-in-view: false` — os services carregam as associações necessárias antes de retornar.
+Migrations em `backend/src/main/resources/db/migration/` (V1…V11). `jpa.open-in-view: false` — os services carregam as associações necessárias antes de retornar.
 
 ## Comandos
 

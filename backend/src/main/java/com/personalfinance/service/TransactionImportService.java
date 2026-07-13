@@ -1,5 +1,8 @@
 package com.personalfinance.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.personalfinance.dto.response.ImportPreviewResponse;
 import com.personalfinance.dto.response.ImportSessionResponse;
 import com.personalfinance.dto.response.ParsedTransactionDTO;
@@ -12,7 +15,6 @@ import com.personalfinance.service.parser.NubankFaturaParser;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -37,8 +39,7 @@ public class TransactionImportService {
   private final CategoryRepository categoryRepository;
   private final MerchantDisplayNameRepository merchantDisplayNameRepository;
 
-  private final ConcurrentHashMap<UUID, List<ParsedTransactionDTO>> previewCache =
-      new ConcurrentHashMap<>();
+  private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
   @Transactional
   public ImportPreviewResponse parseAndPreview(MultipartFile file, String documentType, User user)
@@ -99,14 +100,57 @@ public class TransactionImportService {
                 .periodStart(period[0])
                 .periodEnd(period[1])
                 .status("PENDING")
+                .previewJson(serializePreview(rawTx))
                 .build());
-
-    previewCache.put(session.getId(), rawTx);
 
     int reviewCount = (int) rawTx.stream().filter(ParsedTransactionDTO::isNeedsReview).count();
 
     return new ImportPreviewResponse(
         session.getId(), resolvedType, period[0], period[1], rawTx, reviewCount);
+  }
+
+  /**
+   * Reopens the persisted preview of a still-pending session so the user can resume confirming an
+   * import they started earlier. Only {@code PENDING} sessions carry a preview.
+   */
+  @Transactional(readOnly = true)
+  public ImportPreviewResponse getPreview(UUID sessionId, User user) {
+    ImportSession session =
+        importSessionRepository
+            .findById(sessionId)
+            .filter(s -> s.getUser().getId().equals(user.getId()))
+            .orElseThrow(() -> new IllegalArgumentException("Import session not found"));
+
+    if (!"PENDING".equals(session.getStatus()) || session.getPreviewJson() == null) {
+      throw new IllegalStateException(
+          "This import is no longer pending — re-upload the PDF to review it again.");
+    }
+
+    List<ParsedTransactionDTO> txList = deserializePreview(session.getPreviewJson());
+    int reviewCount = (int) txList.stream().filter(ParsedTransactionDTO::isNeedsReview).count();
+    return new ImportPreviewResponse(
+        session.getId(),
+        session.getDocumentType(),
+        session.getPeriodStart(),
+        session.getPeriodEnd(),
+        txList,
+        reviewCount);
+  }
+
+  private String serializePreview(List<ParsedTransactionDTO> txList) {
+    try {
+      return objectMapper.writeValueAsString(txList);
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to serialize import preview", e);
+    }
+  }
+
+  private List<ParsedTransactionDTO> deserializePreview(String json) {
+    try {
+      return objectMapper.readValue(json, new TypeReference<List<ParsedTransactionDTO>>() {});
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to read import preview", e);
+    }
   }
 
   @Transactional
@@ -171,8 +215,8 @@ public class TransactionImportService {
     }
 
     session.setStatus("CONFIRMED");
+    session.setPreviewJson(null);
     importSessionRepository.save(session);
-    previewCache.remove(sessionId);
   }
 
   @Transactional
@@ -183,8 +227,8 @@ public class TransactionImportService {
             .filter(s -> s.getUser().getId().equals(user.getId()))
             .orElseThrow(() -> new IllegalArgumentException("Import session not found"));
     session.setStatus("CANCELLED");
+    session.setPreviewJson(null);
     importSessionRepository.save(session);
-    previewCache.remove(sessionId);
   }
 
   @Transactional
@@ -197,7 +241,6 @@ public class TransactionImportService {
     reviewQueueRepository.deleteByImportSessionId(sessionId);
     transactionRepository.deleteByImportSessionId(sessionId);
     importSessionRepository.delete(session);
-    previewCache.remove(sessionId);
   }
 
   public List<ImportSessionResponse> getHistory(UUID userId) {

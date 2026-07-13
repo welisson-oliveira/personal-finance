@@ -48,6 +48,7 @@ export class UploadComponent implements OnInit {
 
   groups: MonthGroup[] = [];
   historyLoading = true;
+  resumingId: string | null = null;
 
   constructor(
     private importService: ImportService,
@@ -175,6 +176,35 @@ export class UploadComponent implements OnInit {
       this.period.setFromMonthString(month);
       this.router.navigate(['/transactions']);
     }
+  }
+
+  onSessionClick(session: ImportSessionResponse): void {
+    if (session.status === 'CONFIRMED') {
+      this.goToTransactions(session);
+    } else if (session.status === 'PENDING') {
+      this.resumeSession(session);
+    }
+  }
+
+  resumeSession(session: ImportSessionResponse, event?: Event): void {
+    event?.stopPropagation();
+    if (this.resumingId) return;
+    this.resumingId = session.id;
+    this.importService.getPreview(session.id).subscribe({
+      next: (preview) => {
+        this.resumingId = null;
+        this.router.navigate(['/import/preview'], { state: { preview } });
+      },
+      error: (err) => {
+        this.resumingId = null;
+        this.snackBar.open(
+          err.error?.message || 'Não foi possível retomar esta importação.',
+          'Fechar',
+          { duration: 5000 }
+        );
+        this.loadHistory();
+      },
+    });
   }
 
   confirmDelete(session: ImportSessionResponse, event: Event): void {

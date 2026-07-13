@@ -40,6 +40,10 @@ public class ImportSession {
   @Builder.Default
   private String status = "PENDING";
 
+  /** Serialized parsed preview (List&lt;ParsedTransactionDTO&gt;), kept while status is PENDING. */
+  @Column(name = "preview_json", columnDefinition = "TEXT")
+  private String previewJson;
+
   @CreationTimestamp
   @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;

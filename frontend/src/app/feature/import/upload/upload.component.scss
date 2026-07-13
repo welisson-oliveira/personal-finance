@@ -223,6 +223,14 @@
   color: #666;
 }
 
+.resume-btn {
+  white-space: nowrap;
+
+  mat-spinner {
+    display: inline-block;
+  }
+}
+
 .nav-arrow {
   color: #bdbdbd;
   font-size: 20px;
