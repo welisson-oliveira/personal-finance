@@ -82,6 +82,7 @@ docker compose -f docker-compose.test.yml up -d   # banco de teste (:5433)
 ## Convenções
 
 - **Backend:** DTO na fronteira do controller (nunca entidade); `@AuthenticationPrincipal User` em todo endpoint autenticado; ownership sempre validado no service (`AccessDeniedException` → 403); Lombok em entidades/DTOs; annotationProcessorPaths com **Lombok antes de MapStruct**.
+- **Tratamento de erro (`GlobalExceptionHandler`):** validação de `@Valid` (`MethodArgumentNotValidException`/`ConstraintViolationException`) e body malformado → **400**; `IllegalArgumentException` → 400; `AccessDeniedException` → 403; autenticação → 401; `IllegalStateException` e violação de integridade referencial (`DataIntegrityViolationException`) → **409**; resto → 500. Todo endpoint devolve o mesmo envelope `{error, message, status, timestamp}`.
 - **Frontend:** componentes **standalone** com `imports` explícito; estado global compartilhado via **signals** (`AuthService.currentUser`, `PeriodService.state`) persistidos em `localStorage`; telas que dependem do mês usam `effect(() => { period.period(); load(); })`; diálogos retornam resultado via `dialogRef.close(...)` e a lista faz a chamada de serviço no `afterClosed()`.
 - **Formatação antes de commitar** (evita CI vermelho): `npm run format` + `format:check` (front) e `mvn spotless:apply` + `spotless:check` (back).
 - **Git Flow:** feature branches saem de `develop` e voltam via PR para `develop`; nunca abrir PR de feature para `main`.
