@@ -139,7 +139,7 @@ public class NubankExtratoParser {
                   .amount(internalAmount)
                   .type(incomeBlock ? "INCOME" : "EXPENSE")
                   .autoClassification("INTERNAL")
-                  .included(false)
+                  .included(true)
                   .build());
         }
         continue;

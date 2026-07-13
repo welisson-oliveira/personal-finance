@@ -131,6 +131,7 @@ export class PreviewComponent implements OnInit {
       OWN_TRANSFER: 'Transferência própria',
       INVESTMENT: 'Investimento',
       INTERNAL: 'Transação interna',
+      INTERNAL_FATURA_EXISTS: 'Fatura já importada',
     };
     return ac ? (labels[ac] ?? ac) : '';
   }
@@ -142,7 +143,9 @@ export class PreviewComponent implements OnInit {
       INVESTMENT:
         'Resgate de aplicação detectado automaticamente. Não será contabilizado como receita do mês',
       INTERNAL:
-        'Transação interna (fatura ou RDB). Desmarcada para evitar dupla contagem — inclua apenas se souber o que está fazendo',
+        'Pagamento de fatura. Inclua se quiser registrar o fluxo de caixa da conta — ao importar a fatura do cartão depois, este pagamento será substituído automaticamente pelos itens individuais',
+      INTERNAL_FATURA_EXISTS:
+        'A fatura deste período já foi importada. Incluir este pagamento causaria dupla contagem.',
     };
     return ac ? (tooltips[ac] ?? ac) : '';
   }
