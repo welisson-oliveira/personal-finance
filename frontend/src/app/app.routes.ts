@@ -73,6 +73,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'reports',
+        loadComponent: () =>
+          import('./feature/reports/reports.component').then((m) => m.ReportsComponent),
+      },
+      {
         path: 'known-persons',
         loadComponent: () =>
           import('./feature/known-persons/known-person-list/known-person-list.component').then(

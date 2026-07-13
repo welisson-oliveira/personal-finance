@@ -1,0 +1,151 @@
+.report-card {
+  margin-bottom: 16px;
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.empty {
+  color: #888;
+  padding: 16px 0;
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+
+  &.receita {
+    background: #43a047;
+  }
+  &.despesa {
+    background: #e53935;
+  }
+}
+
+/* Monthly evolution — grouped bars */
+.evolution-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.month-col {
+  flex: 1;
+  min-width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.bar {
+  width: 14px;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.2s ease;
+
+  &.receita {
+    background: #43a047;
+  }
+  &.despesa {
+    background: #e53935;
+  }
+}
+
+.month-label {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #555;
+  text-transform: capitalize;
+}
+
+.month-balance {
+  font-size: 0.7rem;
+  color: #2e7d32;
+  font-weight: 600;
+
+  &.negative {
+    color: #c62828;
+  }
+}
+
+/* Category breakdown — horizontal bars */
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.breakdown-row {
+  display: grid;
+  grid-template-columns: 160px 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.breakdown-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.breakdown-track {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 6px;
+  height: 14px;
+  overflow: hidden;
+}
+
+.breakdown-fill {
+  height: 100%;
+  border-radius: 6px;
+  min-width: 2px;
+  transition: width 0.2s ease;
+}
+
+.breakdown-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .breakdown-row {
+    grid-template-columns: 110px 1fr auto;
+  }
+}
