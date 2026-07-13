@@ -118,4 +118,15 @@ public interface TransactionRepository
           + "AND t.date BETWEEN :start AND :end")
   long countPixRecebidosInPeriod(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+  @Query(
+      "SELECT t FROM Transaction t "
+          + "WHERE t.user.id = :userId "
+          + "AND t.source = 'EXTRATO' "
+          + "AND LOWER(t.description) LIKE 'pagamento de fatura%' "
+          + "AND t.date BETWEEN :start AND :end")
+  List<Transaction> findBillPaymentsByUserAndDateBetween(
+      @Param("userId") UUID userId,
+      @Param("start") LocalDate start,
+      @Param("end") LocalDate end);
 }

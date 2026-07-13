@@ -58,7 +58,7 @@ class TransactionImportServiceTest {
             .documentType("EXTRATO")
             .status("PENDING")
             .build();
-    when(importSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
+    lenient().when(importSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
     lenient().when(importSessionRepository.save(any())).thenReturn(session);
     lenient()
         .when(merchantDisplayNameRepository.findByUserIdAndNormalizedName(any(), any()))
@@ -167,6 +167,79 @@ class TransactionImportServiceTest {
 
     verify(transactionRepository, never()).save(any());
     verify(reviewQueueRepository, never()).save(any());
+  }
+
+  @Test
+  void confirm_fatura_removes_matching_bill_payment_from_extrato() {
+    ImportSession faturaSession =
+        ImportSession.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .documentType("FATURA")
+            .status("PENDING")
+            .periodEnd(LocalDate.of(2026, 7, 5))
+            .build();
+    when(importSessionRepository.findById(faturaSession.getId()))
+        .thenReturn(Optional.of(faturaSession));
+
+    Transaction billPayment =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .description("Pagamento de fatura 1.200,00")
+            .amount(BigDecimal.valueOf(1200))
+            .source("EXTRATO")
+            .build();
+    when(transactionRepository.findBillPaymentsByUserAndDateBetween(
+            eq(user.getId()),
+            eq(LocalDate.of(2026, 7, 5)),
+            eq(LocalDate.of(2026, 8, 19))))
+        .thenReturn(List.of(billPayment));
+
+    ParsedTransactionDTO faturaItem =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 6, 15))
+            .description("Supermercado")
+            .amount(BigDecimal.valueOf(300))
+            .type("EXPENSE")
+            .included(true)
+            .needsReview(false)
+            .build();
+
+    service.confirm(faturaSession.getId(), List.of(faturaItem), user);
+
+    verify(transactionRepository).deleteAll(List.of(billPayment));
+    verify(transactionRepository, atLeastOnce()).save(any());
+  }
+
+  @Test
+  void confirm_fatura_without_bill_payment_works_normally() {
+    ImportSession faturaSession =
+        ImportSession.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .documentType("FATURA")
+            .status("PENDING")
+            .periodEnd(LocalDate.of(2026, 7, 5))
+            .build();
+    when(importSessionRepository.findById(faturaSession.getId()))
+        .thenReturn(Optional.of(faturaSession));
+    when(transactionRepository.findBillPaymentsByUserAndDateBetween(any(), any(), any()))
+        .thenReturn(List.of());
+
+    ParsedTransactionDTO faturaItem =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 6, 10))
+            .description("iFood")
+            .amount(BigDecimal.valueOf(50))
+            .type("EXPENSE")
+            .included(true)
+            .needsReview(false)
+            .build();
+
+    service.confirm(faturaSession.getId(), List.of(faturaItem), user);
+
+    verify(transactionRepository, never()).deleteAll(anyList());
+    verify(transactionRepository, atLeastOnce()).save(any());
   }
 
   @Test

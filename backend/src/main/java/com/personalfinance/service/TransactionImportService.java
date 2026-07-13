@@ -90,6 +90,14 @@ public class TransactionImportService {
       }
     }
 
+    if ("EXTRATO".equals(resolvedType)) {
+      for (ParsedTransactionDTO tx : rawTx) {
+        if ("INTERNAL".equals(tx.getAutoClassification())) {
+          checkAndMarkFaturaExists(tx, user.getId());
+        }
+      }
+    }
+
     ImportSession session =
         importSessionRepository.save(
             ImportSession.builder()
@@ -160,6 +168,8 @@ public class TransactionImportService {
             .findById(sessionId)
             .filter(s -> s.getUser().getId().equals(user.getId()))
             .orElseThrow(() -> new IllegalArgumentException("Import session not found"));
+
+    reconcileBillPayment(session, user.getId());
 
     List<ParsedTransactionDTO> txList =
         clientList.stream().filter(ParsedTransactionDTO::isIncluded).toList();
@@ -257,6 +267,29 @@ public class TransactionImportService {
                     s.getCreatedAt(),
                     transactionRepository.countByImportSessionId(s.getId())))
         .toList();
+  }
+
+  private void checkAndMarkFaturaExists(ParsedTransactionDTO tx, UUID userId) {
+    LocalDate paymentDate = tx.getDate();
+    boolean faturaExists =
+        importSessionRepository.existsConfirmedFaturaByUserAndPeriodEndBetween(
+            userId, paymentDate.minusDays(45), paymentDate);
+    if (faturaExists) {
+      tx.setAutoClassification("INTERNAL_FATURA_EXISTS");
+      tx.setIncluded(false);
+    }
+  }
+
+  private void reconcileBillPayment(ImportSession session, UUID userId) {
+    if (!"FATURA".equals(session.getDocumentType())) return;
+    if (session.getPeriodEnd() == null) return;
+    LocalDate windowStart = session.getPeriodEnd();
+    LocalDate windowEnd = session.getPeriodEnd().plusDays(45);
+    List<Transaction> payments =
+        transactionRepository.findBillPaymentsByUserAndDateBetween(userId, windowStart, windowEnd);
+    if (!payments.isEmpty()) {
+      transactionRepository.deleteAll(payments);
+    }
   }
 
   private String extractText(byte[] pdfBytes) throws IOException {

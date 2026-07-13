@@ -67,12 +67,12 @@ class NubankExtratoParserTest {
   }
 
   @Test
-  void pagamento_fatura_when_present_is_marked_as_internal_excluded() {
+  void pagamento_fatura_when_present_is_marked_as_internal_included_by_default() {
     result.transactions().stream()
         .filter(t -> t.getDescription().startsWith("Pagamento de fatura"))
         .forEach(
             t -> {
-              assertThat(t.isIncluded()).isFalse();
+              assertThat(t.isIncluded()).isTrue();
               assertThat(t.getAutoClassification()).isEqualTo("INTERNAL");
             });
   }
