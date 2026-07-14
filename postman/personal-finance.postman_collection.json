@@ -393,9 +393,9 @@
                   "  pm.expect(body.type).to.eql('EXPENSE');",
                   "  pm.expect(Number(body.amount)).to.eql(150);",
                   "});",
-                  "pm.test('budgetGroup persisted, no incomeType', function () {",
+                  "pm.test('budgetGroup persisted, not investment', function () {",
                   "  pm.expect(body.budgetGroup).to.eql('ESSENTIAL');",
-                  "  pm.expect(body.incomeType == null).to.be.true;",
+                  "  pm.expect(body.investmentDirection == null).to.be.true;",
                   "});",
                   "pm.collectionVariables.set('expenseTxId', body.id);"
                 ]
@@ -411,7 +411,7 @@
             "url": { "raw": "{{base_url}}/api/transactions", "host": ["{{base_url}}"], "path": ["api", "transactions"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"description\": \"QA Salary\",\n  \"amount\": 5000.00,\n  \"type\": \"INCOME\",\n  \"date\": \"{{pf_date}}\",\n  \"incomeType\": \"INCOME\"\n}"
+              "raw": "{\n  \"description\": \"QA Salary\",\n  \"amount\": 5000.00,\n  \"type\": \"INCOME\",\n  \"date\": \"{{pf_date}}\"\n}"
             }
           },
           "event": [
@@ -422,9 +422,8 @@
                 "exec": [
                   "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
                   "var body = pm.response.json();",
-                  "pm.test('type is INCOME with incomeType INCOME', function () {",
+                  "pm.test('type is INCOME', function () {",
                   "  pm.expect(body.type).to.eql('INCOME');",
-                  "  pm.expect(body.incomeType).to.eql('INCOME');",
                   "});",
                   "pm.collectionVariables.set('incomeTxId', body.id);"
                 ]
@@ -618,7 +617,7 @@
                   "  pm.expect(body.month).to.eql(Number(pm.collectionVariables.get('pf_month')));",
                   "});",
                   "pm.test('exposes 50/30/20 aggregates', function () {",
-                  "  ['receitaBruta','totalDespesas','percentualEssenciais','rendaBase','saldo'].forEach(function (k) {",
+                  "  ['entradas','totalDespesas','aplicado','percentualEssenciais','rendaBase','resultado'].forEach(function (k) {",
                   "    pm.expect(body).to.have.property(k);",
                   "  });",
                   "});",
@@ -858,7 +857,7 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": { "raw": "{{base_url}}/api/known-persons", "host": ["{{base_url}}"], "path": ["api", "known-persons"] },
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Maria QA\",\n  \"relationship\": \"FAMILY\",\n  \"defaultIncomeType\": \"REIMBURSEMENT\",\n  \"defaultLabel\": \"Reembolso Maria\"\n}" }
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Maria QA\",\n  \"relationship\": \"FAMILY\",\n  \"defaultTreatment\": \"IGNORE\",\n  \"defaultLabel\": \"Maria\"\n}" }
           },
           "event": [
             {
@@ -871,7 +870,7 @@
                   "pm.test('active by default with expected fields', function () {",
                   "  pm.expect(body.active).to.eql(true);",
                   "  pm.expect(body.relationship).to.eql('FAMILY');",
-                  "  pm.expect(body.defaultIncomeType).to.eql('REIMBURSEMENT');",
+                  "  pm.expect(body.defaultTreatment).to.eql('IGNORE');",
                   "});",
                   "pm.collectionVariables.set('personId', body.id);"
                 ]
@@ -925,7 +924,7 @@
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": { "raw": "{{base_url}}/api/known-persons/{{personId}}", "host": ["{{base_url}}"], "path": ["api", "known-persons", "{{personId}}"] },
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Maria QA\",\n  \"relationship\": \"FRIEND\",\n  \"defaultIncomeType\": \"INCOME\",\n  \"defaultLabel\": \"Maria\"\n}" }
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Maria QA\",\n  \"relationship\": \"FRIEND\",\n  \"defaultTreatment\": \"INCOME\",\n  \"defaultLabel\": \"Maria\"\n}" }
           },
           "event": [
             {
@@ -963,14 +962,22 @@
       ]
     },
     {
-      "name": "7. Review Queue",
+      "name": "7. Revisão inline (needsReview)",
       "item": [
         {
-          "name": "List pending (200, array)",
+          "name": "List pending review (200, paged)",
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{base_url}}/api/review/pending", "host": ["{{base_url}}"], "path": ["api", "review", "pending"] }
+            "url": {
+              "raw": "{{base_url}}/api/transactions?month={{pf_month_str}}&needsReview=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "transactions"],
+              "query": [
+                { "key": "month", "value": "{{pf_month_str}}" },
+                { "key": "needsReview", "value": "true" }
+              ]
+            }
           },
           "event": [
             {
@@ -979,27 +986,11 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('returns an array (empty for a fresh user)', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Resolve non-existent item (400)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/review/00000000-0000-0000-0000-000000000000/resolve", "host": ["{{base_url}}"], "path": ["api", "review", "00000000-0000-0000-0000-000000000000", "resolve"] },
-            "body": { "mode": "raw", "raw": "{\n  \"merchantName\": \"Whatever\",\n  \"type\": \"EXPENSE\",\n  \"budgetGroup\": \"ESSENTIAL\"\n}" }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('resolving a missing item fails (400/403/404)', function () { pm.expect(pm.response.code).to.be.oneOf([400, 403, 404]); });"
+                  "var body = pm.response.json();",
+                  "pm.test('is a Spring Page', function () { pm.expect(body.content).to.be.an('array'); });",
+                  "pm.test('every row actually needs review', function () {",
+                  "  body.content.forEach(function (t) { pm.expect(t.needsReview).to.eql(true); });",
+                  "});"
                 ]
               }
             }

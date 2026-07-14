@@ -8,21 +8,19 @@ Retorna `DashboardResponse`. Cálculos (mês corrente do usuário):
 
 | Métrica                                              | Cálculo                                                                                                              |
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `receitaBruta`                                       | soma de `type=INCOME` e `income_type=INCOME`                                                                         |
-| `reembolsos`                                         | soma de `income_type=REIMBURSEMENT`                                                                                  |
-| `receitaReal`                                        | **hoje = `receitaBruta`** (reembolsos calculados à parte, não somados)                                               |
-| `despesasEssenciais` / `despesasNaoEssenciais`       | soma de despesas por `budget_group` (usa `userShare` quando `shared`)                                                |
+| `entradas`                                           | soma de `type=INCOME` (exclui `ignored`) — "Entradas do mês / Receita disponível"                                    |
+| `despesasEssenciais` / `despesasNaoEssenciais`       | soma de `type=EXPENSE` por `budget_group` (usa `userShare` quando `shared`, exclui `ignored`)                        |
 | `totalDespesas`                                      | essenciais + não essenciais                                                                                          |
-| `investido`                                          | despesas com **`budget_group=INVESTMENT`** (ex: Aplicação RDB do extrato)                                            |
-| `resgatado`                                          | receitas com **`income_type=INVESTMENT`** (ex: Resgate RDB do extrato)                                               |
-| `saldo`                                              | receitaReal − totalDespesas                                                                                          |
-| `rendaBase`                                          | base do 50/30/20: renda real do mês; **se 0, cai para `monthlyNetIncome`** do usuário                                |
-| `percentual{Essenciais,NaoEssenciais,Investimentos}` | cada grupo / `rendaBase`                                                                                             |
+| `aplicado`                                           | **aporte líquido**: `INVESTMENT/CONTRIBUTION` − `INVESTMENT/REDEMPTION` — "Aplicado em investimentos"                |
+| `resgatado`                                          | soma de `INVESTMENT/REDEMPTION` — "Resgatado dos investimentos"                                                      |
+| `resultado`                                          | entradas − totalDespesas — "Resultado do mês" (evita o termo "Saldo")                                                |
+| `rendaBase`                                          | base do 50/30/20: `entradas` do mês; **se 0, cai para `monthlyNetIncome`** do usuário                               |
+| `percentual{Essenciais,NaoEssenciais,Investimentos}` | cada grupo / `rendaBase` (investimentos usa `aplicado` líquido)                                                     |
 | `destaques`                                          | maior supermercado/delivery (via `subcategory` das regras), qtd assinaturas, qtd compras, qtd PIX enviados/recebidos |
 
-> Atenção: `investido` (budget_group) e `resgatado` (income_type) usam eixos diferentes de propósito. `buildDestaques` filtra despesas por `incomeType IS NULL`.
+> A Home segue os 4 blocos da visão de produto: **quanto entrou / para onde foi / está seguindo o 50-30-20 / quanto sobrou**. `reembolso` deixou de existir (vira `INCOME`).
 
-Queries em `TransactionRepository` (`sumByUserIdAndTypeAndIncomeTypeAndDateBetween`, `sumExpenseByBudgetGroupAndDateBetween`, `findExpensesWithCategoryInPeriod`, `count*InPeriod`).
+Queries em `TransactionRepository` (`sumIncomeByUserIdAndDateBetween`, `sumInvestmentByDirectionAndDateBetween`, `sumExpenseByBudgetGroupAndDateBetween`, `findExpensesWithCategoryInPeriod`, `count*InPeriod`) — todas excluem `ignored`.
 
 ### Endpoint — `DashboardController`
 
@@ -48,4 +46,4 @@ Usuário troca o mês na toolbar → `PeriodService.set()` → `effect()` do das
 
 ## Testes relevantes
 
-`DashboardServiceTest` (saldo, percentuais, investido vs resgatado, renda zero, precedência/fallback do salário líquido).
+`DashboardServiceTest` (entradas/totais/resultado, percentuais, aporte líquido = aporte − resgate, renda zero, precedência/fallback do salário líquido).

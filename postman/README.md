@@ -69,7 +69,7 @@ Saída de sucesso: todas as asserções verdes e **exit code 0** (Newman falha o
 | 4. Reports | evolução mensal (6 pontos + clamp 24), gasto por categoria (ordenação) |
 | 5. Budget Goals | criar (201 + amount 0 → 400), listar, atualizar, excluir |
 | 6. Known Persons | criar (201 + relationship inválido 400), listar, atualizar, desativar |
-| 7. Review Queue | pendentes (array), resolver inexistente (400/404) |
+| 7. Revisão inline | lista `?needsReview=true` (Page; toda linha tem `needsReview=true`) |
 | 8. Merchant Rules | listar regras globais semeadas |
 | 9. Import | histórico (array), retomar sessão inexistente (400/404) |
 | 10. Cleanup | remove transação e categoria criadas |

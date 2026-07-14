@@ -6,7 +6,7 @@ Dois relatórios visuais (gráficos em SVG/CSS, sem dependência externa): **evo
 
 ### `ReportService`
 
-- `monthlyEvolution(userId, months)` — para os últimos `months` meses (clamp 1–24): `receita` = `type=INCOME & income_type=INCOME`; `despesa` = `budget_group` ESSENTIAL + NON_ESSENTIAL; `saldo` = receita − despesa. Reaproveita as somas do `DashboardService`.
+- `monthlyEvolution(userId, months)` — para os últimos `months` meses (clamp 1–24): `receita` = `type=INCOME` (exclui `ignored`); `despesa` = `budget_group` ESSENTIAL + NON_ESSENTIAL; `saldo` = receita − despesa. Reaproveita as somas do `DashboardService`.
 - `categoryBreakdown(userId, year, month)` — agrupa as despesas do mês por categoria (`findExpensesWithCategoryInPeriod`), usando `userShare` quando `shared` (`effectiveAmount`), ordenado do maior para o menor.
 
 ### Endpoints — `ReportController` (`/api/reports`)

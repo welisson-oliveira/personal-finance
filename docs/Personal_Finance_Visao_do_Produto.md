@@ -1,5 +1,16 @@
 # Personal Finance --- Visão do Produto
 
+> **Nota de implementação (modelo simplificado).** Para reduzir a confusão de
+> classificação, o app usa **um eixo único de tipo**: `RECEITA` · `DESPESA` ·
+> `INVESTIMENTO` (com `budget_group` essencial/não-essencial na despesa e
+> `investment_direction` aporte/resgate no investimento). O princípio de
+> **evitar dupla contagem** é preservado por um flag **`ignored`** ("não contar",
+> ex.: transferência entre contas próprias, resgates entram como investimento).
+> O conceito de **reembolso deixou de existir** como categoria separada — vira
+> `RECEITA` comum. As seções abaixo descrevem a filosofia; onde falam de
+> "reembolso" ou "transferência interna" como tipos distintos, leia como
+> `RECEITA` e `ignored`, respectivamente.
+
 ## Objetivo
 
 A aplicação **não tem como objetivo reproduzir um extrato bancário** ou
