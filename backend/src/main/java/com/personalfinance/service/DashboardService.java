@@ -4,7 +4,6 @@ import com.personalfinance.dto.response.DashboardResponse;
 import com.personalfinance.dto.response.DashboardResponse.Destaques;
 import com.personalfinance.model.entity.Transaction;
 import com.personalfinance.model.entity.User;
-import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.MerchantRuleRepository;
 import com.personalfinance.repository.TransactionRepository;
 import java.math.BigDecimal;
@@ -32,15 +31,7 @@ public class DashboardService {
     LocalDate start = ym.atDay(1);
     LocalDate end = ym.atEndOfMonth();
 
-    BigDecimal receitaBruta =
-        transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INCOME", start, end);
-
-    BigDecimal reembolsos =
-        transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "REIMBURSEMENT", start, end);
-
-    BigDecimal receitaReal = receitaBruta;
+    BigDecimal entradas = transactionRepository.sumIncomeByUserIdAndDateBetween(userId, start, end);
 
     BigDecimal despesasEssenciais =
         transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
@@ -52,40 +43,39 @@ public class DashboardService {
 
     BigDecimal totalDespesas = despesasEssenciais.add(despesasNaoEssenciais);
 
-    BigDecimal investido =
-        transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "INVESTMENT", start, end);
-
+    BigDecimal aportes =
+        transactionRepository.sumInvestmentByDirectionAndDateBetween(
+            userId, "CONTRIBUTION", start, end);
     BigDecimal resgatado =
-        transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INVESTMENT", start, end);
+        transactionRepository.sumInvestmentByDirectionAndDateBetween(
+            userId, "REDEMPTION", start, end);
+    // Net contribution for the 20% goal: what actually stayed invested this month.
+    BigDecimal aplicado = aportes.subtract(resgatado);
 
-    BigDecimal saldo = receitaReal.subtract(totalDespesas);
+    BigDecimal resultado = entradas.subtract(totalDespesas);
 
     // 50/30/20 base: month's registered income, falling back to the configured net salary
     BigDecimal rendaBase =
-        receitaReal.compareTo(BigDecimal.ZERO) > 0
-            ? receitaReal
+        entradas.compareTo(BigDecimal.ZERO) > 0
+            ? entradas
             : (user.getMonthlyNetIncome() != null ? user.getMonthlyNetIncome() : BigDecimal.ZERO);
 
     BigDecimal percentualEssenciais = percent(despesasEssenciais, rendaBase);
     BigDecimal percentualNaoEssenciais = percent(despesasNaoEssenciais, rendaBase);
-    BigDecimal percentualInvestimentos = percent(investido.subtract(resgatado), rendaBase);
+    BigDecimal percentualInvestimentos = percent(aplicado, rendaBase);
 
     Destaques destaques = buildDestaques(userId, start, end);
 
     return DashboardResponse.builder()
         .year(year)
         .month(month)
-        .receitaBruta(receitaBruta)
-        .reembolsos(reembolsos)
-        .receitaReal(receitaReal)
+        .entradas(entradas)
         .despesasEssenciais(despesasEssenciais)
         .despesasNaoEssenciais(despesasNaoEssenciais)
         .totalDespesas(totalDespesas)
-        .investido(investido.subtract(resgatado))
+        .aplicado(aplicado)
         .resgatado(resgatado)
-        .saldo(saldo)
+        .resultado(resultado)
         .rendaBase(rendaBase)
         .percentualEssenciais(percentualEssenciais)
         .percentualNaoEssenciais(percentualNaoEssenciais)

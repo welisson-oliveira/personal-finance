@@ -21,7 +21,5 @@ public interface ImportSessionRepository extends JpaRepository<ImportSession, UU
           + "AND s.status = 'CONFIRMED' "
           + "AND s.periodEnd BETWEEN :start AND :end")
   boolean existsConfirmedFaturaByUserAndPeriodEndBetween(
-      @Param("userId") UUID userId,
-      @Param("start") LocalDate start,
-      @Param("end") LocalDate end);
+      @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 }

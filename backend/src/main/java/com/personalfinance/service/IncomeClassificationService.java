@@ -3,8 +3,6 @@ package com.personalfinance.service;
 import com.personalfinance.dto.response.ParsedTransactionDTO;
 import com.personalfinance.model.entity.KnownPerson;
 import com.personalfinance.repository.KnownPersonRepository;
-import com.personalfinance.repository.TransactionRepository;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -15,18 +13,17 @@ import org.springframework.stereotype.Service;
 public class IncomeClassificationService {
 
   private final KnownPersonRepository knownPersonRepository;
-  private final TransactionRepository transactionRepository;
-  private final MerchantNormalizationService normalizationService;
 
   public void classify(ParsedTransactionDTO tx, UUID userId, String accountHolderName) {
     if (!"INCOME".equals(tx.getType())) return;
 
     String descLower = tx.getDescription().toLowerCase();
 
+    // Transfers between the user's own accounts: keep them but out of every calculation.
     if (descLower.contains("open banking")
         && accountHolderName != null
         && descLower.contains(accountHolderName.toLowerCase())) {
-      tx.setIncomeType("OWN_TRANSFER");
+      tx.setIgnored(true);
       tx.setAutoClassification("OWN_TRANSFER");
       tx.setIncluded(false);
       return;
@@ -39,24 +36,18 @@ public class IncomeClassificationService {
         if (person.getDefaultLabel() != null) {
           tx.setNotes(person.getDefaultLabel());
         }
-        // ALWAYS_REVIEW is not a valid transaction income_type — it means "let the user decide".
-        // Send it to the review queue with no income type instead of persisting an invalid value.
-        if ("ALWAYS_REVIEW".equals(person.getDefaultIncomeType())) {
-          tx.setIncomeType(null);
+        String treatment = person.getDefaultTreatment();
+        if ("IGNORE".equals(treatment)) {
+          tx.setIgnored(true);
+          tx.setIncluded(false);
+        } else if ("ALWAYS_REVIEW".equals(treatment)) {
           tx.setNeedsReview(true);
-        } else {
-          tx.setIncomeType(person.getDefaultIncomeType());
         }
+        // else INCOME: nothing extra — it is already a plain income.
         return;
       }
     }
-
-    String normalized = normalizationService.normalize(tx.getDescription());
-    transactionRepository.findByUserIdAndEffectiveName(userId, normalized).stream()
-        .filter(t -> t.getIncomeType() != null && !"OWN_TRANSFER".equals(t.getIncomeType()))
-        .max(Comparator.comparing(t -> t.getDate()))
-        .ifPresentOrElse(
-            t -> tx.setIncomeType(t.getIncomeType()), () -> tx.setIncomeType("INCOME"));
+    // Unknown third-party income is plain income (type already INCOME).
   }
 
   private boolean nameMatches(String descLower, String personName) {

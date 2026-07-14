@@ -15,18 +15,20 @@ public class DashboardResponse {
   private int year;
   private int month;
 
-  private BigDecimal receitaBruta;
-  private BigDecimal reembolsos;
-  private BigDecimal receitaReal;
+  // "Quanto entrou": entradas do mês (receita disponível). Ignora transferências/ignorados.
+  private BigDecimal entradas;
 
+  // "Para onde foi": despesas 50/30 + investimento (20).
   private BigDecimal despesasEssenciais;
   private BigDecimal despesasNaoEssenciais;
   private BigDecimal totalDespesas;
 
-  private BigDecimal investido;
-  private BigDecimal resgatado;
+  private BigDecimal aplicado; // aporte líquido no mês (aportes − resgates)
+  private BigDecimal resgatado; // resgates brutos do mês
 
-  private BigDecimal saldo;
+  // "Quanto sobrou": resultado do mês (entradas − despesas).
+  private BigDecimal resultado;
+
   private BigDecimal rendaBase;
   private BigDecimal percentualEssenciais;
   private BigDecimal percentualNaoEssenciais;

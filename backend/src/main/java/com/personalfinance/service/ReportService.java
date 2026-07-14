@@ -3,7 +3,6 @@ package com.personalfinance.service;
 import com.personalfinance.dto.response.CategoryTotalResponse;
 import com.personalfinance.dto.response.MonthlyPointResponse;
 import com.personalfinance.model.entity.Transaction;
-import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.TransactionRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -37,8 +36,7 @@ public class ReportService {
       LocalDate start = ym.atDay(1);
       LocalDate end = ym.atEndOfMonth();
       BigDecimal receita =
-          transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-              userId, TransactionType.INCOME, "INCOME", start, end);
+          transactionRepository.sumIncomeByUserIdAndDateBetween(userId, start, end);
       BigDecimal despesa =
           transactionRepository
               .sumExpenseByBudgetGroupAndDateBetween(userId, "ESSENTIAL", start, end)

@@ -194,7 +194,7 @@ class TransactionControllerTest {
             .description("Transfer to own account")
             .amount(new BigDecimal("500.00"))
             .type(TransactionType.INCOME)
-            .incomeType("OWN_TRANSFER")
+            .ignored(true)
             .date(LocalDate.of(2026, 5, 15))
             .source("EXTRATO")
             .build());

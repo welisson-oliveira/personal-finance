@@ -35,9 +35,7 @@ public class TransactionSpecifications {
     };
   }
 
-  public static Specification<Transaction> excludingOwnTransfer() {
-    return (root, query, cb) ->
-        cb.or(
-            cb.isNull(root.get("incomeType")), cb.notEqual(root.get("incomeType"), "OWN_TRANSFER"));
+  public static Specification<Transaction> excludingIgnored() {
+    return (root, query, cb) -> cb.isFalse(root.get("ignored"));
   }
 }

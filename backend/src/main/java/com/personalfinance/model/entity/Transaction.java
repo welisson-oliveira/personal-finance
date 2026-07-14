@@ -36,11 +36,23 @@ public class Transaction {
   @Column(nullable = false)
   private TransactionType type;
 
-  @Column(name = "income_type", length = 30)
-  private String incomeType;
-
+  /** Only for EXPENSE: ESSENTIAL | NON_ESSENTIAL (the 50/30 of the 50/30/20). */
   @Column(name = "budget_group", length = 20)
   private String budgetGroup;
+
+  /** Only for INVESTMENT: CONTRIBUTION (aporte) | REDEMPTION (resgate). */
+  @Column(name = "investment_direction", length = 20)
+  private String investmentDirection;
+
+  /** Excluded from every dashboard calculation (e.g. transfers between the user's own accounts). */
+  @Column(nullable = false)
+  @Builder.Default
+  private boolean ignored = false;
+
+  /** Imported but not yet classified with confidence — surfaced for inline review in the list. */
+  @Column(name = "needs_review", nullable = false)
+  @Builder.Default
+  private boolean needsReview = false;
 
   @Column(nullable = false)
   private LocalDate date;

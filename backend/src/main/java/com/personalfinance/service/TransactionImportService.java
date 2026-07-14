@@ -34,7 +34,6 @@ public class TransactionImportService {
   private final MerchantNormalizationService normalizationService;
   private final MerchantClassificationService classificationService;
   private final ImportSessionRepository importSessionRepository;
-  private final ReviewQueueRepository reviewQueueRepository;
   private final TransactionRepository transactionRepository;
   private final CategoryRepository categoryRepository;
   private final MerchantDisplayNameRepository merchantDisplayNameRepository;
@@ -67,19 +66,20 @@ public class TransactionImportService {
     }
 
     for (ParsedTransactionDTO tx : rawTx) {
-      // RDB (INVESTMENT) is already fully classified by the parser — keep it as-is
-      if ("INVESTMENT".equals(tx.getAutoClassification())) {
-        tx.setNormalizedDescription(normalizationService.normalize(tx.getDescription()));
+      tx.setNormalizedDescription(normalizationService.normalize(tx.getDescription()));
+
+      // Investments are fully classified by the parser (RDB aporte/resgate) — keep as-is.
+      if ("INVESTMENT".equals(tx.getType())) {
         continue;
       }
+      // Income: only known-person / own-transfer handling; income carries no category/budget group.
       if ("INCOME".equals(tx.getType())) {
         incomeClassifier.classify(tx, user.getId(), holderName);
-      } else {
-        tx.setIncomeType(null);
+        continue;
       }
-      String normalized = normalizationService.normalize(tx.getDescription());
-      tx.setNormalizedDescription(normalized);
-      ClassificationResult cr = classificationService.classify(normalized, user.getId());
+      // Expense: classify the merchant into a category + budget group (50/30).
+      ClassificationResult cr =
+          classificationService.classify(tx.getNormalizedDescription(), user.getId());
       if (cr.isKnown()) {
         tx.setCategoryId(cr.getCategoryId());
         tx.setCategoryName(cr.getCategoryName());
@@ -198,8 +198,10 @@ public class TransactionImportService {
               .normalizedDescription(dto.getNormalizedDescription())
               .amount(dto.getAmount())
               .type(TransactionType.valueOf(dto.getType()))
-              .incomeType(dto.getIncomeType())
               .budgetGroup(dto.getBudgetGroup())
+              .investmentDirection(dto.getInvestmentDirection())
+              .ignored(dto.isIgnored())
+              .needsReview(dto.isNeedsReview())
               .date(dto.getDate())
               .notes(resolvedNotes)
               .category(category)
@@ -208,20 +210,6 @@ public class TransactionImportService {
               .installmentInfo(dto.getInstallmentInfo())
               .build();
       transactionRepository.save(tx);
-
-      if (dto.isNeedsReview()) {
-        reviewQueueRepository.save(
-            ReviewQueue.builder()
-                .user(user)
-                .importSession(session)
-                .rawDescription(dto.getDescription())
-                .normalizedDescription(dto.getNormalizedDescription())
-                .type(dto.getType())
-                .amount(dto.getAmount())
-                .transactionDate(dto.getDate())
-                .status("PENDING")
-                .build());
-      }
     }
 
     session.setStatus("CONFIRMED");
@@ -248,7 +236,6 @@ public class TransactionImportService {
             .findById(sessionId)
             .filter(s -> s.getUser().getId().equals(user.getId()))
             .orElseThrow(() -> new IllegalArgumentException("Import session not found"));
-    reviewQueueRepository.deleteByImportSessionId(sessionId);
     transactionRepository.deleteByImportSessionId(sessionId);
     importSessionRepository.delete(session);
   }
