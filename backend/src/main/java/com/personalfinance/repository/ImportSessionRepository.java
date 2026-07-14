@@ -15,11 +15,11 @@ public interface ImportSessionRepository extends JpaRepository<ImportSession, UU
   List<ImportSession> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
   @Query(
-      "SELECT COUNT(s) > 0 FROM ImportSession s "
+      "SELECT s FROM ImportSession s "
           + "WHERE s.user.id = :userId "
           + "AND s.documentType = 'FATURA' "
           + "AND s.status = 'CONFIRMED' "
           + "AND s.periodEnd BETWEEN :start AND :end")
-  boolean existsConfirmedFaturaByUserAndPeriodEndBetween(
+  List<ImportSession> findConfirmedFaturaByUserAndPeriodEndBetween(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 }

@@ -13,6 +13,7 @@ import com.personalfinance.service.parser.DocumentTypeDetector;
 import com.personalfinance.service.parser.NubankExtratoParser;
 import com.personalfinance.service.parser.NubankFaturaParser;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
@@ -192,12 +193,25 @@ public class TransactionImportService {
             .filter(s -> s.getUser().getId().equals(user.getId()))
             .orElseThrow(() -> new IllegalArgumentException("Import session not found"));
 
-    reconcileBillPayment(session, user.getId());
-
     List<ParsedTransactionDTO> txList =
         clientList.stream().filter(ParsedTransactionDTO::isIncluded).toList();
 
+    boolean isFatura = "FATURA".equals(session.getDocumentType());
+    if (isFatura) {
+      // Extrato-first order: the lump "Pagamento de fatura" already in the extrato is replaced by
+      // the itemized fatura being confirmed now.
+      reconcileBillPayment(session, user.getId(), netTotal(txList));
+    }
+
     for (ParsedTransactionDTO dto : txList) {
+      // Fatura-first order: skip a bill payment already represented by a confirmed fatura, so the
+      // import order never matters.
+      if (!isFatura
+          && isBillPayment(dto)
+          && hasMatchingConfirmedFatura(user.getId(), dto.getAmount(), dto.getDate())) {
+        continue;
+      }
+
       Category category = null;
       if (dto.getCategoryId() != null) {
         category = categoryRepository.findById(dto.getCategoryId()).orElse(null);
@@ -279,26 +293,71 @@ public class TransactionImportService {
         .toList();
   }
 
+  /**
+   * How close the bill-payment amount must be to the fatura's net total to be considered a match.
+   */
+  private static final BigDecimal RECONCILE_TOLERANCE = new BigDecimal("0.02");
+
+  /**
+   * Bill-payment window relative to the fatura's closing date: a few days before, well past the due
+   * date.
+   */
+  private static final int WINDOW_BEFORE_DAYS = 5;
+
+  private static final int WINDOW_AFTER_DAYS = 45;
+
   private void checkAndMarkFaturaExists(ParsedTransactionDTO tx, UUID userId) {
-    LocalDate paymentDate = tx.getDate();
-    boolean faturaExists =
-        importSessionRepository.existsConfirmedFaturaByUserAndPeriodEndBetween(
-            userId, paymentDate.minusDays(45), paymentDate);
-    if (faturaExists) {
+    // Preview hint (matched by value + date) so the user sees the payment already covered by a
+    // fatura.
+    if (hasMatchingConfirmedFatura(userId, tx.getAmount(), tx.getDate())) {
       tx.setAutoClassification("INTERNAL_FATURA_EXISTS");
       tx.setIncluded(false);
     }
   }
 
-  private void reconcileBillPayment(ImportSession session, UUID userId) {
-    if (!"FATURA".equals(session.getDocumentType())) return;
+  private boolean isBillPayment(ParsedTransactionDTO dto) {
+    return dto.getDescription() != null
+        && dto.getDescription().toLowerCase().startsWith("pagamento de fatura");
+  }
+
+  /** Net amount an import session's items add up to (expenses minus estornos) ≈ what was paid. */
+  private BigDecimal netTotal(List<ParsedTransactionDTO> items) {
+    BigDecimal net = BigDecimal.ZERO;
+    for (ParsedTransactionDTO dto : items) {
+      if ("EXPENSE".equals(dto.getType())) net = net.add(dto.getAmount());
+      else if ("INCOME".equals(dto.getType())) net = net.subtract(dto.getAmount());
+    }
+    return net;
+  }
+
+  private boolean amountsMatch(BigDecimal a, BigDecimal b) {
+    return a != null && b != null && a.subtract(b).abs().compareTo(RECONCILE_TOLERANCE) <= 0;
+  }
+
+  /** True if a confirmed fatura near this date has a net total matching the payment amount. */
+  private boolean hasMatchingConfirmedFatura(UUID userId, BigDecimal amount, LocalDate date) {
+    List<ImportSession> faturas =
+        importSessionRepository.findConfirmedFaturaByUserAndPeriodEndBetween(
+            userId, date.minusDays(WINDOW_AFTER_DAYS), date.plusDays(WINDOW_BEFORE_DAYS));
+    return faturas.stream()
+        .anyMatch(
+            s -> amountsMatch(amount, transactionRepository.sumNetByImportSession(s.getId())));
+  }
+
+  /**
+   * Deletes extrato bill payments matching this fatura by amount within a window around its
+   * closing.
+   */
+  private void reconcileBillPayment(ImportSession session, UUID userId, BigDecimal faturaNet) {
     if (session.getPeriodEnd() == null) return;
-    LocalDate windowStart = session.getPeriodEnd();
-    LocalDate windowEnd = session.getPeriodEnd().plusDays(45);
+    LocalDate windowStart = session.getPeriodEnd().minusDays(WINDOW_BEFORE_DAYS);
+    LocalDate windowEnd = session.getPeriodEnd().plusDays(WINDOW_AFTER_DAYS);
     List<Transaction> payments =
         transactionRepository.findBillPaymentsByUserAndDateBetween(userId, windowStart, windowEnd);
-    if (!payments.isEmpty()) {
-      transactionRepository.deleteAll(payments);
+    List<Transaction> matching =
+        payments.stream().filter(p -> amountsMatch(p.getAmount(), faturaNet)).toList();
+    if (!matching.isEmpty()) {
+      transactionRepository.deleteAll(matching);
     }
   }
 

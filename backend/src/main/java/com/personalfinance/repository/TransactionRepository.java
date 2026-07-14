@@ -115,4 +115,11 @@ public interface TransactionRepository
           + "AND t.date BETWEEN :start AND :end")
   List<Transaction> findBillPaymentsByUserAndDateBetween(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+  /** Net total of an import session's items (expenses minus estornos) ≈ the invoice amount paid. */
+  @Query(
+      "SELECT COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount "
+          + "WHEN t.type = 'INCOME' THEN -t.amount ELSE 0 END), 0) "
+          + "FROM Transaction t WHERE t.importSession.id = :sessionId")
+  BigDecimal sumNetByImportSession(@Param("sessionId") UUID sessionId);
 }
