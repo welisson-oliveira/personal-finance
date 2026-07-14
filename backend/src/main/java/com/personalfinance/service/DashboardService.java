@@ -150,8 +150,10 @@ public class DashboardService {
         expenses.stream()
             .filter(
                 t ->
-                    t.getNormalizedDescription() != null
-                        && assinaturaNorm.contains(t.getNormalizedDescription().toLowerCase()))
+                    (t.getNormalizedDescription() != null
+                            && assinaturaNorm.contains(t.getNormalizedDescription().toLowerCase()))
+                        || (t.getCategory() != null
+                            && "Assinatura".equalsIgnoreCase(t.getCategory().getName())))
             .count();
 
     long qtdCompras = transactionRepository.countExpensesInPeriod(userId, start, end);
