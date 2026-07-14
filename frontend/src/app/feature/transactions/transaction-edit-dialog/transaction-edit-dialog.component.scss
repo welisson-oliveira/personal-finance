@@ -8,8 +8,12 @@
 .form-fields {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-width: 420px;
+  gap: 4px;
+  min-width: 440px;
+
+  mat-form-field {
+    width: 100%;
+  }
 }
 
 .field-row {
@@ -23,5 +27,28 @@
 }
 
 .half-width {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+app-category-select {
+  display: block;
+  width: 100%;
+}
+
+/* "Ignorar" toggle set apart from the fields above */
+.ignore-row {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 520px) {
+  .form-fields {
+    min-width: 0;
+  }
+  .field-row {
+    flex-direction: column;
+    gap: 4px;
+  }
 }

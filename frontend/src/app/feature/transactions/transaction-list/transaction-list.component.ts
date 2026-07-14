@@ -7,6 +7,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -25,7 +26,6 @@ import { Category } from '../../../core/models/category.model';
 import { CategoryService } from '../../../core/services/category.service';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { TransactionEditDialogComponent } from '../transaction-edit-dialog/transaction-edit-dialog.component';
-import { CategorySelectComponent } from '../../../shared/category-select/category-select.component';
 import { PeriodService } from '../../../core/services/period.service';
 
 @Component({
@@ -39,6 +39,7 @@ import { PeriodService } from '../../../core/services/period.service';
     MatButtonModule,
     MatIconModule,
     MatSelectModule,
+    MatMenuModule,
     MatFormFieldModule,
     MatInputModule,
     MatCheckboxModule,
@@ -47,7 +48,6 @@ import { PeriodService } from '../../../core/services/period.service';
     MatSnackBarModule,
     MatDialogModule,
     MatTooltipModule,
-    CategorySelectComponent,
   ],
   templateUrl: './transaction-list.component.html',
   styleUrl: './transaction-list.component.scss',
@@ -63,7 +63,7 @@ export class TransactionListComponent implements OnInit {
   pageIndex = 0;
   pageSize = 20;
 
-  displayedColumns = ['date', 'description', 'classification', 'amount', 'actions'];
+  displayedColumns = ['date', 'description', 'type', 'category', 'group', 'amount', 'actions'];
 
   typeLabels: Record<string, string> = {
     INCOME: 'Receita',
@@ -107,14 +107,6 @@ export class TransactionListComponent implements OnInit {
   // Inline apelido editing
   editingId: string | null = null;
   editingNotes = '';
-
-  // Inline classification editing
-  classEditId: string | null = null;
-  editType = '';
-  editCategoryId?: string;
-  editBudgetGroup?: string;
-  editDirection?: string;
-  editIgnored = false;
 
   constructor(
     private txService: TransactionService,
@@ -236,41 +228,45 @@ export class TransactionListComponent implements OnInit {
     });
   }
 
-  // --- Inline classification (resolves "needs review" right on the row) ---
-  startClassEdit(tx: Transaction): void {
-    this.classEditId = tx.id;
-    this.editType = tx.type;
-    this.editCategoryId = tx.categoryId;
-    this.editBudgetGroup = tx.budgetGroup;
-    this.editDirection = tx.investmentDirection;
-    this.editIgnored = tx.ignored;
+  // --- Per-field quick edit (each datum on its own, via a small menu) ---
+  onTypePick(tx: Transaction, value: string): void {
+    if (value !== tx.type) this.quickUpdate(tx, { type: value });
   }
 
-  cancelClassEdit(): void {
-    this.classEditId = null;
+  onCategoryPick(tx: Transaction, value: string | undefined): void {
+    if (value !== tx.categoryId) this.quickUpdate(tx, { categoryId: value });
   }
 
-  onEditTypeChange(): void {
-    // Reset the fields that do not apply to the newly chosen type.
-    if (this.editType !== 'EXPENSE') {
-      this.editCategoryId = undefined;
-      this.editBudgetGroup = undefined;
-    }
-    if (this.editType !== 'INVESTMENT') {
-      this.editDirection = undefined;
-    }
+  onGroupPick(tx: Transaction, value: string): void {
+    if (tx.type === 'EXPENSE') this.quickUpdate(tx, { budgetGroup: value });
+    else if (tx.type === 'INVESTMENT') this.quickUpdate(tx, { investmentDirection: value });
   }
 
-  saveClass(tx: Transaction): void {
+  /** Applies a single-field change, normalizing the fields that don't apply to the (new) type. */
+  private quickUpdate(
+    tx: Transaction,
+    patch: Partial<{
+      type: string;
+      categoryId?: string;
+      budgetGroup?: string;
+      investmentDirection?: string;
+      ignored: boolean;
+    }>
+  ): void {
+    const type = patch.type ?? tx.type;
+    const isExpense = type === 'EXPENSE';
+    const isInvestment = type === 'INVESTMENT';
     const req: UpdateTransactionRequest = {
       description: tx.description,
       amount: tx.amount,
-      type: this.editType,
+      type,
       date: tx.date,
-      categoryId: this.editType === 'EXPENSE' ? this.editCategoryId : undefined,
-      budgetGroup: this.editType === 'EXPENSE' ? this.editBudgetGroup : undefined,
-      investmentDirection: this.editType === 'INVESTMENT' ? this.editDirection : undefined,
-      ignored: this.editIgnored,
+      categoryId: isExpense ? (patch.categoryId ?? tx.categoryId) : undefined,
+      budgetGroup: isExpense ? (patch.budgetGroup ?? tx.budgetGroup) : undefined,
+      investmentDirection: isInvestment
+        ? (patch.investmentDirection ?? tx.investmentDirection)
+        : undefined,
+      ignored: patch.ignored ?? tx.ignored,
       notes: tx.notes,
       shared: tx.shared,
       totalAmount: tx.totalAmount,
@@ -278,8 +274,7 @@ export class TransactionListComponent implements OnInit {
     };
     this.txService.update(tx.id, req).subscribe({
       next: () => {
-        this.classEditId = null;
-        this.snackBar.open('Classificação salva.', 'Fechar', { duration: 2500 });
+        this.snackBar.open('Transação atualizada.', 'Fechar', { duration: 2000 });
         this.load();
       },
       error: (err) => {
