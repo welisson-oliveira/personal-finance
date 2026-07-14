@@ -42,6 +42,7 @@ interface DialogData {
             [categories]="availableCategories"
             label="Categoria"
             [(value)]="categoryId"
+            (categoryCreated)="availableCategories = availableCategories.concat($event)"
           />
         }
 

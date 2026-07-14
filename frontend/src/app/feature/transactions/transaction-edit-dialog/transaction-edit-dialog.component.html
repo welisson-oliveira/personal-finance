@@ -67,7 +67,11 @@
 
     @if (isExpense) {
       <div class="field-row">
-        <app-category-select [categories]="data.categories" [(value)]="categoryId" />
+        <app-category-select
+          [categories]="data.categories"
+          [(value)]="categoryId"
+          (categoryCreated)="data.categories = data.categories.concat($event)"
+        />
       </div>
     }
 

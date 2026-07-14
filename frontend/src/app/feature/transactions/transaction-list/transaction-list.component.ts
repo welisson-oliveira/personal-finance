@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -26,6 +27,7 @@ import { Category } from '../../../core/models/category.model';
 import { CategoryService } from '../../../core/services/category.service';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { TransactionEditDialogComponent } from '../transaction-edit-dialog/transaction-edit-dialog.component';
+import { CategoryFormDialogComponent } from '../../categories/category-form-dialog/category-form-dialog.component';
 import { PeriodService } from '../../../core/services/period.service';
 
 @Component({
@@ -40,6 +42,7 @@ import { PeriodService } from '../../../core/services/period.service';
     MatIconModule,
     MatSelectModule,
     MatMenuModule,
+    MatDividerModule,
     MatFormFieldModule,
     MatInputModule,
     MatCheckboxModule,
@@ -235,6 +238,28 @@ export class TransactionListComponent implements OnInit {
 
   onCategoryPick(tx: Transaction, value: string | undefined): void {
     if (value !== tx.categoryId) this.quickUpdate(tx, { categoryId: value });
+  }
+
+  /** Opens the category dialog, persists the new category and assigns it to this transaction. */
+  createCategoryFor(tx: Transaction): void {
+    this.dialog
+      .open(CategoryFormDialogComponent, { data: null, width: '440px' })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) return;
+        this.categoryService.create(result).subscribe({
+          next: (created) => {
+            this.categories = [...this.categories, created];
+            this.snackBar.open(`Categoria "${created.name}" criada.`, 'Fechar', { duration: 2500 });
+            this.onCategoryPick(tx, created.id);
+          },
+          error: (err) => {
+            this.snackBar.open(err.error?.message || 'Erro ao criar categoria.', 'Fechar', {
+              duration: 4000,
+            });
+          },
+        });
+      });
   }
 
   onGroupPick(tx: Transaction, value: string): void {

@@ -19,6 +19,7 @@ import { ImportPreviewResponse, ParsedTransaction } from '../../../core/models/i
 import { Category } from '../../../core/models/category.model';
 import { ImportService } from '../import.service';
 import { CategoryService } from '../../../core/services/category.service';
+import { CategorySelectComponent } from '../../../shared/category-select/category-select.component';
 
 @Component({
   selector: 'app-preview',
@@ -39,6 +40,7 @@ import { CategoryService } from '../../../core/services/category.service';
     MatBadgeModule,
     MatCheckboxModule,
     MatTooltipModule,
+    CategorySelectComponent,
   ],
   templateUrl: './preview.component.html',
   styleUrl: './preview.component.scss',
@@ -140,7 +142,13 @@ export class PreviewComponent implements OnInit {
   confirm(): void {
     if (!this.preview) return;
     this.loading = true;
-    this.importService.confirm(this.preview.sessionId, this.preview.transactions).subscribe({
+    // The category selector uses '' for "no category"; send undefined so the backend doesn't
+    // try to parse an empty string as a UUID.
+    const transactions = this.preview.transactions.map((tx) => ({
+      ...tx,
+      categoryId: tx.categoryId || undefined,
+    }));
+    this.importService.confirm(this.preview.sessionId, transactions).subscribe({
       next: () => {
         this.snackBar.open('Import confirmed successfully!', 'Close', { duration: 3000 });
         this.router.navigate(['/dashboard']);

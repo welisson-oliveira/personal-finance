@@ -1,15 +1,23 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
+import { MatSelect, MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Category } from '../../core/models/category.model';
+import { CategoryService } from '../../core/services/category.service';
+import { CategoryFormDialogComponent } from '../../feature/categories/category-form-dialog/category-form-dialog.component';
 
 /**
  * Category picker with a search box inside the dropdown panel. Two-way bound via [(value)]
  * (empty string means "no category"). Options show the category icon.
+ *
+ * The panel also offers "➕ Nova categoria…", which opens the category form dialog, persists the
+ * new category and auto-selects it. Parents should keep their local list in sync via
+ * `(categoryCreated)="categories = [...categories, $event]"` so the new option renders immediately.
  */
 @Component({
   selector: 'app-category-select',
@@ -21,6 +29,8 @@ import { Category } from '../../core/models/category.model';
     MatSelectModule,
     MatInputModule,
     MatIconModule,
+    MatDialogModule,
+    MatSnackBarModule,
   ],
   templateUrl: './category-select.component.html',
   styleUrl: './category-select.component.scss',
@@ -30,8 +40,18 @@ export class CategorySelectComponent {
   @Input() label = 'Categoria';
   @Input() value: string | undefined = '';
   @Output() valueChange = new EventEmitter<string | undefined>();
+  /** Emitted (before valueChange) when a category is created inline, so parents can sync their list. */
+  @Output() categoryCreated = new EventEmitter<Category>();
+
+  @ViewChild(MatSelect) private select?: MatSelect;
 
   search = '';
+
+  constructor(
+    private dialog: MatDialog,
+    private categoryService: CategoryService,
+    private snackBar: MatSnackBar
+  ) {}
 
   get filtered(): Category[] {
     const q = this.search.trim().toLowerCase();
@@ -46,5 +66,29 @@ export class CategorySelectComponent {
 
   onPanelClosed(): void {
     this.search = '';
+  }
+
+  createNew(): void {
+    this.select?.close();
+    this.dialog
+      .open(CategoryFormDialogComponent, { data: null, width: '440px' })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) return;
+        this.categoryService.create(result).subscribe({
+          next: (created) => {
+            // Emit first so the parent's list already holds the new option before we select it.
+            this.categoryCreated.emit(created);
+            this.value = created.id;
+            this.valueChange.emit(created.id);
+            this.snackBar.open(`Categoria "${created.name}" criada.`, 'Fechar', { duration: 2500 });
+          },
+          error: (err) => {
+            this.snackBar.open(err.error?.message || 'Erro ao criar categoria.', 'Fechar', {
+              duration: 4000,
+            });
+          },
+        });
+      });
   }
 }
