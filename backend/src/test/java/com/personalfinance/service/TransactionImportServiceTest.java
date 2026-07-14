@@ -58,7 +58,9 @@ class TransactionImportServiceTest {
             .documentType("EXTRATO")
             .status("PENDING")
             .build();
-    lenient().when(importSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
+    lenient()
+        .when(importSessionRepository.findById(session.getId()))
+        .thenReturn(Optional.of(session));
     lenient().when(importSessionRepository.save(any())).thenReturn(session);
     lenient()
         .when(merchantDisplayNameRepository.findByUserIdAndNormalizedName(any(), any()))
@@ -190,9 +192,7 @@ class TransactionImportServiceTest {
             .source("EXTRATO")
             .build();
     when(transactionRepository.findBillPaymentsByUserAndDateBetween(
-            eq(user.getId()),
-            eq(LocalDate.of(2026, 7, 5)),
-            eq(LocalDate.of(2026, 8, 19))))
+            eq(user.getId()), eq(LocalDate.of(2026, 7, 5)), eq(LocalDate.of(2026, 8, 19))))
         .thenReturn(List.of(billPayment));
 
     ParsedTransactionDTO faturaItem =

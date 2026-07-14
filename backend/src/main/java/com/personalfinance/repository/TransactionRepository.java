@@ -126,7 +126,5 @@ public interface TransactionRepository
           + "AND LOWER(t.description) LIKE 'pagamento de fatura%' "
           + "AND t.date BETWEEN :start AND :end")
   List<Transaction> findBillPaymentsByUserAndDateBetween(
-      @Param("userId") UUID userId,
-      @Param("start") LocalDate start,
-      @Param("end") LocalDate end);
+      @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 }
