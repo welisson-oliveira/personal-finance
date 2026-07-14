@@ -202,9 +202,50 @@ class TransactionImportServiceTest {
             .amount(BigDecimal.valueOf(1200))
             .source("EXTRATO")
             .build();
+    // Window is now [periodEnd - 5, periodEnd + 45].
     when(transactionRepository.findBillPaymentsByUserAndDateBetween(
-            eq(user.getId()), eq(LocalDate.of(2026, 7, 5)), eq(LocalDate.of(2026, 8, 19))))
+            eq(user.getId()), eq(LocalDate.of(2026, 6, 30)), eq(LocalDate.of(2026, 8, 19))))
         .thenReturn(List.of(billPayment));
+
+    // Fatura items add up to the paid amount (1200) → matched by value.
+    ParsedTransactionDTO faturaItem =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 6, 15))
+            .description("Supermercado")
+            .amount(BigDecimal.valueOf(1200))
+            .type("EXPENSE")
+            .included(true)
+            .needsReview(false)
+            .build();
+
+    service.confirm(faturaSession.getId(), List.of(faturaItem), user);
+
+    verify(transactionRepository).deleteAll(List.of(billPayment));
+    verify(transactionRepository, atLeastOnce()).save(any());
+  }
+
+  @Test
+  void confirm_fatura_does_not_remove_bill_payment_with_different_amount() {
+    ImportSession faturaSession =
+        ImportSession.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .documentType("FATURA")
+            .status("PENDING")
+            .periodEnd(LocalDate.of(2026, 7, 5))
+            .build();
+    when(importSessionRepository.findById(faturaSession.getId()))
+        .thenReturn(Optional.of(faturaSession));
+
+    Transaction unrelatedPayment =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .description("Pagamento de fatura 999,00")
+            .amount(BigDecimal.valueOf(999))
+            .source("EXTRATO")
+            .build();
+    when(transactionRepository.findBillPaymentsByUserAndDateBetween(any(), any(), any()))
+        .thenReturn(List.of(unrelatedPayment));
 
     ParsedTransactionDTO faturaItem =
         ParsedTransactionDTO.builder()
@@ -218,8 +259,55 @@ class TransactionImportServiceTest {
 
     service.confirm(faturaSession.getId(), List.of(faturaItem), user);
 
-    verify(transactionRepository).deleteAll(List.of(billPayment));
-    verify(transactionRepository, atLeastOnce()).save(any());
+    // 300 != 999 → the payment is left alone.
+    verify(transactionRepository, never()).deleteAll(anyList());
+  }
+
+  @Test
+  void confirm_extrato_skips_bill_payment_already_covered_by_confirmed_fatura() {
+    ImportSession faturaSession =
+        ImportSession.builder().id(UUID.randomUUID()).user(user).documentType("FATURA").build();
+    when(importSessionRepository.findConfirmedFaturaByUserAndPeriodEndBetween(
+            eq(user.getId()), any(), any()))
+        .thenReturn(List.of(faturaSession));
+    when(transactionRepository.sumNetByImportSession(faturaSession.getId()))
+        .thenReturn(BigDecimal.valueOf(1000));
+
+    ParsedTransactionDTO billPayment =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 7, 10))
+            .description("Pagamento de fatura 1.000,00")
+            .amount(BigDecimal.valueOf(1000))
+            .type("EXPENSE")
+            .autoClassification("INTERNAL")
+            .included(true)
+            .build();
+
+    service.confirm(session.getId(), List.of(billPayment), user);
+
+    // The extrato session already exists; the payment must NOT be persisted (fatura represents it).
+    verify(transactionRepository, never()).save(any());
+  }
+
+  @Test
+  void confirm_extrato_keeps_bill_payment_when_no_matching_fatura() {
+    when(importSessionRepository.findConfirmedFaturaByUserAndPeriodEndBetween(
+            eq(user.getId()), any(), any()))
+        .thenReturn(List.of());
+
+    ParsedTransactionDTO billPayment =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 7, 10))
+            .description("Pagamento de fatura 1.000,00")
+            .amount(BigDecimal.valueOf(1000))
+            .type("EXPENSE")
+            .autoClassification("INTERNAL")
+            .included(true)
+            .build();
+
+    service.confirm(session.getId(), List.of(billPayment), user);
+
+    verify(transactionRepository, times(1)).save(any());
   }
 
   @Test

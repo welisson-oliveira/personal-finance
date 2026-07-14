@@ -22,6 +22,10 @@ Upload de extrato/fatura Nubank (PDF) → parse + classificação automática �
 
 - Persiste **apenas** os DTOs com `included = true` como `Transaction` (resolvendo o apelido via `merchant_display_names`).
 - Persiste o `needs_review` **na própria `Transaction`** (não há mais tabela `review_queue`) — a resolução é inline na lista de transações.
+- **Reconciliação extrato↔fatura — independente da ordem de importação, por valor:**
+  - **Fatura importada depois do extrato:** `reconcileBillPayment` apaga os lançamentos do **extrato** (`pagamento de fatura%`) cuja data caia em **[fechamento − 5, fechamento + 45]** **e** cujo valor case (tolerância R$ 0,02) com o **total líquido da fatura** (`netTotal` = despesas − estornos dos itens).
+  - **Extrato importado depois da fatura:** no confirm do extrato, cada "Pagamento de fatura" é **pulado** (não é criado) se houver uma **fatura confirmada** por perto cujo total líquido (`sumNetByImportSession`) case com o valor pago (`hasMatchingConfirmedFatura`).
+  - Assim o resultado é o mesmo nas duas ordens: o valor cheio é substituído pelos itens da fatura.
 - Marca a sessão `CONFIRMED` e **zera o `preview_json`**. **Usa a lista enviada pelo cliente** (com as edições do preview), não o JSON persistido.
 
 `cancel` (→ CANCELLED), `deleteSession` (apaga sessão + transações + itens de revisão), `getHistory`.
@@ -29,7 +33,7 @@ Upload de extrato/fatura Nubank (PDF) → parse + classificação automática �
 ### Parsers (`service/parser/`)
 
 - **`DocumentTypeDetector`** — heurística `detect(text)` → `FATURA` (período vigente, vencimento…) ou `EXTRATO` (total de entradas/saídas, conta…).
-- **`NubankExtratoParser`** — percorre linhas após "Movimenta…", rastreia blocos entradas/saídas; trata "Pagamento de fatura" como `INTERNAL` (`included=false`), crédito em conta, boletos, transferências multilinha; nomes de mês PT. **RDB vira investimento** (`type=INVESTMENT`, `autoClassification=INVESTMENT`, `included=true`): Aplicação RDB → `investmentDirection=CONTRIBUTION` (aporte); Resgate RDB → `investmentDirection=REDEMPTION` (resgate). **`resolveType` sobrepõe o bloco pela palavra "recebida"/"enviada"** (correção de tipo). Retorna `ParseResult(periodStart, periodEnd, transactions)`.
+- **`NubankExtratoParser`** — percorre linhas após "Movimenta…", rastreia blocos entradas/saídas; trata "Pagamento de fatura" como `INTERNAL` **`ignored=true` por padrão** (fica registrado mas **não conta** nos totais/relatórios, evitando dupla contagem com os itens da fatura mesmo se a reconciliação não rodar), crédito em conta, boletos, transferências multilinha; nomes de mês PT. **RDB vira investimento** (`type=INVESTMENT`, `autoClassification=INVESTMENT`, `included=true`): Aplicação RDB → `investmentDirection=CONTRIBUTION` (aporte); Resgate RDB → `investmentDirection=REDEMPTION` (resgate). **`resolveType` sobrepõe o bloco pela palavra "recebida"/"enviada"** (correção de tipo). Retorna `ParseResult(periodStart, periodEnd, transactions)`.
 - **`NubankFaturaParser`** — período + ano do vencimento (trata virada de ano); seções por portador ("Welisson W Oliveira", "Rosangela Oliveira"); filtra "Pagamentos"; parcela `Parcela n/n` → `installmentInfo`; estorno (`-R$`) → `INCOME`.
 
 ### Endpoints — `ImportController` (`/api/import`)
@@ -60,7 +64,9 @@ Upload PDF → parse+classificação → preview (usuário ajusta tipo/categoria
 
 ## Regras de domínio
 
-- `OWN_TRANSFER` e transações `INTERNAL` (pagamento de fatura) chegam ao preview com `included=false` — visíveis mas desmarcadas.
+- **Pagamento de fatura** (`INTERNAL`) chega `included=true` mas **`ignored=true`** — registrado como fluxo de caixa, porém fora dos cálculos (dupla proteção: mesmo sem reconciliação, não infla os totais). Se já existir uma fatura confirmada que **case por valor** (`INTERNAL_FATURA_EXISTS`), chega **desmarcado** (`included=false`) e, no confirm, é pulado de vez. Ao confirmar a fatura, `reconcileBillPayment` apaga o lançamento correspondente do extrato. **A reconciliação casa por valor + janela de data, nas duas ordens de importação.**
+- Transferências próprias (`OWN_TRANSFER`) chegam como `ignored` (não contam como receita).
+- **Fatura vira/ano:** `NubankFaturaParser` ancora o ano de fechamento pelo mês do vencimento — fatura que **fecha em dezembro e vence em janeiro** mantém o fechamento no ano anterior (senão a janela de reconciliação erraria).
 - RDB (`Aplicação`/`Resgate`) chega classificado como investimento e **marcado para incluir** (alimenta o dashboard). O `parseAndPreview` preserva essa classificação (não roda os classificadores por cima quando `autoClassification=INVESTMENT`).
 - Classificação de estabelecimento e aprendizado: ver [classificacao-e-aprendizado.md](./classificacao-e-aprendizado.md).
 - Pré-preenchimento de apelido no import vem de `merchant_display_names` (ver [transacoes.md](./transacoes.md)).
@@ -73,4 +79,4 @@ Upload PDF → parse+classificação → preview (usuário ajusta tipo/categoria
 
 ## Testes relevantes
 
-`TransactionImportServiceTest` (confirm persiste só `included`, usa dados do cliente e não o JSON, persiste `needs_review`/`ignored`/`investmentDirection` na Transaction, pula excluídos; `getPreview` devolve o preview persistido de sessão `PENDING` e recusa sessão não-pendente / sem JSON; `updatePreview` grava as edições numa sessão `PENDING` e round-trips pelo `getPreview`, recusa sessão não-pendente e de outro usuário), `NubankExtratoParserTest` e `NubankFaturaParserTest` (fixtures reais `extrato.pdf`/`fatura.pdf`), `import.service.spec` e `preview.component.spec` (autosave: `onEdit` chama `savePreview`; vira no-op após confirm/cancel).
+`TransactionImportServiceTest` (confirm persiste só `included`, usa dados do cliente e não o JSON, persiste `needs_review`/`ignored`/`investmentDirection` na Transaction, pula excluídos; `getPreview` devolve o preview persistido de sessão `PENDING` e recusa sessão não-pendente / sem JSON; `updatePreview` grava as edições numa sessão `PENDING` e round-trips pelo `getPreview`, recusa sessão não-pendente e de outro usuário; **reconciliação por valor nas duas ordens** — fatura apaga o pagamento do extrato quando o valor casa e não apaga quando difere; extrato pula o pagamento quando existe fatura confirmada casando por valor), `NubankExtratoParserTest` (pagamento de fatura vem `ignored`) e `NubankFaturaParserTest` (fixtures reais `extrato.pdf`/`fatura.pdf`; fechamento dez/vencimento jan mantém ano anterior), `import.service.spec` e `preview.component.spec` (autosave: `onEdit` chama `savePreview`; vira no-op após confirm/cancel).

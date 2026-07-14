@@ -15,8 +15,8 @@ public class NubankFaturaParser {
   private static final Pattern PERIOD_PATTERN =
       Pattern.compile("Per.odo vigente: (\\d{2}) ([A-Z]{3}) a (\\d{2}) ([A-Z]{3})");
 
-  private static final Pattern DUE_DATE_YEAR =
-      Pattern.compile("Data de vencimento: \\d{2} [A-Z]{3} (\\d{4})");
+  private static final Pattern DUE_DATE =
+      Pattern.compile("Data de vencimento: \\d{2} ([A-Z]{3}) (\\d{4})");
 
   // Matches: DD MMM [???? XXXX] DESCRIPTION R$ AMOUNT  (or ?R$ AMOUNT for credits)
   private static final Pattern TX_LINE =
@@ -45,15 +45,23 @@ public class NubankFaturaParser {
       String line = rawLine.trim();
       Matcher pm = PERIOD_PATTERN.matcher(line);
       if (pm.find() && periodStart == null) {
-        Matcher ym = DUE_DATE_YEAR.matcher(text);
-        if (ym.find()) year = Integer.parseInt(ym.group(1));
         int startDay = Integer.parseInt(pm.group(1));
         int startMonth = monthNum(pm.group(2));
         int endDay = Integer.parseInt(pm.group(3));
         int endMonth = monthNum(pm.group(4));
-        int startYear = (startMonth > endMonth) ? year - 1 : year;
+
+        Matcher due = DUE_DATE.matcher(text);
+        int dueMonth = endMonth;
+        if (due.find()) {
+          dueMonth = monthNum(due.group(1));
+          year = Integer.parseInt(due.group(2));
+        }
+        // The due date year is on the invoice; the closing month can fall in the previous year
+        // (statement closes in December but is due in January). Anchor the closing year off it.
+        int closingYear = (endMonth > dueMonth) ? year - 1 : year;
+        int startYear = (startMonth > endMonth) ? closingYear - 1 : closingYear;
         periodStart = LocalDate.of(startYear, startMonth, startDay);
-        periodEnd = LocalDate.of(year, endMonth, endDay);
+        periodEnd = LocalDate.of(closingYear, endMonth, endDay);
       }
     }
 
