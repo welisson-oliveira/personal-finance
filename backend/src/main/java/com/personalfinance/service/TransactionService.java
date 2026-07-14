@@ -37,7 +37,12 @@ public class TransactionService {
 
   @Transactional(readOnly = true)
   public Page<TransactionResponse> findAll(
-      UUID userId, String month, String type, UUID categoryId, Pageable pageable) {
+      UUID userId,
+      String month,
+      String type,
+      UUID categoryId,
+      Boolean needsReview,
+      Pageable pageable) {
     LocalDate start = null;
     LocalDate end = null;
     if (month != null && !month.isBlank()) {
@@ -53,6 +58,7 @@ public class TransactionService {
             .and(TransactionSpecifications.inDateRange(start, end))
             .and(TransactionSpecifications.ofType(txType))
             .and(TransactionSpecifications.inCategory(categoryId))
+            .and(TransactionSpecifications.needingReview(needsReview))
             .and(TransactionSpecifications.excludingIgnored());
 
     return transactionRepository.findAll(spec, pageable).map(this::toResponse);

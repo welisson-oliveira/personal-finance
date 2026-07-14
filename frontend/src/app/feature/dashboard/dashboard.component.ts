@@ -72,6 +72,6 @@ export class DashboardComponent {
 
   baseLabel(): string {
     if (!this.data) return '';
-    return this.data.receitaReal > 0 ? 'renda do mês' : 'salário configurado';
+    return this.data.entradas > 0 ? 'renda do mês' : 'salário configurado';
   }
 }

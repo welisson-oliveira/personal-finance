@@ -38,4 +38,11 @@ public class TransactionSpecifications {
   public static Specification<Transaction> excludingIgnored() {
     return (root, query, cb) -> cb.isFalse(root.get("ignored"));
   }
+
+  public static Specification<Transaction> needingReview(Boolean needsReview) {
+    return (root, query, cb) -> {
+      if (needsReview == null || !needsReview) return cb.conjunction();
+      return cb.isTrue(root.get("needsReview"));
+    };
+  }
 }

@@ -12,15 +12,13 @@ export interface Destaques {
 export interface DashboardResponse {
   year: number;
   month: number;
-  receitaBruta: number;
-  reembolsos: number;
-  receitaReal: number;
+  entradas: number;
   despesasEssenciais: number;
   despesasNaoEssenciais: number;
   totalDespesas: number;
-  investido: number;
+  aplicado: number;
   resgatado: number;
-  saldo: number;
+  resultado: number;
   rendaBase: number;
   percentualEssenciais: number;
   percentualNaoEssenciais: number;

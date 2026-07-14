@@ -45,13 +45,6 @@ export const routes: Routes = [
         ],
       },
       {
-        path: 'review',
-        loadComponent: () =>
-          import('./feature/review/review-queue/review-queue.component').then(
-            (m) => m.ReviewQueueComponent
-          ),
-      },
-      {
         path: 'transactions',
         loadComponent: () =>
           import('./feature/transactions/transaction-list/transaction-list.component').then(

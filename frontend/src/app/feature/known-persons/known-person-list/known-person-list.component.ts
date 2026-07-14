@@ -42,10 +42,9 @@ export class KnownPersonListComponent implements OnInit {
     OTHER: 'Outro',
   };
 
-  readonly incomeTypeLabel: Record<string, string> = {
-    REIMBURSEMENT: 'Reembolso',
+  readonly treatmentLabel: Record<string, string> = {
     INCOME: 'Receita',
-    OWN_TRANSFER: 'Transferência Própria',
+    IGNORE: 'Ignorar',
     ALWAYS_REVIEW: 'Sempre Revisar',
   };
 

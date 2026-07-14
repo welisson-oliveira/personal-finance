@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Transaction, UpdateTransactionRequest } from '../../../core/models/transaction.model';
 import { Category } from '../../../core/models/category.model';
@@ -28,6 +29,7 @@ interface DialogData {
     MatFormFieldModule,
     MatSelectModule,
     MatInputModule,
+    MatCheckboxModule,
     CurrencyMaskDirective,
     CategorySelectComponent,
     MatTooltipModule,
@@ -39,42 +41,19 @@ export class TransactionEditDialogComponent {
   description: string;
   amount: number | null;
   type: string;
-  incomeType: string;
   budgetGroup: string;
+  investmentDirection: string;
+  ignored: boolean;
   date: string;
   categoryId: string;
 
   types = [
     { value: 'INCOME', label: 'Receita' },
     { value: 'EXPENSE', label: 'Despesa' },
-  ];
-
-  incomeTypes = [
-    { value: '', label: 'Nenhum', tooltip: '' },
-    {
-      value: 'INCOME',
-      label: 'Receita real',
-      tooltip: 'Entrada de dinheiro que conta para o orçamento mensal',
-    },
-    {
-      value: 'REIMBURSEMENT',
-      label: 'Reembolso',
-      tooltip: 'Devolução de um gasto já registrado. Não entra no cálculo de receita',
-    },
-    {
-      value: 'OWN_TRANSFER',
-      label: 'Transferência própria',
-      tooltip: 'Movimentação entre contas próprias. Ignorada no cálculo de receita',
-    },
-    {
-      value: 'INVESTMENT',
-      label: 'Investimento',
-      tooltip: 'Resgate de aplicação financeira. Não conta como receita do mês',
-    },
+    { value: 'INVESTMENT', label: 'Investimento' },
   ];
 
   budgetGroups = [
-    { value: '', label: 'Nenhum', tooltip: '' },
     {
       value: 'ESSENTIAL',
       label: 'Essencial (50%)',
@@ -85,10 +64,14 @@ export class TransactionEditDialogComponent {
       label: 'Não Essencial (30%)',
       tooltip: 'Lazer, assinaturas, compras não prioritárias. Meta: 30%',
     },
+  ];
+
+  directions = [
+    { value: 'CONTRIBUTION', label: 'Aporte', tooltip: 'Dinheiro aplicado em investimentos' },
     {
-      value: 'INVESTMENT',
-      label: 'Investimento (20%)',
-      tooltip: 'Aportes em reservas e aplicações financeiras. Meta: 20%',
+      value: 'REDEMPTION',
+      label: 'Resgate',
+      tooltip: 'Resgate de aplicação. Não conta como receita',
     },
   ];
 
@@ -100,14 +83,19 @@ export class TransactionEditDialogComponent {
     this.description = tx.description;
     this.amount = tx.amount;
     this.type = tx.type;
-    this.incomeType = tx.incomeType || '';
     this.budgetGroup = tx.budgetGroup || '';
+    this.investmentDirection = tx.investmentDirection || '';
+    this.ignored = tx.ignored;
     this.date = tx.date;
     this.categoryId = tx.categoryId || '';
   }
 
-  get isIncome(): boolean {
-    return this.type === 'INCOME';
+  get isExpense(): boolean {
+    return this.type === 'EXPENSE';
+  }
+
+  get isInvestment(): boolean {
+    return this.type === 'INVESTMENT';
   }
 
   get valid(): boolean {
@@ -115,13 +103,13 @@ export class TransactionEditDialogComponent {
   }
 
   onTypeChange(): void {
-    // Income has an income type but no budget group/category;
-    // expense has budget group/category but no income type.
-    if (this.isIncome) {
+    // Expense carries category + budget group; investment carries a direction; income neither.
+    if (!this.isExpense) {
       this.budgetGroup = '';
       this.categoryId = '';
-    } else {
-      this.incomeType = '';
+    }
+    if (!this.isInvestment) {
+      this.investmentDirection = '';
     }
   }
 
@@ -133,9 +121,10 @@ export class TransactionEditDialogComponent {
       amount: this.amount!,
       type: this.type,
       date: this.date,
-      categoryId: this.isIncome ? undefined : this.categoryId || undefined,
-      budgetGroup: this.isIncome ? undefined : this.budgetGroup || undefined,
-      incomeType: this.isIncome ? this.incomeType || undefined : undefined,
+      categoryId: this.isExpense ? this.categoryId || undefined : undefined,
+      budgetGroup: this.isExpense ? this.budgetGroup || undefined : undefined,
+      investmentDirection: this.isInvestment ? this.investmentDirection || undefined : undefined,
+      ignored: this.ignored,
       notes: tx.notes,
       shared: tx.shared,
       totalAmount: tx.totalAmount,

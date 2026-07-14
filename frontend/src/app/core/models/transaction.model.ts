@@ -4,8 +4,10 @@ export interface Transaction {
   normalizedDescription?: string;
   amount: number;
   type: string;
-  incomeType?: string;
   budgetGroup?: string;
+  investmentDirection?: string;
+  ignored: boolean;
+  needsReview: boolean;
   date: string;
   notes?: string;
   categoryId?: string;
@@ -25,7 +27,8 @@ export interface UpdateTransactionRequest {
   date: string;
   categoryId?: string;
   budgetGroup?: string;
-  incomeType?: string;
+  investmentDirection?: string;
+  ignored?: boolean;
   notes?: string;
   shared: boolean;
   totalAmount?: number;

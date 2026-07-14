@@ -67,7 +67,7 @@
             @if (tx.needsReview) {
               <mat-icon
                 class="review-icon"
-                matTooltip="Classificação automática não encontrada. Revise na fila após confirmar"
+                matTooltip="Classificação automática não encontrada. Revise inline na lista de transações após confirmar"
                 >warning</mat-icon
               >
             }
@@ -93,19 +93,19 @@
               class="type-chip"
               [class.income-chip]="tx.type === 'INCOME'"
               [class.expense-chip]="tx.type === 'EXPENSE'"
-              [matTooltip]="tx.type === 'INCOME' ? 'Entrada de dinheiro' : 'Saída de dinheiro'"
+              [class.investment-chip]="tx.type === 'INVESTMENT'"
             >
-              {{ tx.type === 'INCOME' ? 'Receita' : 'Despesa' }}
+              {{ typeLabels[tx.type] || tx.type }}
             </span>
           </td>
         </ng-container>
 
-        <ng-container matColumnDef="incomeType">
-          <th mat-header-cell *matHeaderCellDef>Tipo de entrada</th>
+        <ng-container matColumnDef="budgetGroup">
+          <th mat-header-cell *matHeaderCellDef>Grupo</th>
           <td mat-cell *matCellDef="let tx">
-            @if (tx.type === 'INCOME') {
-              <mat-select [(ngModel)]="tx.incomeType" class="inline-select">
-                @for (opt of incomeTypes; track opt.value) {
+            @if (tx.type === 'EXPENSE') {
+              <mat-select [(ngModel)]="tx.budgetGroup" class="inline-select">
+                @for (opt of budgetGroups; track opt.value) {
                   <mat-option [value]="opt.value" [matTooltip]="opt.tooltip" matTooltipPosition="right">
                     {{ opt.label }}
                   </mat-option>
@@ -117,12 +117,12 @@
           </td>
         </ng-container>
 
-        <ng-container matColumnDef="budgetGroup">
-          <th mat-header-cell *matHeaderCellDef>Grupo</th>
+        <ng-container matColumnDef="direction">
+          <th mat-header-cell *matHeaderCellDef>Direção</th>
           <td mat-cell *matCellDef="let tx">
-            @if (tx.type === 'EXPENSE') {
-              <mat-select [(ngModel)]="tx.budgetGroup" class="inline-select">
-                @for (opt of budgetGroups; track opt.value) {
+            @if (tx.type === 'INVESTMENT') {
+              <mat-select [(ngModel)]="tx.investmentDirection" class="inline-select">
+                @for (opt of directions; track opt.value) {
                   <mat-option [value]="opt.value" [matTooltip]="opt.tooltip" matTooltipPosition="right">
                     {{ opt.label }}
                   </mat-option>
