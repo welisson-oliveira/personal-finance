@@ -260,6 +260,11 @@
 
   <mat-menu #categoryMenu="matMenu" class="cat-menu">
     <ng-template matMenuContent let-tx="tx">
+      <button mat-menu-item (click)="createCategoryFor(tx)">
+        <mat-icon>add</mat-icon>
+        <span>Nova categoria…</span>
+      </button>
+      <mat-divider></mat-divider>
       <button mat-menu-item (click)="onCategoryPick(tx, undefined)">
         <span class="muted">Nenhuma</span>
       </button>

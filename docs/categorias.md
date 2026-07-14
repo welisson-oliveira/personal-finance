@@ -21,7 +21,7 @@ CRUD de categorias do usuário (as globais do sistema são visíveis mas somente
 
 - **`feature/categories/category-list`** (`app-category-list`) — lista; `openCreate()`/`openEdit()` abrem o form dialog; `confirmDelete()` via `ConfirmDialogComponent`. **Categorias globais são read-only** — `openEdit`/`confirmDelete` retornam cedo quando `cat.global`. O ícone é exibido na cor da categoria.
 - **`feature/categories/category-form-dialog`** (`app-category-form-dialog`) — **template e estilos inline** (sem `.html`/`.scss`). Form reativo (name obrigatório, icon, color). Tem **preview ao vivo** do chip, grade de **ícones sugeridos** (`suggestedIcons`) e **paleta de cores** (`palette`, 16 cores, toggle). Usa `CategoryService`.
-- **`shared/category-select`** (`app-category-select`) — reutilizável: `mat-select` de categoria com **busca no painel** e ícone/cor nas opções; two-way `[(value)]` (`''` = "Nenhuma"). Usado no editar transação e no resolver da fila.
+- **`shared/category-select`** (`app-category-select`) — reutilizável: `mat-select` de categoria com **busca no painel** e ícone/cor nas opções; two-way `[(value)]` (`''` = "Nenhuma"). No rodapé do painel há **"➕ Nova categoria…"**: abre o `category-form-dialog`, persiste via `CategoryService.create` e **já seleciona** a criada, emitindo `@Output() categoryCreated` **antes** do `valueChange` para o pai sincronizar sua lista (`(categoryCreated)="categories = categories.concat($event)"`). Usado no **editar transação**, **metas** e no **preview de importação** (seletor de categoria por linha). A **lista de transações** oferece o mesmo "➕ Nova categoria…" no menu de categoria da célula (`createCategoryFor`).
 
 ## Onde mexer
 

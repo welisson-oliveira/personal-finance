@@ -104,7 +104,23 @@ describe('PreviewComponent', () => {
 
     component.confirm();
 
-    expect(importServiceSpy.confirm).toHaveBeenCalledWith('sess-001', mockPreview.transactions);
+    const [sessionId, txs] = importServiceSpy.confirm.calls.mostRecent().args;
+    expect(sessionId).toBe('sess-001');
+    expect(txs.length).toBe(mockPreview.transactions.length);
+    expect(txs.map((t) => t.description)).toEqual(
+      mockPreview.transactions.map((t) => t.description)
+    );
+  });
+
+  it('confirm normalizes empty categoryId to undefined', () => {
+    importServiceSpy.confirm.and.returnValue(of(undefined));
+    mockPreview.transactions[0].categoryId = '';
+
+    component.confirm();
+
+    const [, txs] = importServiceSpy.confirm.calls.mostRecent().args;
+    expect(txs[0].categoryId).toBeUndefined();
+    mockPreview.transactions[0].categoryId = undefined;
   });
 
   it('autoClassificationLabel returns Portuguese label for OWN_TRANSFER', () => {
