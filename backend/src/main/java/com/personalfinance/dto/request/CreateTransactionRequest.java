@@ -28,8 +28,9 @@ public class CreateTransactionRequest {
   @NotNull private LocalDate date;
 
   private UUID categoryId;
-  private String budgetGroup;
-  private String incomeType;
+  private String budgetGroup; // EXPENSE: ESSENTIAL | NON_ESSENTIAL
+  private String investmentDirection; // INVESTMENT: CONTRIBUTION | REDEMPTION
+  private boolean ignored;
   private String notes;
   private boolean shared;
   private BigDecimal totalAmount;

@@ -35,9 +35,14 @@ public class TransactionSpecifications {
     };
   }
 
-  public static Specification<Transaction> excludingOwnTransfer() {
-    return (root, query, cb) ->
-        cb.or(
-            cb.isNull(root.get("incomeType")), cb.notEqual(root.get("incomeType"), "OWN_TRANSFER"));
+  public static Specification<Transaction> excludingIgnored() {
+    return (root, query, cb) -> cb.isFalse(root.get("ignored"));
+  }
+
+  public static Specification<Transaction> needingReview(Boolean needsReview) {
+    return (root, query, cb) -> {
+      if (needsReview == null || !needsReview) return cb.conjunction();
+      return cb.isTrue(root.get("needsReview"));
+    };
   }
 }

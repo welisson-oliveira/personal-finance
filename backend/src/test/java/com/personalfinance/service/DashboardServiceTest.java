@@ -1,12 +1,10 @@
 package com.personalfinance.service;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.personalfinance.dto.response.DashboardResponse;
 import com.personalfinance.model.entity.User;
-import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.MerchantRuleRepository;
 import com.personalfinance.repository.TransactionRepository;
 import java.math.BigDecimal;
@@ -27,169 +25,97 @@ class DashboardServiceTest {
 
   @InjectMocks private DashboardService service;
 
-  @Test
-  void monthly_returns_correct_saldo() {
-    UUID userId = UUID.randomUUID();
-    LocalDate start = LocalDate.of(2026, 5, 1);
-    LocalDate end = LocalDate.of(2026, 5, 31);
+  private static final LocalDate START = LocalDate.of(2026, 5, 1);
+  private static final LocalDate END = LocalDate.of(2026, 5, 31);
 
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INCOME", start, end))
-        .thenReturn(new BigDecimal("3000.00"));
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "REIMBURSEMENT", start, end))
-        .thenReturn(new BigDecimal("500.00"));
+  private void stubIncome(UUID userId, String value) {
+    when(transactionRepository.sumIncomeByUserIdAndDateBetween(userId, START, END))
+        .thenReturn(new BigDecimal(value));
+  }
+
+  private void stubExpenses(UUID userId, String essential, String nonEssential) {
     when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "ESSENTIAL", start, end))
-        .thenReturn(new BigDecimal("1200.00"));
+            userId, "ESSENTIAL", START, END))
+        .thenReturn(new BigDecimal(essential));
     when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "NON_ESSENTIAL", start, end))
-        .thenReturn(new BigDecimal("800.00"));
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "INVESTMENT", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INVESTMENT", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
+            userId, "NON_ESSENTIAL", START, END))
+        .thenReturn(new BigDecimal(nonEssential));
+  }
+
+  private void stubInvestments(UUID userId, String contribution, String redemption) {
+    when(transactionRepository.sumInvestmentByDirectionAndDateBetween(
+            userId, "CONTRIBUTION", START, END))
+        .thenReturn(new BigDecimal(contribution));
+    when(transactionRepository.sumInvestmentByDirectionAndDateBetween(
+            userId, "REDEMPTION", START, END))
+        .thenReturn(new BigDecimal(redemption));
+  }
+
+  private void stubDestaques(UUID userId) {
+    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, START, END))
         .thenReturn(List.of());
     when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
-    when(transactionRepository.countExpensesInPeriod(userId, start, end)).thenReturn(10L);
-    when(transactionRepository.countPixEnviadosInPeriod(userId, start, end)).thenReturn(2L);
-    when(transactionRepository.countPixRecebidosInPeriod(userId, start, end)).thenReturn(3L);
+    when(transactionRepository.countExpensesInPeriod(userId, START, END)).thenReturn(0L);
+    when(transactionRepository.countPixEnviadosInPeriod(userId, START, END)).thenReturn(0L);
+    when(transactionRepository.countPixRecebidosInPeriod(userId, START, END)).thenReturn(0L);
+  }
+
+  @Test
+  void monthly_returns_entradas_totals_and_resultado() {
+    UUID userId = UUID.randomUUID();
+    stubIncome(userId, "3000.00");
+    stubExpenses(userId, "1200.00", "800.00");
+    stubInvestments(userId, "0", "0");
+    stubDestaques(userId);
 
     DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
 
-    assertThat(result.getReceitaBruta()).isEqualByComparingTo("3000.00");
-    assertThat(result.getReembolsos()).isEqualByComparingTo("500.00");
-    assertThat(result.getReceitaReal()).isEqualByComparingTo("3000.00");
+    assertThat(result.getEntradas()).isEqualByComparingTo("3000.00");
     assertThat(result.getDespesasEssenciais()).isEqualByComparingTo("1200.00");
     assertThat(result.getDespesasNaoEssenciais()).isEqualByComparingTo("800.00");
     assertThat(result.getTotalDespesas()).isEqualByComparingTo("2000.00");
-    assertThat(result.getSaldo()).isEqualByComparingTo("1000.00");
+    assertThat(result.getResultado()).isEqualByComparingTo("1000.00");
   }
 
   @Test
   void monthly_calculates_percentages_correctly() {
     UUID userId = UUID.randomUUID();
-    LocalDate start = LocalDate.of(2026, 5, 1);
-    LocalDate end = LocalDate.of(2026, 5, 31);
-
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INCOME", start, end))
-        .thenReturn(new BigDecimal("4000.00"));
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "REIMBURSEMENT", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "ESSENTIAL", start, end))
-        .thenReturn(new BigDecimal("2000.00"));
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "NON_ESSENTIAL", start, end))
-        .thenReturn(new BigDecimal("1200.00"));
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "INVESTMENT", start, end))
-        .thenReturn(new BigDecimal("800.00"));
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INVESTMENT", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
-        .thenReturn(List.of());
-    when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
-    when(transactionRepository.countExpensesInPeriod(userId, start, end)).thenReturn(0L);
-    when(transactionRepository.countPixEnviadosInPeriod(userId, start, end)).thenReturn(0L);
-    when(transactionRepository.countPixRecebidosInPeriod(userId, start, end)).thenReturn(0L);
+    stubIncome(userId, "4000.00");
+    stubExpenses(userId, "2000.00", "1200.00");
+    stubInvestments(userId, "800.00", "0");
+    stubDestaques(userId);
 
     DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
 
     assertThat(result.getPercentualEssenciais()).isEqualByComparingTo("50.00");
     assertThat(result.getPercentualNaoEssenciais()).isEqualByComparingTo("30.00");
     assertThat(result.getPercentualInvestimentos()).isEqualByComparingTo("20.00");
-
-    BigDecimal soma =
-        result
-            .getPercentualEssenciais()
-            .add(result.getPercentualNaoEssenciais())
-            .add(result.getPercentualInvestimentos());
-    assertThat(soma).isLessThanOrEqualTo(new BigDecimal("100.00"));
   }
 
   @Test
-  void monthly_investido_uses_budget_group_not_income_type() {
+  void monthly_aplicado_is_net_contribution_minus_redemption() {
     UUID userId = UUID.randomUUID();
-    LocalDate start = LocalDate.of(2026, 5, 1);
-    LocalDate end = LocalDate.of(2026, 5, 31);
-
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            any(), any(), any(), any(), any()))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "ESSENTIAL", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "NON_ESSENTIAL", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "INVESTMENT", start, end))
-        .thenReturn(new BigDecimal("1500.00"));
-    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
-        .thenReturn(List.of());
-    when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
-    when(transactionRepository.countExpensesInPeriod(any(), any(), any())).thenReturn(0L);
-    when(transactionRepository.countPixEnviadosInPeriod(any(), any(), any())).thenReturn(0L);
-    when(transactionRepository.countPixRecebidosInPeriod(any(), any(), any())).thenReturn(0L);
+    stubIncome(userId, "5000.00");
+    stubExpenses(userId, "0", "0");
+    stubInvestments(userId, "1500.00", "500.00");
+    stubDestaques(userId);
 
     DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
 
-    assertThat(result.getInvestido()).isEqualByComparingTo("1500.00");
-  }
-
-  @Test
-  void monthly_resgatado_uses_income_type_investment() {
-    UUID userId = UUID.randomUUID();
-    LocalDate start = LocalDate.of(2026, 5, 1);
-    LocalDate end = LocalDate.of(2026, 5, 31);
-
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INCOME", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "REIMBURSEMENT", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INVESTMENT", start, end))
-        .thenReturn(new BigDecimal("2000.00"));
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(any(), any(), any(), any()))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
-        .thenReturn(List.of());
-    when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
-    when(transactionRepository.countExpensesInPeriod(any(), any(), any())).thenReturn(0L);
-    when(transactionRepository.countPixEnviadosInPeriod(any(), any(), any())).thenReturn(0L);
-    when(transactionRepository.countPixRecebidosInPeriod(any(), any(), any())).thenReturn(0L);
-
-    DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
-
-    assertThat(result.getResgatado()).isEqualByComparingTo("2000.00");
+    // Net of the R$500 redemption against the R$1500 contribution.
+    assertThat(result.getAplicado()).isEqualByComparingTo("1000.00");
+    assertThat(result.getResgatado()).isEqualByComparingTo("500.00");
+    // 1000 / 5000 = 20%
+    assertThat(result.getPercentualInvestimentos()).isEqualByComparingTo("20.00");
   }
 
   @Test
   void monthly_with_zero_income_returns_zero_percentages() {
     UUID userId = UUID.randomUUID();
-    LocalDate start = LocalDate.of(2026, 5, 1);
-    LocalDate end = LocalDate.of(2026, 5, 31);
-
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            any(), any(), any(), any(), any()))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(any(), any(), any(), any()))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.findExpensesWithCategoryInPeriod(any(), any(), any()))
-        .thenReturn(List.of());
-    when(merchantRuleRepository.findAllVisibleToUser(any())).thenReturn(List.of());
-    when(transactionRepository.countExpensesInPeriod(any(), any(), any())).thenReturn(0L);
-    when(transactionRepository.countPixEnviadosInPeriod(any(), any(), any())).thenReturn(0L);
-    when(transactionRepository.countPixRecebidosInPeriod(any(), any(), any())).thenReturn(0L);
+    stubIncome(userId, "0");
+    stubExpenses(userId, "0", "0");
+    stubInvestments(userId, "0", "0");
+    stubDestaques(userId);
 
     DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
 
@@ -202,37 +128,12 @@ class DashboardServiceTest {
   @Test
   void monthly_falls_back_to_configured_net_income_when_month_has_no_income() {
     UUID userId = UUID.randomUUID();
-    LocalDate start = LocalDate.of(2026, 5, 1);
-    LocalDate end = LocalDate.of(2026, 5, 31);
-
-    // Month has no registered income, but expenses exist
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INCOME", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "REIMBURSEMENT", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "ESSENTIAL", start, end))
-        .thenReturn(new BigDecimal("2500.00"));
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "NON_ESSENTIAL", start, end))
-        .thenReturn(new BigDecimal("1500.00"));
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "INVESTMENT", start, end))
-        .thenReturn(new BigDecimal("1000.00"));
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INVESTMENT", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
-        .thenReturn(List.of());
-    when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
-    when(transactionRepository.countExpensesInPeriod(userId, start, end)).thenReturn(0L);
-    when(transactionRepository.countPixEnviadosInPeriod(userId, start, end)).thenReturn(0L);
-    when(transactionRepository.countPixRecebidosInPeriod(userId, start, end)).thenReturn(0L);
+    stubIncome(userId, "0");
+    stubExpenses(userId, "2500.00", "1500.00");
+    stubInvestments(userId, "1000.00", "0");
+    stubDestaques(userId);
 
     User user = User.builder().id(userId).monthlyNetIncome(new BigDecimal("5000.00")).build();
-
     DashboardResponse result = service.getMonthly(user, 2026, 5);
 
     assertThat(result.getRendaBase()).isEqualByComparingTo("5000.00");
@@ -244,40 +145,14 @@ class DashboardServiceTest {
   @Test
   void monthly_prefers_registered_income_over_configured_net_income() {
     UUID userId = UUID.randomUUID();
-    LocalDate start = LocalDate.of(2026, 5, 1);
-    LocalDate end = LocalDate.of(2026, 5, 31);
-
-    // Month has registered income (e.g. salary imported from the extrato)
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INCOME", start, end))
-        .thenReturn(new BigDecimal("4000.00"));
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "REIMBURSEMENT", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "ESSENTIAL", start, end))
-        .thenReturn(new BigDecimal("2000.00"));
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "NON_ESSENTIAL", start, end))
-        .thenReturn(new BigDecimal("1200.00"));
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            userId, "INVESTMENT", start, end))
-        .thenReturn(new BigDecimal("800.00"));
-    when(transactionRepository.sumByUserIdAndTypeAndIncomeTypeAndDateBetween(
-            userId, TransactionType.INCOME, "INVESTMENT", start, end))
-        .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
-        .thenReturn(List.of());
-    when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
-    when(transactionRepository.countExpensesInPeriod(userId, start, end)).thenReturn(0L);
-    when(transactionRepository.countPixEnviadosInPeriod(userId, start, end)).thenReturn(0L);
-    when(transactionRepository.countPixRecebidosInPeriod(userId, start, end)).thenReturn(0L);
+    stubIncome(userId, "4000.00");
+    stubExpenses(userId, "2000.00", "1200.00");
+    stubInvestments(userId, "800.00", "0");
+    stubDestaques(userId);
 
     User user = User.builder().id(userId).monthlyNetIncome(new BigDecimal("5000.00")).build();
-
     DashboardResponse result = service.getMonthly(user, 2026, 5);
 
-    // Registered income wins over the configured salary
     assertThat(result.getRendaBase()).isEqualByComparingTo("4000.00");
     assertThat(result.getPercentualEssenciais()).isEqualByComparingTo("50.00");
     assertThat(result.getPercentualNaoEssenciais()).isEqualByComparingTo("30.00");

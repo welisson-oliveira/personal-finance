@@ -38,7 +38,6 @@ class TransactionImportServiceTest {
   @Mock private MerchantNormalizationService normalizationService;
   @Mock private MerchantClassificationService classificationService;
   @Mock private ImportSessionRepository importSessionRepository;
-  @Mock private ReviewQueueRepository reviewQueueRepository;
   @Mock private TransactionRepository transactionRepository;
   @Mock private CategoryRepository categoryRepository;
   @Mock private MerchantDisplayNameRepository merchantDisplayNameRepository;
@@ -58,7 +57,9 @@ class TransactionImportServiceTest {
             .documentType("EXTRATO")
             .status("PENDING")
             .build();
-    lenient().when(importSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
+    lenient()
+        .when(importSessionRepository.findById(session.getId()))
+        .thenReturn(Optional.of(session));
     lenient().when(importSessionRepository.save(any())).thenReturn(session);
     lenient()
         .when(merchantDisplayNameRepository.findByUserIdAndNormalizedName(any(), any()))
@@ -95,14 +96,14 @@ class TransactionImportServiceTest {
   }
 
   @Test
-  void confirm_uses_client_data_not_cache() {
+  void confirm_uses_client_data_not_stored_preview() {
     ParsedTransactionDTO clientVersion =
         ParsedTransactionDTO.builder()
             .date(LocalDate.of(2026, 5, 10))
-            .description("Pix recebido")
+            .description("Mercado")
             .amount(BigDecimal.valueOf(3000))
-            .type("INCOME")
-            .incomeType("REIMBURSEMENT")
+            .type("EXPENSE")
+            .budgetGroup("ESSENTIAL")
             .included(true)
             .needsReview(false)
             .build();
@@ -111,30 +112,41 @@ class TransactionImportServiceTest {
 
     ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
     verify(transactionRepository).save(txCaptor.capture());
-    assertThat(txCaptor.getValue().getIncomeType()).isEqualTo("REIMBURSEMENT");
+    assertThat(txCaptor.getValue().getBudgetGroup()).isEqualTo("ESSENTIAL");
   }
 
   @Test
-  void confirm_does_not_persist_own_transfer_when_excluded() {
-    ParsedTransactionDTO ownTransfer =
+  void confirm_persists_investment_direction_and_ignored_flag() {
+    ParsedTransactionDTO aporte =
         ParsedTransactionDTO.builder()
             .date(LocalDate.of(2026, 5, 5))
-            .description("Transferência Open Banking João Silva")
-            .amount(BigDecimal.valueOf(2000))
+            .description("Aplicação RDB")
+            .amount(BigDecimal.valueOf(200))
+            .type("INVESTMENT")
+            .investmentDirection("CONTRIBUTION")
+            .included(true)
+            .build();
+    ParsedTransactionDTO ownTransfer =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 5, 6))
+            .description("Transferência Open Banking João")
+            .amount(BigDecimal.valueOf(500))
             .type("INCOME")
-            .incomeType("OWN_TRANSFER")
-            .autoClassification("INTERNAL")
-            .included(false)
-            .needsReview(false)
+            .ignored(true)
+            .included(true)
             .build();
 
-    service.confirm(session.getId(), List.of(ownTransfer), user);
+    service.confirm(session.getId(), List.of(aporte, ownTransfer), user);
 
-    verify(transactionRepository, never()).save(any());
+    ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
+    verify(transactionRepository, times(2)).save(txCaptor.capture());
+    assertThat(txCaptor.getAllValues())
+        .anySatisfy(t -> assertThat(t.getInvestmentDirection()).isEqualTo("CONTRIBUTION"))
+        .anySatisfy(t -> assertThat(t.isIgnored()).isTrue());
   }
 
   @Test
-  void confirm_creates_review_queue_entry_for_included_needs_review() {
+  void confirm_persists_needs_review_flag_on_transaction() {
     ParsedTransactionDTO tx =
         ParsedTransactionDTO.builder()
             .date(LocalDate.of(2026, 5, 15))
@@ -148,11 +160,13 @@ class TransactionImportServiceTest {
 
     service.confirm(session.getId(), List.of(tx), user);
 
-    verify(reviewQueueRepository, times(1)).save(any());
+    ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
+    verify(transactionRepository).save(txCaptor.capture());
+    assertThat(txCaptor.getValue().isNeedsReview()).isTrue();
   }
 
   @Test
-  void confirm_skips_review_queue_for_excluded_needs_review() {
+  void confirm_skips_excluded_transactions() {
     ParsedTransactionDTO tx =
         ParsedTransactionDTO.builder()
             .date(LocalDate.of(2026, 5, 15))
@@ -166,7 +180,6 @@ class TransactionImportServiceTest {
     service.confirm(session.getId(), List.of(tx), user);
 
     verify(transactionRepository, never()).save(any());
-    verify(reviewQueueRepository, never()).save(any());
   }
 
   @Test
@@ -190,9 +203,7 @@ class TransactionImportServiceTest {
             .source("EXTRATO")
             .build();
     when(transactionRepository.findBillPaymentsByUserAndDateBetween(
-            eq(user.getId()),
-            eq(LocalDate.of(2026, 7, 5)),
-            eq(LocalDate.of(2026, 8, 19))))
+            eq(user.getId()), eq(LocalDate.of(2026, 7, 5)), eq(LocalDate.of(2026, 8, 19))))
         .thenReturn(List.of(billPayment));
 
     ParsedTransactionDTO faturaItem =

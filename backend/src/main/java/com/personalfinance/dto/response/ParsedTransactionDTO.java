@@ -19,12 +19,13 @@ public class ParsedTransactionDTO {
   private String installmentInfo;
 
   private String normalizedDescription;
-  private String incomeType;
-  private String budgetGroup;
+  private String budgetGroup; // EXPENSE: ESSENTIAL | NON_ESSENTIAL
+  private String investmentDirection; // INVESTMENT: CONTRIBUTION | REDEMPTION
   private UUID categoryId;
   private String categoryName;
   private String notes;
   private UUID knownPersonId;
+  @Builder.Default private boolean ignored = false;
   private boolean needsReview;
   @Builder.Default private boolean included = true;
   private String autoClassification;

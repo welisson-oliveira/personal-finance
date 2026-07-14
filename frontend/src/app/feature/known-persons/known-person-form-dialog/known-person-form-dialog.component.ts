@@ -44,15 +44,14 @@ import { KnownPerson } from '../../../core/models/known-person.model';
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Tipo de Entrada Padrão</mat-label>
-          <mat-select formControlName="defaultIncomeType">
-            <mat-option value="REIMBURSEMENT">Reembolso (não conta como receita)</mat-option>
+          <mat-label>Tratamento Padrão</mat-label>
+          <mat-select formControlName="defaultTreatment">
             <mat-option value="INCOME">Receita (renda real)</mat-option>
-            <mat-option value="OWN_TRANSFER">Transferência Própria (ignorar)</mat-option>
+            <mat-option value="IGNORE">Ignorar (não conta nos cálculos)</mat-option>
             <mat-option value="ALWAYS_REVIEW">Sempre Revisar</mat-option>
           </mat-select>
-          <mat-error *ngIf="form.get('defaultIncomeType')?.hasError('required')"
-            >Tipo é obrigatório</mat-error
+          <mat-error *ngIf="form.get('defaultTreatment')?.hasError('required')"
+            >Tratamento é obrigatório</mat-error
           >
         </mat-form-field>
 
@@ -85,7 +84,7 @@ export class KnownPersonFormDialogComponent {
     this.form = this.fb.group({
       name: [data?.name ?? '', Validators.required],
       relationship: [data?.relationship ?? 'HOUSE_MEMBER', Validators.required],
-      defaultIncomeType: [data?.defaultIncomeType ?? 'REIMBURSEMENT', Validators.required],
+      defaultTreatment: [data?.defaultTreatment ?? 'INCOME', Validators.required],
       defaultLabel: [data?.defaultLabel ?? ''],
     });
   }

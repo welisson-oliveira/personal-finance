@@ -6,8 +6,9 @@ export interface ParsedTransaction {
   cardHolder?: string;
   installmentInfo?: string;
   normalizedDescription?: string;
-  incomeType?: string;
   budgetGroup?: string;
+  investmentDirection?: string;
+  ignored?: boolean;
   categoryId?: string;
   categoryName?: string;
   notes?: string;

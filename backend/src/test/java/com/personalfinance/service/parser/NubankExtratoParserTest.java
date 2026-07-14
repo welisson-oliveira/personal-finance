@@ -56,12 +56,11 @@ class NubankExtratoParserTest {
     assertThat(rdbs)
         .allSatisfy(
             t -> {
+              assertThat(t.getType()).isEqualTo("INVESTMENT");
               if (t.getDescription().toLowerCase().startsWith("resgate")) {
-                assertThat(t.getType()).isEqualTo("INCOME");
-                assertThat(t.getIncomeType()).isEqualTo("INVESTMENT");
+                assertThat(t.getInvestmentDirection()).isEqualTo("REDEMPTION");
               } else {
-                assertThat(t.getType()).isEqualTo("EXPENSE");
-                assertThat(t.getBudgetGroup()).isEqualTo("INVESTMENT");
+                assertThat(t.getInvestmentDirection()).isEqualTo("CONTRIBUTION");
               }
             });
   }

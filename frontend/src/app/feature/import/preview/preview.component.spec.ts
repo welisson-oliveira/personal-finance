@@ -31,6 +31,7 @@ describe('PreviewComponent', () => {
         type: 'EXPENSE',
         needsReview: false,
         included: true,
+        ignored: false,
         budgetGroup: 'ESSENTIAL',
       },
       {
@@ -40,6 +41,7 @@ describe('PreviewComponent', () => {
         type: 'EXPENSE',
         needsReview: false,
         included: false,
+        ignored: false,
         autoClassification: 'INTERNAL',
       },
       {
@@ -47,7 +49,7 @@ describe('PreviewComponent', () => {
         description: 'Transferência Open Banking',
         amount: 2000,
         type: 'INCOME',
-        incomeType: 'OWN_TRANSFER',
+        ignored: true,
         needsReview: false,
         included: false,
         autoClassification: 'OWN_TRANSFER',

@@ -10,8 +10,8 @@ Personal expense tracking app with a Java/Spring Boot REST API and an Angular fr
 
 A pasta [`docs/`](./docs/README.md) documenta a aplicação **por feature de negócio**, cruzando backend + frontend de cada domínio. **Antes de mexer num domínio, leia o doc correspondente** em vez de reanalisar o código inteiro; e **atualize o doc na mesma PR** quando o comportamento mudar.
 
-- [`docs/README.md`](./docs/README.md) — índice, arquitetura, stack, convenções, componentes compartilhados e **glossário de domínio** (`income_type`, `budget_group` 50/30/20, nome efetivo).
-- Domínios: autenticação-e-usuarios · importacao-de-pdfs · classificacao-e-aprendizado (cross-cutting) · fila-de-revisao · transacoes · dashboard · relatorios · categorias · metas-de-orcamento · pessoas-conhecidas.
+- [`docs/README.md`](./docs/README.md) — índice, arquitetura, stack, convenções, componentes compartilhados e **glossário de domínio** (tipo único receita/despesa/investimento, `budget_group` 50/30/20, `investment_direction`, `ignored`, `needs_review`, nome efetivo).
+- Domínios: autenticação-e-usuarios · importacao-de-pdfs · classificacao-e-aprendizado (cross-cutting) · transacoes (inclui a revisão inline) · dashboard · relatorios · categorias · metas-de-orcamento · pessoas-conhecidas.
 
 ## Commands
 

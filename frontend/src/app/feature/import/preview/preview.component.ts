@@ -54,34 +54,17 @@ export class PreviewComponent implements OnInit {
     'description',
     'amount',
     'type',
-    'incomeType',
     'budgetGroup',
+    'direction',
     'category',
     'notes',
   ];
 
-  incomeTypes = [
-    {
-      value: 'INCOME',
-      label: 'Receita real',
-      tooltip: 'Entrada de dinheiro que conta para o orçamento mensal',
-    },
-    {
-      value: 'REIMBURSEMENT',
-      label: 'Reembolso',
-      tooltip: 'Devolução de um gasto já registrado. Não entra no cálculo de receita',
-    },
-    {
-      value: 'OWN_TRANSFER',
-      label: 'Transf. própria',
-      tooltip: 'Movimentação entre contas próprias. Ignorada no cálculo de receita',
-    },
-    {
-      value: 'INVESTMENT',
-      label: 'Investimento',
-      tooltip: 'Resgate de aplicação financeira. Não conta como receita do mês',
-    },
-  ];
+  typeLabels: Record<string, string> = {
+    INCOME: 'Receita',
+    EXPENSE: 'Despesa',
+    INVESTMENT: 'Investimento',
+  };
 
   budgetGroups = [
     {
@@ -94,10 +77,14 @@ export class PreviewComponent implements OnInit {
       label: 'Não Essencial',
       tooltip: 'Lazer, assinaturas, compras não prioritárias. Meta: 30%',
     },
+  ];
+
+  directions = [
+    { value: 'CONTRIBUTION', label: 'Aporte', tooltip: 'Dinheiro aplicado em investimentos' },
     {
-      value: 'INVESTMENT',
-      label: 'Investimento',
-      tooltip: 'Aportes em reservas e aplicações financeiras. Meta: 20%',
+      value: 'REDEMPTION',
+      label: 'Resgate',
+      tooltip: 'Resgate de aplicação. Não conta como receita',
     },
   ];
 

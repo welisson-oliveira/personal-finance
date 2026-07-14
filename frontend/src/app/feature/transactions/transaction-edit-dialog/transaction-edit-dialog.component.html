@@ -38,19 +38,7 @@
         </mat-select>
       </mat-form-field>
 
-      @if (isIncome) {
-        <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
-          <mat-label>Tipo de entrada</mat-label>
-          <mat-select [(ngModel)]="incomeType">
-            @for (it of incomeTypes; track it.value) {
-              <mat-option [value]="it.value" [matTooltip]="it.tooltip" matTooltipPosition="right">
-                {{ it.label }}
-              </mat-option>
-            }
-          </mat-select>
-          <mat-hint>Reembolsos e transferências próprias não contam como receita</mat-hint>
-        </mat-form-field>
-      } @else {
+      @if (isExpense) {
         <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
           <mat-label>Grupo de orçamento</mat-label>
           <mat-select [(ngModel)]="budgetGroup">
@@ -60,16 +48,32 @@
               </mat-option>
             }
           </mat-select>
-          <mat-hint>Regra 50/30/20: Essencial → Não Essencial → Investimento</mat-hint>
+          <mat-hint>Regra 50/30/20: Essencial (50%) e Não Essencial (30%)</mat-hint>
+        </mat-form-field>
+      } @else if (isInvestment) {
+        <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
+          <mat-label>Direção</mat-label>
+          <mat-select [(ngModel)]="investmentDirection">
+            @for (d of directions; track d.value) {
+              <mat-option [value]="d.value" [matTooltip]="d.tooltip" matTooltipPosition="right">
+                {{ d.label }}
+              </mat-option>
+            }
+          </mat-select>
+          <mat-hint>Aporte soma no 20%; resgate abate o líquido</mat-hint>
         </mat-form-field>
       }
     </div>
 
-    @if (!isIncome) {
+    @if (isExpense) {
       <div class="field-row">
         <app-category-select [categories]="data.categories" [(value)]="categoryId" />
       </div>
     }
+
+    <div class="field-row">
+      <mat-checkbox [(ngModel)]="ignored">Ignorar nos cálculos (ex.: transferência entre contas próprias)</mat-checkbox>
+    </div>
   </div>
 </mat-dialog-content>
 

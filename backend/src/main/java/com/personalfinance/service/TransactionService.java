@@ -37,7 +37,12 @@ public class TransactionService {
 
   @Transactional(readOnly = true)
   public Page<TransactionResponse> findAll(
-      UUID userId, String month, String type, UUID categoryId, Pageable pageable) {
+      UUID userId,
+      String month,
+      String type,
+      UUID categoryId,
+      Boolean needsReview,
+      Pageable pageable) {
     LocalDate start = null;
     LocalDate end = null;
     if (month != null && !month.isBlank()) {
@@ -53,7 +58,8 @@ public class TransactionService {
             .and(TransactionSpecifications.inDateRange(start, end))
             .and(TransactionSpecifications.ofType(txType))
             .and(TransactionSpecifications.inCategory(categoryId))
-            .and(TransactionSpecifications.excludingOwnTransfer());
+            .and(TransactionSpecifications.needingReview(needsReview))
+            .and(TransactionSpecifications.excludingIgnored());
 
     return transactionRepository.findAll(spec, pageable).map(this::toResponse);
   }
@@ -67,8 +73,9 @@ public class TransactionService {
             .description(request.getDescription())
             .amount(request.getAmount())
             .type(TransactionType.valueOf(request.getType()))
-            .incomeType(request.getIncomeType())
             .budgetGroup(request.getBudgetGroup())
+            .investmentDirection(request.getInvestmentDirection())
+            .ignored(request.isIgnored())
             .date(request.getDate())
             .notes(request.getNotes())
             .category(category)
@@ -87,23 +94,27 @@ public class TransactionService {
     tx.setDescription(request.getDescription());
     tx.setAmount(request.getAmount());
     tx.setType(TransactionType.valueOf(request.getType()));
-    tx.setIncomeType(request.getIncomeType());
     tx.setBudgetGroup(request.getBudgetGroup());
+    tx.setInvestmentDirection(request.getInvestmentDirection());
+    tx.setIgnored(request.isIgnored());
     tx.setDate(request.getDate());
     tx.setNotes(request.getNotes());
     tx.setCategory(category);
     tx.setShared(request.isShared());
     tx.setTotalAmount(request.getTotalAmount());
     tx.setUserShare(request.getUserShare());
+    // Editing a transaction resolves it — clear the "needs review" flag.
+    tx.setNeedsReview(false);
     Transaction saved = transactionRepository.save(tx);
     propagateClassification(saved, user);
     return toResponse(saved);
   }
 
   /**
-   * Propagates the classification (category, budget group, income type) of an edited transaction to
-   * every other transaction with the same effective name for this user, and learns a merchant rule
-   * so future imports are classified the same way.
+   * Propagates the classification (type, category, budget group, investment direction, ignored) of
+   * an edited transaction to every other transaction with the same effective name for this user,
+   * clears their pending-review flag, and learns a merchant rule so future imports are classified
+   * the same way.
    */
   private void propagateClassification(Transaction source, User user) {
     String effectiveName =
@@ -116,9 +127,12 @@ public class TransactionService {
         transactionRepository.findByUserIdAndEffectiveName(user.getId(), effectiveName);
     for (Transaction t : matching) {
       if (t.getId().equals(source.getId())) continue;
+      t.setType(source.getType());
       t.setCategory(source.getCategory());
       t.setBudgetGroup(source.getBudgetGroup());
-      t.setIncomeType(source.getIncomeType());
+      t.setInvestmentDirection(source.getInvestmentDirection());
+      t.setIgnored(source.isIgnored());
+      t.setNeedsReview(false);
     }
     transactionRepository.saveAll(matching);
 
@@ -208,8 +222,10 @@ public class TransactionService {
         .normalizedDescription(tx.getNormalizedDescription())
         .amount(tx.getAmount())
         .type(tx.getType().name())
-        .incomeType(tx.getIncomeType())
         .budgetGroup(tx.getBudgetGroup())
+        .investmentDirection(tx.getInvestmentDirection())
+        .ignored(tx.isIgnored())
+        .needsReview(tx.isNeedsReview())
         .date(tx.getDate())
         .notes(tx.getNotes())
         .categoryId(tx.getCategory() != null ? tx.getCategory().getId() : null)

@@ -106,17 +106,16 @@ public class NubankExtratoParser {
         }
         BigDecimal rdbAmount = extractTrailing(line);
         if (rdbAmount != null && currentDate != null) {
-          // Resgate RDB = money back (income, resgatado); Aplicação RDB = aporte (expense,
-          // investido)
+          // Both directions are INVESTMENT: Aplicação RDB = CONTRIBUTION (aporte),
+          // Resgate RDB = REDEMPTION (resgate).
           boolean isResgate = line.toLowerCase().startsWith("resgate");
           transactions.add(
               ParsedTransactionDTO.builder()
                   .date(currentDate)
                   .description(line)
                   .amount(rdbAmount)
-                  .type(isResgate ? "INCOME" : "EXPENSE")
-                  .incomeType(isResgate ? "INVESTMENT" : null)
-                  .budgetGroup(isResgate ? null : "INVESTMENT")
+                  .type("INVESTMENT")
+                  .investmentDirection(isResgate ? "REDEMPTION" : "CONTRIBUTION")
                   .autoClassification("INVESTMENT")
                   .included(true)
                   .build());

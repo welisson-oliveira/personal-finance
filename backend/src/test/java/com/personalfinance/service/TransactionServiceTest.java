@@ -146,7 +146,6 @@ class TransactionServiceTest {
     req.setAmount(new BigDecimal("5000.00"));
     req.setType("INCOME");
     req.setDate(LocalDate.of(2026, 5, 5));
-    req.setIncomeType("INCOME");
 
     when(transactionRepository.findById(id)).thenReturn(Optional.of(edited));
     when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

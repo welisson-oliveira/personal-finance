@@ -9,58 +9,24 @@
 } @else if (errorMessage) {
   <p class="error-text">{{ errorMessage }}</p>
 } @else if (data) {
-  <!-- Receita -->
-  <div class="section-title">Receita — {{ period.label() }}</div>
+  <!-- 1. Quanto dinheiro entrou? -->
+  <div class="section-title">Quanto entrou? — {{ period.label() }}</div>
   <div class="cards-row">
     <mat-card
       class="metric-card income"
-      matTooltip="Total de receitas classificadas como 'Receita real' no período"
-      matTooltipPosition="above"
-    >
-      <mat-card-content>
-        <mat-icon>trending_up</mat-icon>
-        <div class="metric-label">Receita Bruta</div>
-        <div class="metric-value">{{ fmt(data.receitaBruta) }}</div>
-      </mat-card-content>
-    </mat-card>
-    <mat-card
-      class="metric-card reimbursement"
-      matTooltip="Devoluções recebidas. Não entram no cálculo de receita real"
-      matTooltipPosition="above"
-    >
-      <mat-card-content>
-        <mat-icon>swap_horiz</mat-icon>
-        <div class="metric-label">Reembolsos</div>
-        <div class="metric-value">{{ fmt(data.reembolsos) }}</div>
-      </mat-card-content>
-    </mat-card>
-    <mat-card
-      class="metric-card real-income"
-      matTooltip="Receita bruta do período. Base para a distribuição 50/30/20"
+      matTooltip="Entradas reais do mês (receita disponível). Ignora transferências entre contas próprias"
       matTooltipPosition="above"
     >
       <mat-card-content>
         <mat-icon>attach_money</mat-icon>
-        <div class="metric-label">Receita Real</div>
-        <div class="metric-value">{{ fmt(data.receitaReal) }}</div>
-      </mat-card-content>
-    </mat-card>
-    <mat-card
-      class="metric-card balance"
-      [class.negative]="data.saldo < 0"
-      matTooltip="Receita real menos o total de despesas do período"
-      matTooltipPosition="above"
-    >
-      <mat-card-content>
-        <mat-icon>account_balance_wallet</mat-icon>
-        <div class="metric-label">Saldo</div>
-        <div class="metric-value">{{ fmt(data.saldo) }}</div>
+        <div class="metric-label">Entradas do mês</div>
+        <div class="metric-value">{{ fmt(data.entradas) }}</div>
       </mat-card-content>
     </mat-card>
   </div>
 
-  <!-- 50/30/20 -->
-  <div class="section-title">Distribuição 50/30/20</div>
+  <!-- 3. Estou seguindo o método 50/30/20? -->
+  <div class="section-title">Está seguindo o 50/30/20?</div>
   <mat-card class="budget-card">
     <mat-card-content>
       @if (!hasBase()) {
@@ -135,7 +101,7 @@
           <span class="budget-target">(meta 20%)</span>
         </div>
         <div class="budget-values">
-          {{ fmt(data.investido) }}
+          {{ fmt(data.aplicado) }}
         </div>
       </div>
       <mat-progress-bar
@@ -151,8 +117,8 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Despesas -->
-  <div class="section-title">Despesas</div>
+  <!-- 2. Para onde o dinheiro foi? -->
+  <div class="section-title">Para onde o dinheiro foi?</div>
   <div class="cards-row">
     <mat-card
       class="metric-card essential"
@@ -161,7 +127,7 @@
     >
       <mat-card-content>
         <mat-icon>home</mat-icon>
-        <div class="metric-label">Essenciais</div>
+        <div class="metric-label">Despesas Essenciais</div>
         <div class="metric-value">{{ fmt(data.despesasEssenciais) }}</div>
       </mat-card-content>
     </mat-card>
@@ -172,46 +138,47 @@
     >
       <mat-card-content>
         <mat-icon>local_mall</mat-icon>
-        <div class="metric-label">Não Essenciais</div>
+        <div class="metric-label">Despesas Não Essenciais</div>
         <div class="metric-value">{{ fmt(data.despesasNaoEssenciais) }}</div>
       </mat-card-content>
     </mat-card>
     <mat-card
-      class="metric-card total-expenses"
-      matTooltip="Soma de todas as despesas do período"
-      matTooltipPosition="above"
-    >
-      <mat-card-content>
-        <mat-icon>receipt</mat-icon>
-        <div class="metric-label">Total Despesas</div>
-        <div class="metric-value">{{ fmt(data.totalDespesas) }}</div>
-      </mat-card-content>
-    </mat-card>
-  </div>
-
-  <!-- Investimentos -->
-  <div class="section-title">Investimentos</div>
-  <div class="cards-row">
-    <mat-card
       class="metric-card investment"
-      matTooltip="Despesas com grupo 'Investimento' no período"
+      matTooltip="Aporte líquido no mês (aportes menos resgates). Investimento é realocação de patrimônio, não despesa"
       matTooltipPosition="above"
     >
       <mat-card-content>
         <mat-icon>trending_up</mat-icon>
-        <div class="metric-label">Investido</div>
-        <div class="metric-value">{{ fmt(data.investido) }}</div>
+        <div class="metric-label">Aplicado em investimentos</div>
+        <div class="metric-value">{{ fmt(data.aplicado) }}</div>
       </mat-card-content>
     </mat-card>
     <mat-card
       class="metric-card reimbursement"
-      matTooltip="Receitas classificadas como resgate de investimento"
+      matTooltip="Resgates de investimentos no mês. Não contam como receita"
       matTooltipPosition="above"
     >
       <mat-card-content>
         <mat-icon>trending_down</mat-icon>
-        <div class="metric-label">Resgatado</div>
+        <div class="metric-label">Resgatado dos investimentos</div>
         <div class="metric-value">{{ fmt(data.resgatado) }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- 4. Quanto sobrou? -->
+  <div class="section-title">Quanto sobrou?</div>
+  <div class="cards-row">
+    <mat-card
+      class="metric-card balance"
+      [class.negative]="data.resultado < 0"
+      matTooltip="Entradas do mês menos o total de despesas do período"
+      matTooltipPosition="above"
+    >
+      <mat-card-content>
+        <mat-icon>account_balance_wallet</mat-icon>
+        <div class="metric-label">Resultado do mês</div>
+        <div class="metric-value">{{ fmt(data.resultado) }}</div>
       </mat-card-content>
     </mat-card>
   </div>

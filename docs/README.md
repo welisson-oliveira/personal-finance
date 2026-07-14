@@ -11,7 +11,6 @@ Esta pasta documenta a aplicação **por feature de negócio**, cruzando backend
 | Autenticação e usuários     | [autenticacao-e-usuarios.md](./autenticacao-e-usuarios.md)         | login/registro, JWT, segurança, perfil (salário líquido)                     |
 | Importação de PDFs          | [importacao-de-pdfs.md](./importacao-de-pdfs.md)                   | upload/preview de extrato/fatura, parsers Nubank, pipeline de import         |
 | Classificação e aprendizado | [classificacao-e-aprendizado.md](./classificacao-e-aprendizado.md) | regras de estabelecimento, aliases, normalização, propagação (cross-cutting) |
-| Fila de revisão             | [fila-de-revisao.md](./fila-de-revisao.md)                         | itens pendentes de classificação e aprendizado                               |
 | Transações                  | [transacoes.md](./transacoes.md)                                   | lista, edição, apelido, exclusão de transações                               |
 | Dashboard                   | [dashboard.md](./dashboard.md)                                     | métricas 50/30/20, destaques, seletor de mês global                          |
 | Relatórios                  | [relatorios.md](./relatorios.md)                                   | evolução mensal e gasto por categoria (gráficos)                             |
@@ -53,7 +52,7 @@ DTOs (`dto/request`, `dto/response`) cruzam a fronteira do controller; **entidad
 | `test`         | H2 em memória (modo PostgreSQL)    | desabilitado | `create-drop` |
 
 Env vars: `SPRING_PROFILES_ACTIVE`, `JWT_SECRET`, `JWT_EXPIRATION_MS`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
-Migrations em `backend/src/main/resources/db/migration/` (V1…V11). `jpa.open-in-view: false` — os services carregam as associações necessárias antes de retornar.
+Migrations em `backend/src/main/resources/db/migration/` (V1…V12). `jpa.open-in-view: false` — os services carregam as associações necessárias antes de retornar.
 
 ## Comandos
 
@@ -98,8 +97,11 @@ docker compose -f docker-compose.test.yml up -d   # banco de teste (:5433)
 ## Glossário de domínio
 
 - **`type`** (`TransactionType`, único enum): `INCOME` | `EXPENSE`.
-- **`income_type`** (String, só em receitas): `INCOME` (receita real) · `REIMBURSEMENT` (reembolso de gasto — contado à parte, nunca vira receita) · `OWN_TRANSFER` (transferência entre contas próprias — **excluída em todo lugar**) · `INVESTMENT` (resgate de aplicação → "resgatado" do dashboard). Em `KnownPerson` há também `ALWAYS_REVIEW`.
-- **`budget_group`** (regra 50/30/20, só em despesas): `ESSENTIAL` (50%) · `NON_ESSENTIAL` (30%) · `INVESTMENT` (20% — aporte). Atenção: **`investido`** do dashboard vem de `budget_group=INVESTMENT`; **`resgatado`** vem de `income_type=INVESTMENT` (eixos diferentes de propósito).
+- **`type`** (`TransactionType`, eixo único): `INCOME` (entrada/receita) · `EXPENSE` (despesa) · `INVESTMENT` (investimento). Substituiu o antigo trio `type`+`income_type`+`budget_group`.
+- **`budget_group`** (só em `EXPENSE`, regra 50/30/20): `ESSENTIAL` (50%) · `NON_ESSENTIAL` (30%).
+- **`investment_direction`** (só em `INVESTMENT`): `CONTRIBUTION` (aporte) · `REDEMPTION` (resgate). O 20% do dashboard usa o **líquido** (aportes − resgates).
+- **`ignored`** (boolean, qualquer tipo): fora de **todos** os cálculos (ex.: transferência entre contas próprias). Substituiu o antigo `income_type=OWN_TRANSFER`.
+- **`needs_review`** (boolean): importada mas sem classificação confiável — aparece com o selo "Revisar" na lista de transações e é resolvida **inline** (a antiga fila de revisão deixou de existir). Reembolso deixou de ser um conceito — vira `INCOME` normal.
 - **`source`**: `MANUAL` | `EXTRATO` | `FATURA`.
 - **Nome efetivo (effective-name):** `normalizedDescription` quando existe, senão `description`. É a chave de junção para propagação de classificação, histórico de receita, propagação de apelido e resolução de revisão (`TransactionRepository.findByUserIdAndEffectiveName`).
-- **Regra Receita × Despesa (recorrente no UI e no backend):** receita carrega `income_type` e **não** tem `budget_group`/categoria; despesa carrega `budget_group`/categoria e **não** tem `income_type`.
+- **Regra por tipo (UI e backend):** `EXPENSE` carrega `budget_group` + categoria; `INVESTMENT` carrega `investment_direction`; `INCOME` não carrega nenhum dos dois. Editar uma transação propaga tipo/categoria/grupo/direção/ignored para as de mesmo nome efetivo e limpa o `needs_review` (ver [transacoes.md](./transacoes.md)).

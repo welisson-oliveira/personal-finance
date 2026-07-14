@@ -6,6 +6,6 @@ public record KnownPersonResponse(
     UUID id,
     String name,
     String relationship,
-    String defaultIncomeType,
+    String defaultTreatment,
     String defaultLabel,
     boolean active) {}
