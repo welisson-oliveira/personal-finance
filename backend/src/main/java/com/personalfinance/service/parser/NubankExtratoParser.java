@@ -138,6 +138,9 @@ public class NubankExtratoParser {
                   .amount(internalAmount)
                   .type(incomeBlock ? "INCOME" : "EXPENSE")
                   .autoClassification("INTERNAL")
+                  // Ignored by default: the itemized fatura is the source of truth, so this lump
+                  // payment must never inflate expenses/reports even if reconciliation doesn't run.
+                  .ignored(true)
                   .included(true)
                   .build());
         }

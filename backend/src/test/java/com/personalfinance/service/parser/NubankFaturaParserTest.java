@@ -38,6 +38,16 @@ class NubankFaturaParserTest {
   }
 
   @Test
+  void closing_in_december_due_in_january_keeps_previous_year() {
+    // Statement closes 02 DEZ but is due 09 JAN of the next year — the closing must stay in the
+    // previous year so the extrato bill-payment reconciliation window lands correctly.
+    String text = "Período vigente: 03 NOV a 02 DEZ\nData de vencimento: 09 JAN 2026\nTRANSAÇÕES\n";
+    NubankFaturaParser.ParseResult r = new NubankFaturaParser().parse(text);
+    assertThat(r.periodStart()).isEqualTo(LocalDate.of(2025, 11, 3));
+    assertThat(r.periodEnd()).isEqualTo(LocalDate.of(2025, 12, 2));
+  }
+
+  @Test
   void welisson_transactions_have_correct_holder() {
     List<ParsedTransactionDTO> welissonTxs =
         result.transactions().stream()
