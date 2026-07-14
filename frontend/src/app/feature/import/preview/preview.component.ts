@@ -1,4 +1,7 @@
 import { Component, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -49,6 +52,10 @@ export class PreviewComponent implements OnInit {
   preview: ImportPreviewResponse | null = null;
   categories: Category[] = [];
   loading = false;
+  /** True once the import was confirmed/cancelled — stops autosave from rewriting a cleared preview. */
+  private finalized = false;
+  /** Debounces free-text (notes) edits so we don't PUT on every keystroke. */
+  private notesEdited$ = new Subject<void>();
 
   displayedColumns = [
     'included',
@@ -101,6 +108,9 @@ export class PreviewComponent implements OnInit {
     if (state?.preview) {
       this.preview = state.preview;
     }
+    this.notesEdited$
+      .pipe(debounceTime(600), takeUntilDestroyed())
+      .subscribe(() => this.persistEdits());
   }
 
   ngOnInit(): void {
@@ -139,9 +149,28 @@ export class PreviewComponent implements OnInit {
     return ac ? (tooltips[ac] ?? ac) : '';
   }
 
+  /** Fires immediately when a discrete control (checkbox/select/category) changes. */
+  onEdit(): void {
+    this.persistEdits();
+  }
+
+  /** Fires on notes typing; debounced so we don't PUT on every keystroke. */
+  onNotesInput(): void {
+    this.notesEdited$.next();
+  }
+
+  /** Persists the current edits onto the pending session so they survive leaving the screen. */
+  private persistEdits(): void {
+    if (!this.preview || this.finalized) return;
+    this.importService.savePreview(this.preview.sessionId, this.preview.transactions).subscribe({
+      error: (err) => console.error('Failed to autosave import preview', err),
+    });
+  }
+
   confirm(): void {
     if (!this.preview) return;
     this.loading = true;
+    this.finalized = true;
     // The category selector uses '' for "no category"; send undefined so the backend doesn't
     // try to parse an empty string as a UUID.
     const transactions = this.preview.transactions.map((tx) => ({
@@ -158,12 +187,14 @@ export class PreviewComponent implements OnInit {
           duration: 4000,
         });
         this.loading = false;
+        this.finalized = false;
       },
     });
   }
 
   cancel(): void {
     if (!this.preview) return;
+    this.finalized = true;
     this.importService.cancel(this.preview.sessionId).subscribe({
       complete: () => this.router.navigate(['/import']),
     });

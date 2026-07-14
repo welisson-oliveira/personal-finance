@@ -58,10 +58,11 @@ describe('PreviewComponent', () => {
   };
 
   beforeEach(async () => {
-    importServiceSpy = jasmine.createSpyObj('ImportService', ['confirm', 'cancel']);
+    importServiceSpy = jasmine.createSpyObj('ImportService', ['confirm', 'cancel', 'savePreview']);
     categoryServiceSpy = jasmine.createSpyObj('CategoryService', ['getAll']);
     snackBarSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
     categoryServiceSpy.getAll.and.returnValue(of([]));
+    importServiceSpy.savePreview.and.returnValue(of(undefined));
 
     await TestBed.configureTestingModule({
       imports: [PreviewComponent, HttpClientTestingModule],
@@ -121,6 +122,32 @@ describe('PreviewComponent', () => {
     const [, txs] = importServiceSpy.confirm.calls.mostRecent().args;
     expect(txs[0].categoryId).toBeUndefined();
     mockPreview.transactions[0].categoryId = undefined;
+  });
+
+  it('onEdit persists the current transactions via savePreview', () => {
+    component.onEdit();
+
+    expect(importServiceSpy.savePreview).toHaveBeenCalledWith('sess-001', mockPreview.transactions);
+  });
+
+  it('does not autosave after confirm', () => {
+    importServiceSpy.confirm.and.returnValue(of(undefined));
+    component.confirm();
+    importServiceSpy.savePreview.calls.reset();
+
+    component.onEdit();
+
+    expect(importServiceSpy.savePreview).not.toHaveBeenCalled();
+  });
+
+  it('does not autosave after cancel', () => {
+    importServiceSpy.cancel.and.returnValue(of(undefined));
+    component.cancel();
+    importServiceSpy.savePreview.calls.reset();
+
+    component.onEdit();
+
+    expect(importServiceSpy.savePreview).not.toHaveBeenCalled();
   });
 
   it('autoClassificationLabel returns Portuguese label for OWN_TRANSFER', () => {

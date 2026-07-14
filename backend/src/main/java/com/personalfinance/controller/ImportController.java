@@ -38,6 +38,15 @@ public class ImportController {
     return ResponseEntity.ok(importService.getPreview(id, user));
   }
 
+  @PutMapping("/{id}/preview")
+  public ResponseEntity<Void> updatePreview(
+      @PathVariable UUID id,
+      @RequestBody List<ParsedTransactionDTO> transactions,
+      @AuthenticationPrincipal User user) {
+    importService.updatePreview(id, transactions, user);
+    return ResponseEntity.noContent().build();
+  }
+
   @PostMapping("/{id}/confirm")
   public ResponseEntity<Void> confirm(
       @PathVariable UUID id,

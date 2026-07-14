@@ -145,6 +145,29 @@ public class TransactionImportService {
         reviewCount);
   }
 
+  /**
+   * Persists the user's in-progress edits back onto a still-pending session, so leaving the preview
+   * screen (navigating away, refreshing or closing the app) no longer discards them — resuming the
+   * session via {@link #getPreview} brings the edited state back. Only {@code PENDING} sessions can
+   * be updated.
+   */
+  @Transactional
+  public void updatePreview(UUID sessionId, List<ParsedTransactionDTO> clientList, User user) {
+    ImportSession session =
+        importSessionRepository
+            .findById(sessionId)
+            .filter(s -> s.getUser().getId().equals(user.getId()))
+            .orElseThrow(() -> new IllegalArgumentException("Import session not found"));
+
+    if (!"PENDING".equals(session.getStatus())) {
+      throw new IllegalStateException(
+          "This import is no longer pending — its edits can no longer be saved.");
+    }
+
+    session.setPreviewJson(serializePreview(clientList));
+    importSessionRepository.save(session);
+  }
+
   private String serializePreview(List<ParsedTransactionDTO> txList) {
     try {
       return objectMapper.writeValueAsString(txList);

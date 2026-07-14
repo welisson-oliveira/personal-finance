@@ -294,4 +294,70 @@ class TransactionImportServiceTest {
     assertThatThrownBy(() -> service.getPreview(session.getId(), user))
         .isInstanceOf(IllegalStateException.class);
   }
+
+  @Test
+  void updatePreview_stores_edited_transactions_on_pending_session() {
+    ParsedTransactionDTO edited =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 6, 10))
+            .description("Loja Desconhecida")
+            .amount(BigDecimal.valueOf(50))
+            .type("EXPENSE")
+            .budgetGroup("NON_ESSENTIAL")
+            .notes("Meu apelido")
+            .included(true)
+            .needsReview(false)
+            .build();
+
+    service.updatePreview(session.getId(), List.of(edited), user);
+
+    ArgumentCaptor<ImportSession> captor = ArgumentCaptor.forClass(ImportSession.class);
+    verify(importSessionRepository).save(captor.capture());
+    String json = captor.getValue().getPreviewJson();
+    assertThat(json)
+        .contains("Loja Desconhecida")
+        .contains("NON_ESSENTIAL")
+        .contains("Meu apelido");
+  }
+
+  @Test
+  void updatePreview_round_trips_through_getPreview() {
+    ParsedTransactionDTO edited =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 6, 12))
+            .description("Assinatura")
+            .amount(BigDecimal.valueOf(29))
+            .type("EXPENSE")
+            .budgetGroup("NON_ESSENTIAL")
+            .included(true)
+            .needsReview(false)
+            .build();
+    session.setPeriodStart(LocalDate.of(2026, 6, 1));
+    session.setPeriodEnd(LocalDate.of(2026, 6, 30));
+
+    service.updatePreview(session.getId(), List.of(edited), user);
+    // The saved snapshot is what a later resume reads back.
+    ImportPreviewResponse resumed = service.getPreview(session.getId(), user);
+
+    assertThat(resumed.transactions()).hasSize(1);
+    assertThat(resumed.transactions().get(0).getBudgetGroup()).isEqualTo("NON_ESSENTIAL");
+  }
+
+  @Test
+  void updatePreview_throws_when_session_not_pending() {
+    session.setStatus("CONFIRMED");
+
+    assertThatThrownBy(() -> service.updatePreview(session.getId(), List.of(), user))
+        .isInstanceOf(IllegalStateException.class);
+    verify(importSessionRepository, never()).save(any());
+  }
+
+  @Test
+  void updatePreview_throws_when_session_belongs_to_another_user() {
+    User other = User.builder().id(UUID.randomUUID()).name("Outro").build();
+
+    assertThatThrownBy(() -> service.updatePreview(session.getId(), List.of(), other))
+        .isInstanceOf(IllegalArgumentException.class);
+    verify(importSessionRepository, never()).save(any());
+  }
 }
