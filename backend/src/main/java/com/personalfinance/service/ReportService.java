@@ -73,15 +73,29 @@ public class ReportService {
             .filter(t -> t.getCategory() != null)
             .collect(Collectors.toMap(t -> t.getCategory().getId(), t -> t, (a, b) -> a));
 
-    return totals.entrySet().stream()
-        .map(
-            e -> {
-              var cat = byCategory.get(e.getKey()).getCategory();
-              return new CategoryTotalResponse(
-                  cat.getId(), cat.getName(), cat.getIcon(), cat.getColor(), e.getValue());
-            })
-        .sorted(Comparator.comparing(CategoryTotalResponse::total).reversed())
-        .toList();
+    List<CategoryTotalResponse> result =
+        new ArrayList<>(
+            totals.entrySet().stream()
+                .map(
+                    e -> {
+                      var cat = byCategory.get(e.getKey()).getCategory();
+                      return new CategoryTotalResponse(
+                          cat.getId(), cat.getName(), cat.getIcon(), cat.getColor(), e.getValue());
+                    })
+                .sorted(Comparator.comparing(CategoryTotalResponse::total).reversed())
+                .toList());
+
+    BigDecimal uncategorized =
+        expenses.stream()
+            .filter(t -> t.getCategory() == null)
+            .map(this::effectiveAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    if (uncategorized.compareTo(BigDecimal.ZERO) > 0) {
+      result.add(new CategoryTotalResponse(null, "Sem categoria", "❓", "#9E9E9E", uncategorized));
+    }
+
+    return result;
   }
 
   private BigDecimal effectiveAmount(Transaction t) {
