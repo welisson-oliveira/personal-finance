@@ -16,6 +16,24 @@ export interface ParsedTransaction {
   needsReview: boolean;
   included: boolean;
   autoClassification?: string;
+  /** EXTRATO only: set when the user reconciled this "Pagamento de fatura" to a fatura. */
+  reconciled?: boolean;
+}
+
+export interface ReconciliationCandidate {
+  id: string;
+  label: string;
+  amount: number;
+  date: string;
+}
+
+export interface ReconciliationSlot {
+  side: string; // 'FATURA' | 'EXTRATO' — what the current import is
+  paymentIndex: number | null; // EXTRATO: index into transactions; null for FATURA
+  paymentAmount: number;
+  paymentDate: string;
+  suggestedId: string | null;
+  candidates: ReconciliationCandidate[];
 }
 
 export interface ImportPreviewResponse {
@@ -25,6 +43,16 @@ export interface ImportPreviewResponse {
   periodEnd: string;
   transactions: ParsedTransaction[];
   reviewQueueCount: number;
+  reconciliation: ReconciliationSlot[];
+}
+
+export interface PendingReconciliation {
+  paymentId: string;
+  date: string;
+  amount: number;
+  description: string;
+  suggestedFaturaId: string | null;
+  candidates: ReconciliationCandidate[];
 }
 
 export interface ImportSessionResponse {

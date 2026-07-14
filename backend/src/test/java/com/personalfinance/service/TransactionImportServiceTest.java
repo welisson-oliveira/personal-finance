@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.personalfinance.dto.response.ImportPreviewResponse;
 import com.personalfinance.dto.response.ParsedTransactionDTO;
+import com.personalfinance.dto.response.ReconciliationCandidateDTO;
+import com.personalfinance.dto.response.ReconciliationSlotDTO;
 import com.personalfinance.model.entity.ImportSession;
 import com.personalfinance.model.entity.Transaction;
 import com.personalfinance.model.entity.User;
@@ -88,7 +90,7 @@ class TransactionImportServiceTest {
             .needsReview(false)
             .build();
 
-    service.confirm(session.getId(), List.of(included, excluded), user);
+    service.confirm(session.getId(), List.of(included, excluded), null, user);
 
     ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
     verify(transactionRepository, times(1)).save(txCaptor.capture());
@@ -108,7 +110,7 @@ class TransactionImportServiceTest {
             .needsReview(false)
             .build();
 
-    service.confirm(session.getId(), List.of(clientVersion), user);
+    service.confirm(session.getId(), List.of(clientVersion), null, user);
 
     ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
     verify(transactionRepository).save(txCaptor.capture());
@@ -136,7 +138,7 @@ class TransactionImportServiceTest {
             .included(true)
             .build();
 
-    service.confirm(session.getId(), List.of(aporte, ownTransfer), user);
+    service.confirm(session.getId(), List.of(aporte, ownTransfer), null, user);
 
     ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
     verify(transactionRepository, times(2)).save(txCaptor.capture());
@@ -158,7 +160,7 @@ class TransactionImportServiceTest {
             .needsReview(true)
             .build();
 
-    service.confirm(session.getId(), List.of(tx), user);
+    service.confirm(session.getId(), List.of(tx), null, user);
 
     ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
     verify(transactionRepository).save(txCaptor.capture());
@@ -177,7 +179,7 @@ class TransactionImportServiceTest {
             .needsReview(true)
             .build();
 
-    service.confirm(session.getId(), List.of(tx), user);
+    service.confirm(session.getId(), List.of(tx), null, user);
 
     verify(transactionRepository, never()).save(any());
   }
@@ -218,7 +220,7 @@ class TransactionImportServiceTest {
             .needsReview(false)
             .build();
 
-    service.confirm(faturaSession.getId(), List.of(faturaItem), user);
+    service.confirm(faturaSession.getId(), List.of(faturaItem), null, user);
 
     verify(transactionRepository).deleteAll(List.of(billPayment));
     verify(transactionRepository, atLeastOnce()).save(any());
@@ -257,22 +259,14 @@ class TransactionImportServiceTest {
             .needsReview(false)
             .build();
 
-    service.confirm(faturaSession.getId(), List.of(faturaItem), user);
+    service.confirm(faturaSession.getId(), List.of(faturaItem), null, user);
 
     // 300 != 999 → the payment is left alone.
     verify(transactionRepository, never()).deleteAll(anyList());
   }
 
   @Test
-  void confirm_extrato_skips_bill_payment_already_covered_by_confirmed_fatura() {
-    ImportSession faturaSession =
-        ImportSession.builder().id(UUID.randomUUID()).user(user).documentType("FATURA").build();
-    when(importSessionRepository.findConfirmedFaturaByUserAndPeriodEndBetween(
-            eq(user.getId()), any(), any()))
-        .thenReturn(List.of(faturaSession));
-    when(transactionRepository.sumNetByImportSession(faturaSession.getId()))
-        .thenReturn(BigDecimal.valueOf(1000));
-
+  void confirm_extrato_skips_reconciled_bill_payment() {
     ParsedTransactionDTO billPayment =
         ParsedTransactionDTO.builder()
             .date(LocalDate.of(2026, 7, 10))
@@ -281,20 +275,17 @@ class TransactionImportServiceTest {
             .type("EXPENSE")
             .autoClassification("INTERNAL")
             .included(true)
+            .reconciled(true)
             .build();
 
-    service.confirm(session.getId(), List.of(billPayment), user);
+    service.confirm(session.getId(), List.of(billPayment), null, user);
 
-    // The extrato session already exists; the payment must NOT be persisted (fatura represents it).
+    // Reconciled to a fatura → not persisted (the fatura's items represent it).
     verify(transactionRepository, never()).save(any());
   }
 
   @Test
-  void confirm_extrato_keeps_bill_payment_when_no_matching_fatura() {
-    when(importSessionRepository.findConfirmedFaturaByUserAndPeriodEndBetween(
-            eq(user.getId()), any(), any()))
-        .thenReturn(List.of());
-
+  void confirm_extrato_keeps_non_reconciled_bill_payment() {
     ParsedTransactionDTO billPayment =
         ParsedTransactionDTO.builder()
             .date(LocalDate.of(2026, 7, 10))
@@ -303,11 +294,113 @@ class TransactionImportServiceTest {
             .type("EXPENSE")
             .autoClassification("INTERNAL")
             .included(true)
+            .reconciled(false)
             .build();
 
-    service.confirm(session.getId(), List.of(billPayment), user);
+    service.confirm(session.getId(), List.of(billPayment), null, user);
 
     verify(transactionRepository, times(1)).save(any());
+  }
+
+  @Test
+  void confirm_fatura_deletes_only_approved_reconcile_ids() {
+    ImportSession faturaSession =
+        ImportSession.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .documentType("FATURA")
+            .status("PENDING")
+            .periodEnd(LocalDate.of(2026, 7, 5))
+            .build();
+    when(importSessionRepository.findById(faturaSession.getId()))
+        .thenReturn(Optional.of(faturaSession));
+
+    UUID paymentId = UUID.randomUUID();
+    Transaction payment =
+        Transaction.builder().id(paymentId).user(user).amount(BigDecimal.valueOf(1200)).build();
+    when(transactionRepository.findById(paymentId)).thenReturn(Optional.of(payment));
+
+    ParsedTransactionDTO faturaItem =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 6, 15))
+            .description("Supermercado")
+            .amount(BigDecimal.valueOf(300))
+            .type("EXPENSE")
+            .included(true)
+            .build();
+
+    service.confirm(faturaSession.getId(), List.of(faturaItem), List.of(paymentId), user);
+
+    // Manual list is authoritative: delete exactly the approved payment, ignore auto
+    // value-matching.
+    verify(transactionRepository).delete(payment);
+    verify(transactionRepository, never()).deleteAll(anyList());
+  }
+
+  @Test
+  void reconcile_deletes_the_owned_payment() {
+    UUID paymentId = UUID.randomUUID();
+    Transaction payment = Transaction.builder().id(paymentId).user(user).build();
+    when(transactionRepository.findById(paymentId)).thenReturn(Optional.of(payment));
+
+    service.reconcile(paymentId, user);
+
+    verify(transactionRepository).delete(payment);
+  }
+
+  @Test
+  void reconcile_rejects_payment_of_another_user() {
+    UUID paymentId = UUID.randomUUID();
+    User other = User.builder().id(UUID.randomUUID()).build();
+    Transaction payment = Transaction.builder().id(paymentId).user(other).build();
+    when(transactionRepository.findById(paymentId)).thenReturn(Optional.of(payment));
+
+    assertThatThrownBy(() -> service.reconcile(paymentId, user))
+        .isInstanceOf(IllegalArgumentException.class);
+    verify(transactionRepository, never()).delete(any(Transaction.class));
+  }
+
+  @Test
+  void getPreview_includes_fatura_reconciliation_suggestion() throws Exception {
+    ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    ParsedTransactionDTO item =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 6, 10))
+            .description("Supermercado")
+            .amount(BigDecimal.valueOf(500))
+            .type("EXPENSE")
+            .build();
+    ImportSession fatura =
+        ImportSession.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .documentType("FATURA")
+            .status("PENDING")
+            .periodStart(LocalDate.of(2026, 5, 1))
+            .periodEnd(LocalDate.of(2026, 6, 2))
+            .previewJson(mapper.writeValueAsString(List.of(item)))
+            .build();
+    when(importSessionRepository.findById(fatura.getId())).thenReturn(Optional.of(fatura));
+    UUID payId = UUID.randomUUID();
+    Transaction payment =
+        Transaction.builder()
+            .id(payId)
+            .description("Pagamento de fatura 500,00")
+            .amount(BigDecimal.valueOf(500))
+            .source("EXTRATO")
+            .date(LocalDate.of(2026, 6, 12))
+            .build();
+    when(transactionRepository.findBillPaymentsByUserAndDateBetween(eq(user.getId()), any(), any()))
+        .thenReturn(List.of(payment));
+
+    ImportPreviewResponse preview = service.getPreview(fatura.getId(), user);
+
+    assertThat(preview.reconciliation()).hasSize(1);
+    ReconciliationSlotDTO slot = preview.reconciliation().get(0);
+    assertThat(slot.side()).isEqualTo("FATURA");
+    // net total 500 matches the payment 500 → suggested.
+    assertThat(slot.suggestedId()).isEqualTo(payId);
+    assertThat(slot.candidates()).extracting(ReconciliationCandidateDTO::id).contains(payId);
   }
 
   @Test
@@ -335,7 +428,7 @@ class TransactionImportServiceTest {
             .needsReview(false)
             .build();
 
-    service.confirm(faturaSession.getId(), List.of(faturaItem), user);
+    service.confirm(faturaSession.getId(), List.of(faturaItem), null, user);
 
     verify(transactionRepository, never()).deleteAll(anyList());
     verify(transactionRepository, atLeastOnce()).save(any());

@@ -55,6 +55,7 @@ describe('PreviewComponent', () => {
         autoClassification: 'OWN_TRANSFER',
       },
     ],
+    reconciliation: [],
   };
 
   beforeEach(async () => {
@@ -122,6 +123,56 @@ describe('PreviewComponent', () => {
     const [, txs] = importServiceSpy.confirm.calls.mostRecent().args;
     expect(txs[0].categoryId).toBeUndefined();
     mockPreview.transactions[0].categoryId = undefined;
+  });
+
+  it('confirm sends approved reconcile ids for a FATURA import', () => {
+    importServiceSpy.confirm.and.returnValue(of(undefined));
+    component.preview = {
+      ...mockPreview,
+      documentType: 'FATURA',
+      transactions: mockPreview.transactions.map((t) => ({ ...t })),
+      reconciliation: [
+        {
+          side: 'FATURA',
+          paymentIndex: null,
+          paymentAmount: 800,
+          paymentDate: '2026-05-02',
+          suggestedId: 'pay-1',
+          candidates: [{ id: 'pay-1', label: 'x', amount: 800, date: '2026-05-02' }],
+        },
+      ],
+    };
+    component.reconcileSelection = ['pay-1'];
+
+    component.confirm();
+
+    expect(importServiceSpy.confirm.calls.mostRecent().args[2]).toEqual(['pay-1']);
+  });
+
+  it('confirm flags reconciled bill payments for an EXTRATO import', () => {
+    importServiceSpy.confirm.and.returnValue(of(undefined));
+    component.preview = {
+      ...mockPreview,
+      documentType: 'EXTRATO',
+      transactions: mockPreview.transactions.map((t) => ({ ...t })),
+      reconciliation: [
+        {
+          side: 'EXTRATO',
+          paymentIndex: 1,
+          paymentAmount: 800,
+          paymentDate: '2026-05-02',
+          suggestedId: 'fat-1',
+          candidates: [{ id: 'fat-1', label: 'x', amount: 800, date: '2026-05-02' }],
+        },
+      ],
+    };
+    component.reconcileSelection = ['fat-1'];
+
+    component.confirm();
+
+    const [, txs, ids] = importServiceSpy.confirm.calls.mostRecent().args;
+    expect(ids).toBeUndefined();
+    expect(txs[1].reconciled).toBeTrue();
   });
 
   it('onEdit persists the current transactions via savePreview', () => {
