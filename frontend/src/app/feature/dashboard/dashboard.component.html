@@ -144,24 +144,35 @@
     </mat-card>
     <mat-card
       class="metric-card investment"
-      matTooltip="Aporte líquido no mês (aportes menos resgates). Investimento é realocação de patrimônio, não despesa"
+      matTooltip="Total bruto aplicado em investimentos no mês (aportes)"
       matTooltipPosition="above"
     >
       <mat-card-content>
         <mat-icon>trending_up</mat-icon>
-        <div class="metric-label">Aplicado em investimentos</div>
-        <div class="metric-value">{{ fmt(data.aplicado) }}</div>
+        <div class="metric-label">Aportes brutos</div>
+        <div class="metric-value">{{ fmt(data.aportes) }}</div>
       </mat-card-content>
     </mat-card>
     <mat-card
       class="metric-card reimbursement"
-      matTooltip="Resgates de investimentos no mês. Não contam como receita"
+      matTooltip="Total bruto resgatado de investimentos no mês. Não conta como receita"
       matTooltipPosition="above"
     >
       <mat-card-content>
         <mat-icon>trending_down</mat-icon>
-        <div class="metric-label">Resgatado dos investimentos</div>
+        <div class="metric-label">Resgates brutos</div>
         <div class="metric-value">{{ fmt(data.resgatado) }}</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card
+      class="metric-card aplicado"
+      matTooltip="Fluxo líquido de investimentos no mês (aportes brutos − resgates brutos). Valor positivo = patrimônio investido cresceu"
+      matTooltipPosition="above"
+    >
+      <mat-card-content>
+        <mat-icon>account_balance</mat-icon>
+        <div class="metric-label">Líquido investido</div>
+        <div class="metric-value" [class.negative]="data.aplicado < 0">{{ fmt(data.aplicado) }}</div>
       </mat-card-content>
     </mat-card>
   </div>
