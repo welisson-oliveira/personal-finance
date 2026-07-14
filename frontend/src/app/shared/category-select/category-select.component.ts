@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -39,11 +39,14 @@ export class CategorySelectComponent {
   @Input() categories: Category[] = [];
   @Input() label = 'Categoria';
   @Input() value: string | undefined = '';
+  /** When true, renders a bare (form-field-less) select for use inside compact rows/tables. */
+  @Input() compact = false;
   @Output() valueChange = new EventEmitter<string | undefined>();
   /** Emitted (before valueChange) when a category is created inline, so parents can sync their list. */
   @Output() categoryCreated = new EventEmitter<Category>();
 
   @ViewChild(MatSelect) private select?: MatSelect;
+  @ViewChild('searchInput') private searchInput?: ElementRef<HTMLInputElement>;
 
   search = '';
 
@@ -66,6 +69,11 @@ export class CategorySelectComponent {
 
   onPanelClosed(): void {
     this.search = '';
+  }
+
+  /** Move focus to the in-panel search box when the dropdown opens (after Material's own focus). */
+  onOpened(): void {
+    setTimeout(() => this.searchInput?.nativeElement.focus());
   }
 
   createNew(): void {

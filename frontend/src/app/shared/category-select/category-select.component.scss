@@ -2,6 +2,14 @@
   width: 100%;
 }
 
+/* Compact, form-field-less trigger for use inside table rows (matches neighbouring inline selects). */
+.category-inline {
+  display: inline-block;
+  width: 100%;
+  min-width: 150px;
+  font-size: 0.85rem;
+}
+
 .category-search {
   display: flex;
   align-items: center;

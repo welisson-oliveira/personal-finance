@@ -1,9 +1,22 @@
-<mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
-  <mat-label>{{ label }}</mat-label>
-  <mat-select [value]="value" (selectionChange)="onSelectionChange($event.value)" (closed)="onPanelClosed()">
+@if (compact) {
+  <mat-select
+    class="category-inline"
+    panelClass="category-select-panel"
+    placeholder="Categoria"
+    [value]="value"
+    (selectionChange)="onSelectionChange($event.value)"
+    (opened)="onOpened()"
+    (closed)="onPanelClosed()"
+  >
     <div class="category-search" (click)="$event.stopPropagation()">
       <mat-icon>search</mat-icon>
-      <input type="text" [(ngModel)]="search" placeholder="Buscar categoria..." (keydown)="$event.stopPropagation()" />
+      <input
+        #searchInput
+        type="text"
+        [(ngModel)]="search"
+        placeholder="Buscar categoria..."
+        (keydown)="$event.stopPropagation()"
+      />
     </div>
 
     <mat-option value="">Nenhuma</mat-option>
@@ -22,4 +35,41 @@
       <span>Nova categoria…</span>
     </div>
   </mat-select>
-</mat-form-field>
+} @else {
+  <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+    <mat-label>{{ label }}</mat-label>
+    <mat-select
+      [value]="value"
+      (selectionChange)="onSelectionChange($event.value)"
+      (opened)="onOpened()"
+      (closed)="onPanelClosed()"
+    >
+      <div class="category-search" (click)="$event.stopPropagation()">
+        <mat-icon>search</mat-icon>
+        <input
+          #searchInput
+          type="text"
+          [(ngModel)]="search"
+          placeholder="Buscar categoria..."
+          (keydown)="$event.stopPropagation()"
+        />
+      </div>
+
+      <mat-option value="">Nenhuma</mat-option>
+      @for (cat of filtered; track cat.id) {
+        <mat-option [value]="cat.id">
+          <mat-icon class="option-icon" [style.color]="cat.color || null">{{ cat.icon || 'label' }}</mat-icon>
+          {{ cat.name }}
+        </mat-option>
+      }
+      @if (filtered.length === 0) {
+        <div class="no-results">Nenhuma categoria encontrada</div>
+      }
+
+      <div class="category-create" (click)="$event.stopPropagation(); createNew()">
+        <mat-icon>add</mat-icon>
+        <span>Nova categoria…</span>
+      </div>
+    </mat-select>
+  </mat-form-field>
+}
