@@ -37,7 +37,7 @@ import { Category } from '../../../core/models/category.model';
       <form [formGroup]="form" class="dialog-form">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Nome</mat-label>
-          <input matInput formControlName="name" />
+          <input matInput formControlName="name" cdkFocusInitial />
           <mat-error *ngIf="form.get('name')?.hasError('required')">Nome é obrigatório</mat-error>
         </mat-form-field>
 

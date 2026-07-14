@@ -1,9 +1,13 @@
 import { Component, OnInit, effect } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
+import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
@@ -12,6 +16,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -28,6 +33,7 @@ import { CategoryService } from '../../../core/services/category.service';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { TransactionEditDialogComponent } from '../transaction-edit-dialog/transaction-edit-dialog.component';
 import { CategoryFormDialogComponent } from '../../categories/category-form-dialog/category-form-dialog.component';
+import { AutofocusDirective } from '../../../shared/autofocus/autofocus.directive';
 import { PeriodService } from '../../../core/services/period.service';
 
 @Component({
@@ -41,16 +47,19 @@ import { PeriodService } from '../../../core/services/period.service';
     MatButtonModule,
     MatIconModule,
     MatSelectModule,
+    MatSortModule,
     MatMenuModule,
     MatDividerModule,
     MatFormFieldModule,
     MatInputModule,
     MatCheckboxModule,
+    MatSlideToggleModule,
     MatPaginatorModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatDialogModule,
     MatTooltipModule,
+    AutofocusDirective,
   ],
   templateUrl: './transaction-list.component.html',
   styleUrl: './transaction-list.component.scss',
@@ -62,9 +71,17 @@ export class TransactionListComponent implements OnInit {
 
   filterType = '';
   filterCategoryId = '';
+  filterSearch = '';
+  filterBudgetGroup = '';
   pendingOnly = false;
+  showIgnored = false;
   pageIndex = 0;
   pageSize = 20;
+
+  sortActive = 'date';
+  sortDirection: 'asc' | 'desc' = 'desc';
+
+  private searchInput$ = new Subject<void>();
 
   displayedColumns = ['date', 'description', 'type', 'category', 'group', 'amount', 'actions'];
 
@@ -124,6 +141,9 @@ export class TransactionListComponent implements OnInit {
       this.pageIndex = 0;
       this.load();
     });
+    this.searchInput$.pipe(debounceTime(350), takeUntilDestroyed()).subscribe(() => {
+      this.applyFilters();
+    });
   }
 
   ngOnInit(): void {
@@ -142,6 +162,10 @@ export class TransactionListComponent implements OnInit {
         type: this.filterType || undefined,
         categoryId: this.filterCategoryId || undefined,
         needsReview: this.pendingOnly || undefined,
+        search: this.filterSearch.trim() || undefined,
+        budgetGroup: this.filterBudgetGroup || undefined,
+        includeIgnored: this.showIgnored || undefined,
+        sort: `${this.sortActive},${this.sortDirection}`,
         page: this.pageIndex,
         size: this.pageSize,
       })
@@ -162,6 +186,18 @@ export class TransactionListComponent implements OnInit {
     this.load();
   }
 
+  onSortChange(sort: Sort): void {
+    // Falling back to date/desc keeps a stable order when the user clears the sort.
+    this.sortActive = sort.direction ? sort.active : 'date';
+    this.sortDirection = sort.direction || 'desc';
+    this.pageIndex = 0;
+    this.load();
+  }
+
+  onSearchInput(): void {
+    this.searchInput$.next();
+  }
+
   applyFilters(): void {
     this.pageIndex = 0;
     this.load();
@@ -170,8 +206,24 @@ export class TransactionListComponent implements OnInit {
   clearFilters(): void {
     this.filterType = '';
     this.filterCategoryId = '';
+    this.filterSearch = '';
+    this.filterBudgetGroup = '';
     this.pendingOnly = false;
+    this.showIgnored = false;
     this.applyFilters();
+  }
+
+  /** Replaces a single row in place (new array ref so mat-table re-renders) — no full reload. */
+  private patchRow(updated: Transaction): void {
+    if (!this.page) return;
+    const content = this.page.content.map((t) => (t.id === updated.id ? updated : t));
+    this.page = { ...this.page, content };
+  }
+
+  private removeRow(id: string): void {
+    if (!this.page) return;
+    const content = this.page.content.filter((t) => t.id !== id);
+    this.page = { ...this.page, content, totalElements: Math.max(0, this.page.totalElements - 1) };
   }
 
   confirmDelete(tx: Transaction): void {
@@ -192,9 +244,9 @@ export class TransactionListComponent implements OnInit {
     ref.afterClosed().subscribe((req: UpdateTransactionRequest | undefined) => {
       if (!req) return;
       this.txService.update(tx.id, req).subscribe({
-        next: () => {
+        next: (updated) => {
+          this.patchRow(updated);
           this.snackBar.open('Transação atualizada.', 'Fechar', { duration: 2500 });
-          this.load();
         },
         error: (err) => {
           this.snackBar.open(err.error?.message || 'Erro ao atualizar transação.', 'Fechar', {
@@ -202,6 +254,24 @@ export class TransactionListComponent implements OnInit {
           });
         },
       });
+    });
+  }
+
+  /** Explicitly confirms the pending review for a row (does not touch its classification). */
+  confirmReview(tx: Transaction): void {
+    this.txService.confirmReview(tx.id).subscribe({
+      next: (updated) => {
+        // Under the "pending only" filter the resolved row leaves the list; otherwise just drop
+        // the chip in place.
+        if (this.pendingOnly) this.removeRow(tx.id);
+        else this.patchRow(updated);
+        this.snackBar.open('Revisão confirmada.', 'Fechar', { duration: 2000 });
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.message || 'Erro ao confirmar revisão.', 'Fechar', {
+          duration: 4000,
+        });
+      },
     });
   }
 
@@ -219,11 +289,11 @@ export class TransactionListComponent implements OnInit {
   saveNotes(tx: Transaction): void {
     const notes = this.editingNotes.trim();
     this.txService.updateNotes(tx.id, notes).subscribe({
-      next: () => {
+      next: (updated) => {
         this.editingId = null;
         this.editingNotes = '';
+        this.patchRow(updated);
         this.snackBar.open('Apelido salvo.', 'Fechar', { duration: 2500 });
-        this.load();
       },
       error: () => {
         this.snackBar.open('Erro ao salvar apelido.', 'Fechar', { duration: 3000 });
@@ -298,9 +368,9 @@ export class TransactionListComponent implements OnInit {
       userShare: tx.userShare,
     };
     this.txService.update(tx.id, req).subscribe({
-      next: () => {
+      next: (updated) => {
+        this.patchRow(updated);
         this.snackBar.open('Transação atualizada.', 'Fechar', { duration: 2000 });
-        this.load();
       },
       error: (err) => {
         this.snackBar.open(err.error?.message || 'Erro ao salvar.', 'Fechar', { duration: 4000 });

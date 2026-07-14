@@ -129,6 +129,68 @@ class TransactionServiceTest {
   }
 
   @Test
+  void update_keeps_needs_review_flag_on_edited_and_matching() {
+    UUID id = UUID.randomUUID();
+    UUID categoryId = UUID.randomUUID();
+    Category category = Category.builder().id(categoryId).name("Alimentação").build();
+
+    Transaction edited =
+        Transaction.builder()
+            .id(id)
+            .user(user)
+            .description("Nagumo")
+            .normalizedDescription("Nagumo")
+            .type(TransactionType.EXPENSE)
+            .needsReview(true)
+            .build();
+    Transaction other =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .description("Nagumo")
+            .normalizedDescription("Nagumo")
+            .type(TransactionType.EXPENSE)
+            .needsReview(true)
+            .build();
+
+    when(transactionRepository.findById(id)).thenReturn(Optional.of(edited));
+    when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+    when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    when(transactionRepository.findByUserIdAndEffectiveName(userId, "Nagumo"))
+        .thenReturn(List.of(edited, other));
+
+    service.update(id, expenseRequest(categoryId), user);
+
+    // Editing a field must NOT resolve the review — only confirmReview does.
+    assertThat(edited.isNeedsReview()).isTrue();
+    assertThat(other.isNeedsReview()).isTrue();
+  }
+
+  @Test
+  void confirmReview_clears_needs_review_without_touching_other_fields() {
+    UUID id = UUID.randomUUID();
+    Transaction tx =
+        Transaction.builder()
+            .id(id)
+            .user(user)
+            .description("Nagumo")
+            .type(TransactionType.EXPENSE)
+            .budgetGroup("ESSENTIAL")
+            .needsReview(true)
+            .build();
+
+    when(transactionRepository.findById(id)).thenReturn(Optional.of(tx));
+    when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    service.confirmReview(id, user);
+
+    assertThat(tx.isNeedsReview()).isFalse();
+    assertThat(tx.getBudgetGroup()).isEqualTo("ESSENTIAL");
+    // No propagation on confirm — only the single row is saved.
+    verify(transactionRepository, never()).saveAll(any());
+  }
+
+  @Test
   void update_does_not_create_merchant_rule_for_income() {
     UUID id = UUID.randomUUID();
 

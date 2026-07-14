@@ -24,6 +24,10 @@
   mat-form-field {
     width: 180px;
   }
+
+  .search-field {
+    width: 240px;
+  }
 }
 
 .loading-center {
@@ -279,6 +283,20 @@
   font-weight: 700;
   background: rgba(255, 152, 0, 0.18);
   color: #e65100;
+}
+
+.confirm-review-btn {
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  margin-left: 2px;
+  color: #2e7d32;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .needs-review-row {

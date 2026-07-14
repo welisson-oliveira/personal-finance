@@ -29,10 +29,22 @@ public class TransactionController {
       @RequestParam(required = false) String type,
       @RequestParam(required = false) UUID categoryId,
       @RequestParam(required = false) Boolean needsReview,
+      @RequestParam(required = false) String search,
+      @RequestParam(required = false) String budgetGroup,
+      @RequestParam(defaultValue = "false") boolean includeIgnored,
       @PageableDefault(size = 50, sort = "date") Pageable pageable,
       @AuthenticationPrincipal User user) {
     return ResponseEntity.ok(
-        transactionService.findAll(user.getId(), month, type, categoryId, needsReview, pageable));
+        transactionService.findAll(
+            user.getId(),
+            month,
+            type,
+            categoryId,
+            needsReview,
+            search,
+            budgetGroup,
+            includeIgnored,
+            pageable));
   }
 
   @PostMapping
@@ -55,6 +67,12 @@ public class TransactionController {
       @RequestBody UpdateNotesRequest request,
       @AuthenticationPrincipal User user) {
     return ResponseEntity.ok(transactionService.updateNotes(id, user, request.getNotes()));
+  }
+
+  @PatchMapping("/{id}/review")
+  public ResponseEntity<TransactionResponse> confirmReview(
+      @PathVariable UUID id, @AuthenticationPrincipal User user) {
+    return ResponseEntity.ok(transactionService.confirmReview(id, user));
   }
 
   @DeleteMapping("/{id}")
