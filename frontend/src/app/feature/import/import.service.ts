@@ -21,6 +21,11 @@ export class ImportService {
     return this.http.get<ImportPreviewResponse>(`/api/import/${sessionId}/preview`);
   }
 
+  /** Persists in-progress edits onto the pending session so they survive leaving the preview. */
+  savePreview(sessionId: string, transactions: ParsedTransaction[]): Observable<void> {
+    return this.http.put<void>(`/api/import/${sessionId}/preview`, transactions);
+  }
+
   confirm(sessionId: string, transactions: ParsedTransaction[]): Observable<void> {
     return this.http.post<void>(`/api/import/${sessionId}/confirm`, transactions);
   }

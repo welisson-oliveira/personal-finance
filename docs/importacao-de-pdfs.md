@@ -16,6 +16,8 @@ Upload de extrato/fatura Nubank (PDF) → parse + classificação automática �
 
 `getPreview(sessionId, user)` — **retomar importação pendente**: relê o `preview_json` da sessão e reconstrói o `ImportPreviewResponse`. Só funciona enquanto a sessão está `PENDING` (com JSON presente); caso contrário lança `IllegalStateException` (→ 409, "re-upload the PDF"). Usado quando o usuário sai do preview sem confirmar e quer voltar.
 
+`updatePreview(sessionId, clientList, user)` — **salva as edições em andamento** de volta no `preview_json` da sessão (reusa `serializePreview`). Só sessões `PENDING` (senão `IllegalStateException` → 409). É o que faz as edições do preview **sobreviverem** a sair da tela / atualizar a página / fechar o app: o frontend chama a cada alteração, e o `getPreview` do "Retomar" passa a devolver o estado editado (antes, devolvia só o snapshot do parse).
+
 `confirm(sessionId, clientList, user)`:
 
 - Persiste **apenas** os DTOs com `included = true` como `Transaction` (resolvendo o apelido via `merchant_display_names`).
@@ -34,6 +36,7 @@ Upload de extrato/fatura Nubank (PDF) → parse + classificação automática �
 
 - `POST /parse` (multipart `file`, opcional `documentType`) → `ImportPreviewResponse` (201).
 - `GET /{id}/preview` → `ImportPreviewResponse` reconstruído do `preview_json` (retomar sessão `PENDING`; 409 se já confirmada/cancelada).
+- `PUT /{id}/preview` (body `List<ParsedTransactionDTO>`) → regrava o `preview_json` com as edições em andamento (autosave; 204; 409 se não-pendente).
 - `POST /{id}/confirm` (body `List<ParsedTransactionDTO>`) → persiste confirmados.
 - `POST /{id}/cancel`.
 - `GET /history` → `List<ImportSessionResponse>` com contagem de transações.
@@ -45,10 +48,10 @@ Campos: date, description, amount, type, cardHolder, installmentInfo, normalized
 
 ## Frontend (`feature/import/`, `import.service`)
 
-`import.service`: `parse(file)` → `POST /api/import/parse`; `confirm(sessionId, txs)` → `POST /api/import/{id}/confirm`; `cancel`, `getHistory`, `deleteSession`.
+`import.service`: `parse(file)` → `POST /api/import/parse`; `savePreview(sessionId, txs)` → `PUT /api/import/{id}/preview` (autosave); `confirm(sessionId, txs)` → `POST /api/import/{id}/confirm`; `cancel`, `getHistory`, `deleteSession`.
 
 - **`upload`** (`app-upload`) — página `/import`. Drag-and-drop + input, **só PDF**. `upload()` → `parse()` e navega para `/import/preview` passando `preview` no `state` do router. Também embute o **histórico** (`groupByMonth`, status CONFIRMED/CANCELLED/PENDING), `goToTransactions()` (seta o período global e navega) e exclusão via `ConfirmDialogComponent`. Injeta `PeriodService`. **Sessões `PENDING` têm botão "Retomar"** (`resumeSession` → `getPreview` → navega ao preview); se o preview expirou, mostra snackbar e recarrega o histórico.
-- **`preview`** (`app-preview`) — lê `preview` do `state` (sem ele, redireciona para `/import`). Tabela Material editável (colunas: included, date, description, amount, type, budgetGroup, direction, category, notes) com `CategoryService.getAll()`; `budgetGroups`/`directions` com tooltips; `autoClassificationLabel/Tooltip`. `confirm()` → `importService.confirm()` → `/dashboard`; `cancel()`.
+- **`preview`** (`app-preview`) — lê `preview` do `state` (sem ele, redireciona para `/import`). Tabela Material editável (colunas: included, date, description, amount, type, budgetGroup, direction, category, notes) com `CategoryService.getAll()`; `budgetGroups`/`directions` com tooltips; `autoClassificationLabel/Tooltip`. **Autosave:** cada alteração chama `persistEdits()` → `importService.savePreview()` (controles discretos na hora via `onEdit()`; texto de *notes* com `debounceTime(600)` via `onNotesInput()`), então sair da tela/atualizar/fechar não perde nada — o "Retomar" traz as edições de volta. Flag `finalized` (setada em `confirm()`/`cancel()`) faz o autosave virar no-op depois de confirmar/cancelar (o backend já zerou o `preview_json`). Categoria por linha usa `app-category-select` (com **"➕ Nova categoria…"** inline). `confirm()` → `importService.confirm()` → `/dashboard`; `cancel()`.
 - **`history`** (`app-import-history`) — lista de sessões. **Nota: rota `/import/history` redireciona para `/import`** (o histórico está embutido no upload); o componente existe mas não é roteado.
 
 ## Fluxo ponta-a-ponta
@@ -70,4 +73,4 @@ Upload PDF → parse+classificação → preview (usuário ajusta tipo/categoria
 
 ## Testes relevantes
 
-`TransactionImportServiceTest` (confirm persiste só `included`, usa dados do cliente e não o JSON, persiste `needs_review`/`ignored`/`investmentDirection` na Transaction, pula excluídos; `getPreview` devolve o preview persistido de sessão `PENDING` e recusa sessão não-pendente / sem JSON), `NubankExtratoParserTest` e `NubankFaturaParserTest` (fixtures reais `extrato.pdf`/`fatura.pdf`), `import.service.spec` e `preview.component.spec` (os únicos specs de frontend além do `app.component`).
+`TransactionImportServiceTest` (confirm persiste só `included`, usa dados do cliente e não o JSON, persiste `needs_review`/`ignored`/`investmentDirection` na Transaction, pula excluídos; `getPreview` devolve o preview persistido de sessão `PENDING` e recusa sessão não-pendente / sem JSON; `updatePreview` grava as edições numa sessão `PENDING` e round-trips pelo `getPreview`, recusa sessão não-pendente e de outro usuário), `NubankExtratoParserTest` e `NubankFaturaParserTest` (fixtures reais `extrato.pdf`/`fatura.pdf`), `import.service.spec` e `preview.component.spec` (autosave: `onEdit` chama `savePreview`; vira no-op após confirm/cancel).
