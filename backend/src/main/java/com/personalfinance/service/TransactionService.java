@@ -42,6 +42,9 @@ public class TransactionService {
       String type,
       UUID categoryId,
       Boolean needsReview,
+      String search,
+      String budgetGroup,
+      boolean includeIgnored,
       Pageable pageable) {
     LocalDate start = null;
     LocalDate end = null;
@@ -59,7 +62,11 @@ public class TransactionService {
             .and(TransactionSpecifications.ofType(txType))
             .and(TransactionSpecifications.inCategory(categoryId))
             .and(TransactionSpecifications.needingReview(needsReview))
-            .and(TransactionSpecifications.excludingIgnored());
+            .and(TransactionSpecifications.descriptionContains(search))
+            .and(TransactionSpecifications.ofBudgetGroup(budgetGroup));
+    if (!includeIgnored) {
+      spec = spec.and(TransactionSpecifications.excludingIgnored());
+    }
 
     return transactionRepository.findAll(spec, pageable).map(this::toResponse);
   }
@@ -103,18 +110,30 @@ public class TransactionService {
     tx.setShared(request.isShared());
     tx.setTotalAmount(request.getTotalAmount());
     tx.setUserShare(request.getUserShare());
-    // Editing a transaction resolves it — clear the "needs review" flag.
-    tx.setNeedsReview(false);
+    // Editing does NOT resolve the review — the user confirms it explicitly (confirmReview),
+    // so classifying a field (e.g. budget group) keeps the "needs review" flag and the row
+    // stays put under the "pending only" filter.
     Transaction saved = transactionRepository.save(tx);
     propagateClassification(saved, user);
     return toResponse(saved);
   }
 
   /**
+   * Explicitly marks a transaction as reviewed (clears the pending-review flag) without touching
+   * any other field. This is the only path that resolves a review now.
+   */
+  @Transactional
+  public TransactionResponse confirmReview(UUID id, User user) {
+    Transaction tx = findOwned(id, user.getId());
+    tx.setNeedsReview(false);
+    return toResponse(transactionRepository.save(tx));
+  }
+
+  /**
    * Propagates the classification (type, category, budget group, investment direction, ignored) of
    * an edited transaction to every other transaction with the same effective name for this user,
-   * clears their pending-review flag, and learns a merchant rule so future imports are classified
-   * the same way.
+   * and learns a merchant rule so future imports are classified the same way. The pending-review
+   * flag is left untouched — each row is resolved explicitly via {@link #confirmReview}.
    */
   private void propagateClassification(Transaction source, User user) {
     String effectiveName =
@@ -132,7 +151,7 @@ public class TransactionService {
       t.setBudgetGroup(source.getBudgetGroup());
       t.setInvestmentDirection(source.getInvestmentDirection());
       t.setIgnored(source.isIgnored());
-      t.setNeedsReview(false);
+      // Classification propagates, but the review must still be confirmed per row.
     }
     transactionRepository.saveAll(matching);
 

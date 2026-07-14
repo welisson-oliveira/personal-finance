@@ -45,4 +45,23 @@ public class TransactionSpecifications {
       return cb.isTrue(root.get("needsReview"));
     };
   }
+
+  /** Case-insensitive match across description, normalized description and notes (apelido). */
+  public static Specification<Transaction> descriptionContains(String search) {
+    return (root, query, cb) -> {
+      if (search == null || search.isBlank()) return cb.conjunction();
+      String like = "%" + search.trim().toLowerCase() + "%";
+      return cb.or(
+          cb.like(cb.lower(root.get("description")), like),
+          cb.like(cb.lower(root.get("normalizedDescription")), like),
+          cb.like(cb.lower(root.get("notes")), like));
+    };
+  }
+
+  public static Specification<Transaction> ofBudgetGroup(String budgetGroup) {
+    return (root, query, cb) -> {
+      if (budgetGroup == null || budgetGroup.isBlank()) return cb.conjunction();
+      return cb.equal(root.get("budgetGroup"), budgetGroup);
+    };
+  }
 }

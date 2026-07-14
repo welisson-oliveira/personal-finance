@@ -12,6 +12,10 @@ export class TransactionService {
     type?: string;
     categoryId?: string;
     needsReview?: boolean;
+    search?: string;
+    budgetGroup?: string;
+    includeIgnored?: boolean;
+    sort?: string;
     page?: number;
     size?: number;
   }): Observable<Page<Transaction>> {
@@ -20,6 +24,10 @@ export class TransactionService {
     if (filters.type) params = params.set('type', filters.type);
     if (filters.categoryId) params = params.set('categoryId', filters.categoryId);
     if (filters.needsReview) params = params.set('needsReview', true);
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.budgetGroup) params = params.set('budgetGroup', filters.budgetGroup);
+    if (filters.includeIgnored) params = params.set('includeIgnored', true);
+    if (filters.sort) params = params.set('sort', filters.sort);
     if (filters.page != null) params = params.set('page', filters.page);
     if (filters.size != null) params = params.set('size', filters.size);
     return this.http.get<Page<Transaction>>('/api/transactions', { params });
@@ -31,6 +39,11 @@ export class TransactionService {
 
   updateNotes(id: string, notes: string): Observable<Transaction> {
     return this.http.patch<Transaction>(`/api/transactions/${id}/notes`, { notes });
+  }
+
+  /** Explicitly marks a transaction as reviewed (clears the pending-review flag). */
+  confirmReview(id: string): Observable<Transaction> {
+    return this.http.patch<Transaction>(`/api/transactions/${id}/review`, {});
   }
 
   delete(id: string): Observable<void> {
