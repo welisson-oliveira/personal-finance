@@ -70,7 +70,7 @@ public class DashboardService {
 
     BigDecimal percentualEssenciais = percent(despesasEssenciais, rendaBase);
     BigDecimal percentualNaoEssenciais = percent(despesasNaoEssenciais, rendaBase);
-    BigDecimal percentualInvestimentos = percent(investido, rendaBase);
+    BigDecimal percentualInvestimentos = percent(investido.subtract(resgatado), rendaBase);
 
     Destaques destaques = buildDestaques(userId, start, end);
 
@@ -83,7 +83,7 @@ public class DashboardService {
         .despesasEssenciais(despesasEssenciais)
         .despesasNaoEssenciais(despesasNaoEssenciais)
         .totalDespesas(totalDespesas)
-        .investido(investido)
+        .investido(investido.subtract(resgatado))
         .resgatado(resgatado)
         .saldo(saldo)
         .rendaBase(rendaBase)
