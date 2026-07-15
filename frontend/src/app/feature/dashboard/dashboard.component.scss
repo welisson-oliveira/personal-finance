@@ -263,10 +263,20 @@
   }
 
   .drill-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     margin-right: 12px;
+  }
+
+  .drill-icon {
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+    flex-shrink: 0;
   }
 
   .drill-pct {
