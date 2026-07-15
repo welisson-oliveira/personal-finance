@@ -6,7 +6,7 @@ Como o sistema reconhece estabelecimentos, aprende com as correções do usuári
 
 | Tabela / entidade                                | Chave                                | Papel                                                                                                                                              |
 | ------------------------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `merchant_rules` / `MerchantRule`                | `normalizedName` (+ `user` nullable) | categoria + `expenseType` (budget group) de um estabelecimento. `user=null` = regra global do sistema. `createdBy` SYSTEM/USER, `confidence` 0–100 |
+| `merchant_rules` / `MerchantRule`                | `normalizedName` (+ `user` nullable) | **override** de um estabelecimento: categoria + `expenseType` (budget group) **+ `type` + `ignored` + `investmentDirection`** (V14). `user=null` = regra global do sistema. `createdBy` SYSTEM/USER, `confidence` 0–100 |
 | `merchant_aliases` / `MerchantAlias`             | `alias` (único) → `MerchantRule`     | mapeia variações do texto bruto ("AmazonMktplc", "iFood - NuPay") para o `normalizedName` de uma regra                                             |
 | `merchant_display_names` / `MerchantDisplayName` | `(user, normalizedName)`             | apelido/nome amigável **por usuário** (o "notes" de exibição)                                                                                      |
 
@@ -15,16 +15,17 @@ Seeds: `V2` (13 categorias globais), `V3` (~28 `merchant_rules` SYSTEM + aliases
 ## Services
 
 - **`MerchantNormalizationService.normalize(raw)`** — minúsculo; acha o primeiro `MerchantAlias` global cujo alias é substring do texto; retorna o `normalizedName` da regra; senão devolve o texto original.
-- **`MerchantClassificationService.classify(normalizedName, userId)`** — tenta regra do usuário (`findUserRuleByNormalizedName`), depois regra global (`findGlobalByNormalizedName`); senão `ClassificationResult.unknown()`.
-- **`ClassificationResult`** — valor imutável (categoryId/name, subcategory, expenseType, confidence). `isKnown()` = confidence > 0; `isAutoClassifiable()` = confidence ≥ 80.
+- **`MerchantClassificationService.classify(normalizedName, userId)`** — tenta regra do usuário (`findUserRuleByNormalizedName`), depois regra global (`findGlobalByNormalizedName`); senão `ClassificationResult.unknown()`. **`findUserOverride(normalizedName, userId)`** devolve **só** a regra do usuário (o override aplicado na importação antes das heurísticas).
+- **`ClassificationResult`** — valor imutável (categoryId/name, subcategory, expenseType, confidence, **type, ignored, investmentDirection**). `isKnown()` = confidence > 0; `isAutoClassifiable()` = confidence ≥ 80.
 - **`IncomeClassificationService.classify(tx, userId, holderName)`** (só para `INCOME`) — "open banking" + nome do titular → `ignored` (transferência própria); casa `KnownPerson` ativo (match difuso de ≥2 partes do nome) → aplica `defaultTreatment` (`IGNORE`→`ignored`, `ALWAYS_REVIEW`→`needsReview`, `INCOME`→receita) + `defaultLabel`; senão fica como receita simples. Ver [pessoas-conhecidas.md](./pessoas-conhecidas.md).
 
 ## Aprendizado (como o sistema "para de perguntar")
 
-- **Ao editar/revisar inline uma transação** (despesa com budget group): faz upsert de uma `MerchantRule` do usuário com `confidence=100`, `createdBy=USER` (`findUserRuleByNormalizedName`). Assim a próxima importação do mesmo estabelecimento é auto-classificada.
+- **Ao editar uma transação** (qualquer tipo): faz upsert de uma `MerchantRule` do usuário com `confidence=100`, `createdBy=USER`, gravando **`type`, `ignored`, categoria, `expenseType` e `investmentDirection`**. Assim a próxima importação do mesmo estabelecimento vem já classificada — inclusive corrigindo heurísticas (ex.: "esta transferência Open Banking é meu salário, não é transferência própria, não ignore").
+- **Aplicação na importação:** para **cada** transação, se existe uma regra **do usuário** (`findUserOverride`), ela é aplicada **antes** de qualquer heurística (own-transfer, investimento do parser, regra global de despesa) — `applyUserOverride` seta tipo/ignored/categoria/grupo/direção e `needsReview=false`.
+- **Guarda "Pagamento de fatura":** o aprendizado **não** cria regra para pagamentos de fatura — o `ignored` deles é estrutural (anti-duplicação, tratado pela conciliação), não uma classificação de estabelecimento.
 - **Alias:** ao resolver a revisão, a descrição bruta é salva como novo `MerchantAlias` (dedup por `findByAliasIgnoreCase`), então o mesmo estabelecimento é reconhecido da próxima vez.
-- **Receita não é aprendida como regra** — a classificação de receita vem de `KnownPerson` e do histórico, nunca de `merchant_rules`.
-- **Precedência na importação:** regra do usuário → regra global → desconhecido (`needsReview`). Limiar de auto-classificação: confidence ≥ 80.
+- **Precedência na importação:** override do usuário → (investimento do parser / heurística de receita / regra global de despesa) → desconhecido (`needsReview`). Limiar de auto-classificação: confidence ≥ 80.
 
 ## Propagação por "nome efetivo"
 
@@ -51,4 +52,4 @@ Nome amigável por `(user, normalizedName)`, definido via `PATCH /transactions/{
 
 ## Testes relevantes
 
-`MerchantClassificationServiceTest`, `MerchantNormalizationServiceTest`, `IncomeClassificationServiceTest` (open-banking → ignored, known-person por tratamento, receita simples), `TransactionServiceTest` (propagação + aprende regra; receita não aprende).
+`MerchantClassificationServiceTest` (classify global + **`findUserOverride` carrega type/ignored**), `MerchantNormalizationServiceTest`, `IncomeClassificationServiceTest` (open-banking → ignored, known-person por tratamento, receita simples), `TransactionServiceTest` (propagação + **aprende override de receita com type/ignored**; **não aprende para "Pagamento de fatura"**).
