@@ -25,8 +25,8 @@ public class NubankFaturaParser {
   // Matches: DD MMM start (no R$ at end) → multi-line transaction
   private static final Pattern TX_DATE_ONLY = Pattern.compile("^(\\d{2}) ([A-Z]{3}) (.+)$");
 
-  // Matches a standalone amount line: [?]R$ AMOUNT
-  private static final Pattern AMOUNT_LINE = Pattern.compile("^(.?)R\\$ ([\\d.,]+)$");
+  // Matches a standalone amount line: [?]R$ AMOUNT or - R$ AMOUNT (credit with space after dash)
+  private static final Pattern AMOUNT_LINE = Pattern.compile("^(-\\s*|.?)R\\$ ([\\d.,]+)$");
 
   // Installment pattern in description
   private static final Pattern INSTALLMENT = Pattern.compile("(?:- )?Parcela (\\d+/\\d+)$");
@@ -167,6 +167,11 @@ public class NubankFaturaParser {
         String mon = txm.group(2);
         String descPart = txm.group(3).trim();
         boolean isCredit = !txm.group(4).isEmpty();
+        // "- R$ X" format: greedy (.+) absorbs the '-' into the description; detect and strip it.
+        if (!isCredit && descPart.endsWith("-")) {
+          isCredit = true;
+          descPart = descPart.substring(0, descPart.length() - 1).trim();
+        }
         BigDecimal amount = parseBrazilian(txm.group(5));
 
         if (descPart.startsWith("Pagamento em")) continue;

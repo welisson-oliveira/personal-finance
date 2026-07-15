@@ -93,6 +93,20 @@ class NubankFaturaParserTest {
   }
 
   @Test
+  void estorno_with_space_after_dash_is_income() {
+    // "- R$ 8,10" (space between dash and R$) must be detected as credit, not expense.
+    String text =
+        "TRANSAÇÕES\nWelisson W Oliveira R$ 16,20\n"
+            + "14 MAI Transação de NuTag - R$ 8,10\n"
+            + "14 MAI Transação de NuTag R$ 8,10\n";
+    NubankFaturaParser.ParseResult r = new NubankFaturaParser().parse(text);
+    long incomes = r.transactions().stream().filter(t -> "INCOME".equals(t.getType())).count();
+    long expenses = r.transactions().stream().filter(t -> "EXPENSE".equals(t.getType())).count();
+    assertThat(incomes).isEqualTo(1);
+    assertThat(expenses).isEqualTo(1);
+  }
+
+  @Test
   void payment_line_is_filtered() {
     assertThat(result.transactions())
         .noneMatch(
