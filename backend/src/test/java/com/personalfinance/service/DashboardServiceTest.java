@@ -44,6 +44,9 @@ class DashboardServiceTest {
     when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
             userId, "NON_ESSENTIAL", START, END))
         .thenReturn(new BigDecimal(nonEssential));
+    // By default the whole-month expense total equals the two groups (no ungrouped expenses).
+    when(transactionRepository.sumAllExpenseByUserIdAndDateBetween(userId, START, END))
+        .thenReturn(new BigDecimal(essential).add(new BigDecimal(nonEssential)));
   }
 
   private void stubInvestments(UUID userId, String contribution, String redemption) {
@@ -79,6 +82,32 @@ class DashboardServiceTest {
     assertThat(result.getDespesasNaoEssenciais()).isEqualByComparingTo("800.00");
     assertThat(result.getTotalDespesas()).isEqualByComparingTo("2000.00");
     assertThat(result.getResultado()).isEqualByComparingTo("1000.00");
+  }
+
+  @Test
+  void monthly_computes_saldo_acumulado_despesas_sem_grupo_and_ignored_bill_payments() {
+    UUID userId = UUID.randomUUID();
+    stubIncome(userId, "5000.00");
+    stubExpenses(userId, "1000.00", "500.00"); // grouped expenses = 1500
+    stubInvestments(userId, "0", "0");
+    stubDestaques(userId);
+    // Whole-month expenses (2000) exceed the grouped ones (1500) → 500 ungrouped (ex.: transition
+    // bill).
+    when(transactionRepository.sumAllExpenseByUserIdAndDateBetween(userId, START, END))
+        .thenReturn(new BigDecimal("2000.00"));
+    when(transactionRepository.sumAccumulatedBalanceUntil(userId, END))
+        .thenReturn(new BigDecimal("3200.00"));
+    when(transactionRepository.sumIgnoredBillPaymentsInPeriod(userId, START, END))
+        .thenReturn(new BigDecimal("750.00"));
+
+    DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
+
+    assertThat(result.getTotalDespesas()).isEqualByComparingTo("2000.00");
+    assertThat(result.getDespesasSemGrupo()).isEqualByComparingTo("500.00");
+    // resultado now nets ALL expenses: 5000 − 2000
+    assertThat(result.getResultado()).isEqualByComparingTo("3000.00");
+    assertThat(result.getSaldoAcumulado()).isEqualByComparingTo("3200.00");
+    assertThat(result.getPagamentosFaturaIgnorados()).isEqualByComparingTo("750.00");
   }
 
   @Test

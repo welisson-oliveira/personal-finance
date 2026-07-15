@@ -23,10 +23,13 @@ export interface DashboardResponse {
   despesasEssenciais: number;
   despesasNaoEssenciais: number;
   totalDespesas: number;
+  despesasSemGrupo: number;
   aportes: number;
   resgatado: number;
   aplicado: number;
   resultado: number;
+  saldoAcumulado: number;
+  pagamentosFaturaIgnorados: number;
   rendaBase: number;
   percentualEssenciais: number;
   percentualNaoEssenciais: number;

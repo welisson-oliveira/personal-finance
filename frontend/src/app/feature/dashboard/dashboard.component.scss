@@ -127,6 +127,45 @@
   &.aplicado .metric-value.negative {
     color: #c62828;
   }
+
+  &.other-expense mat-icon,
+  &.other-expense .metric-value {
+    color: #6d4c41;
+  }
+
+  &.accumulated mat-icon,
+  &.accumulated .metric-value {
+    color: #00695c;
+  }
+  &.accumulated.negative .metric-value {
+    color: #c62828;
+  }
+}
+
+.ignored-bill-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  background: rgba(255, 152, 0, 0.08);
+  border-left: 3px solid #ff9800;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #6d4c41;
+
+  mat-icon {
+    color: #ef6c00;
+    font-size: 20px;
+    height: 20px;
+    width: 20px;
+    flex-shrink: 0;
+  }
+
+  a {
+    color: #1565c0;
+    font-weight: 600;
+  }
 }
 
 .budget-card {

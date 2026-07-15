@@ -77,6 +77,41 @@ public interface TransactionRepository
       @Param("start") LocalDate start,
       @Param("end") LocalDate end);
 
+  /** All non-ignored expenses in the period (grouped or not) — feeds "Resultado do mês". */
+  @Query(
+      "SELECT COALESCE(SUM(CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END), 0) "
+          + "FROM Transaction t "
+          + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
+  BigDecimal sumAllExpenseByUserIdAndDateBetween(
+      @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+  /** Sum of bill payments still ignored in the period — the transition-month "furo" signal. */
+  @Query(
+      "SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t "
+          + "WHERE t.user.id = :userId AND t.ignored = true "
+          + "AND LOWER(t.description) LIKE 'pagamento de fatura%' "
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
+  BigDecimal sumIgnoredBillPaymentsInPeriod(
+      @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+  /**
+   * Running "cash in account" balance up to (and including) {@code end}: income, minus all expenses
+   * (respecting the shared split), minus net investment contributions (aportes − resgates).
+   * Excludes ignored rows; uses competence so card purchases land in their payment month.
+   */
+  @Query(
+      "SELECT COALESCE(SUM(CASE "
+          + "WHEN t.type = 'INCOME' THEN t.amount "
+          + "WHEN t.type = 'EXPENSE' THEN - (CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END) "
+          + "WHEN t.type = 'INVESTMENT' AND t.investmentDirection = 'CONTRIBUTION' THEN - t.amount "
+          + "WHEN t.type = 'INVESTMENT' AND t.investmentDirection = 'REDEMPTION' THEN t.amount "
+          + "ELSE 0 END), 0) "
+          + "FROM Transaction t "
+          + "WHERE t.user.id = :userId AND t.ignored = false "
+          + "AND COALESCE(t.competenceDate, t.date) <= :end")
+  BigDecimal sumAccumulatedBalanceUntil(@Param("userId") UUID userId, @Param("end") LocalDate end);
+
   @Query(
       "SELECT t FROM Transaction t LEFT JOIN FETCH t.category "
           + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "

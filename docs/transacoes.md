@@ -51,6 +51,7 @@ Mês selecionado na toolbar → lista recarrega → usuário edita categoria/gru
 - `needs_review` só é resolvido por **confirmação explícita** (`confirmReview` / botão de check na linha); editar campos preserva o selo.
 - **Competência (regime de caixa):** `competence_date` é o mês em que a transação conta no **Dashboard/Relatórios/metas**. Compras de **fatura** têm competência = **mês do vencimento** (definido em lote na importação, ajustável); Pix/débito/manual usam a própria `date`. As agregações usam **`COALESCE(competence_date, date)`**. A **tabela** exibe a `date` da compra, mas o **filtro de mês** da lista usa a competência (`inDateRange` → `COALESCE`). Editável por transação no dialog. Ordenação e reconciliação continuam na `date`.
 - Rateio: quando `shared`, o dashboard soma `userShare` (ver [dashboard.md](./dashboard.md)).
+- **Pagamento de fatura / mês de transição:** o "Pagamento de fatura" do extrato entra `ignored=true` (não duplica com os itens da fatura). No **mês de início do uso** (sem a fatura daquele período importada) isso infla o Resultado/Saldo. Nas linhas de "Pagamento de fatura" há ações inline: **"Contabilizar neste mês"** (des-ignora via `quickUpdate({ignored:false})`) e **"Voltar a ignorar"**. Como o Dashboard passou a contar toda despesa não-ignorada, des-ignorar já reflete no Resultado (em "Outras despesas (sem grupo)") e no Saldo Geral. O Dashboard avisa quando há pagamentos ignorados no mês (`pagamentosFaturaIgnorados`).
 
 ## Onde mexer
 
