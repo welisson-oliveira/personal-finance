@@ -371,6 +371,7 @@ export class TransactionListComponent implements OnInit {
       amount: tx.amount,
       type,
       date: tx.date,
+      competenceDate: tx.competenceDate,
       categoryId: isExpense ? (patch.categoryId ?? tx.categoryId) : undefined,
       budgetGroup: isExpense ? (patch.budgetGroup ?? tx.budgetGroup) : undefined,
       investmentDirection: isInvestment
