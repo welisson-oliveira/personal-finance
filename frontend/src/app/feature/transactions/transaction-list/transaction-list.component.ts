@@ -239,6 +239,24 @@ export class TransactionListComponent implements OnInit {
     this.page = { ...this.page, content, totalElements: Math.max(0, this.page.totalElements - 1) };
   }
 
+  /** Effective name = the apelido key: normalized description, or the raw one when absent. */
+  private effectiveName(tx: Transaction): string {
+    return tx.normalizedDescription || tx.description;
+  }
+
+  /**
+   * The apelido (notes) propagates on the backend to every transaction with the same effective
+   * name; mirror that on all visible rows so it shows without a reload.
+   */
+  private patchNotesForEffectiveName(source: Transaction, notes: string | undefined): void {
+    if (!this.page) return;
+    const name = this.effectiveName(source);
+    const content = this.page.content.map((t) =>
+      this.effectiveName(t) === name ? { ...t, notes } : t
+    );
+    this.page = { ...this.page, content };
+  }
+
   confirmDelete(tx: Transaction): void {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: { message: `Excluir "${tx.description}"?` },
@@ -258,7 +276,9 @@ export class TransactionListComponent implements OnInit {
       if (!req) return;
       this.txService.update(tx.id, req).subscribe({
         next: (updated) => {
-          this.patchRow(updated);
+          // Propagated edits (ALL/FUTURE) change sibling rows — refresh instead of patching one.
+          if (req.propagate && req.propagate !== 'CURRENT') this.load();
+          else this.patchRow(updated);
           this.snackBar.open('Transação atualizada.', 'Fechar', { duration: 2500 });
         },
         error: (err) => {
@@ -305,7 +325,8 @@ export class TransactionListComponent implements OnInit {
       next: (updated) => {
         this.editingId = null;
         this.editingNotes = '';
-        this.patchRow(updated);
+        // Reflects on every row sharing the effective name (backend propagates the apelido).
+        this.patchNotesForEffectiveName(updated, updated.notes);
         this.snackBar.open('Apelido salvo.', 'Fechar', { duration: 2500 });
       },
       error: () => {
@@ -418,7 +439,10 @@ export class TransactionListComponent implements OnInit {
     };
     this.txService.update(tx.id, req).subscribe({
       next: (updated) => {
-        this.patchRow(updated);
+        // CURRENT touches only this row; ALL/FUTURE propagate to siblings, so refresh the page to
+        // reflect the propagated classification instead of leaving stale rows behind.
+        if (scope === 'CURRENT') this.patchRow(updated);
+        else this.load();
         this.snackBar.open('Transação atualizada.', 'Fechar', { duration: 2000 });
       },
       error: (err) => {
