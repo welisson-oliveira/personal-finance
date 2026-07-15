@@ -24,6 +24,30 @@
       </mat-card-content>
     </mat-card>
   </div>
+  @if (data.entradasBreakdown?.length) {
+    <button mat-button class="drill-toggle" (click)="toggle('ent')">
+      <mat-icon>{{ expanded.ent ? 'expand_less' : 'expand_more' }}</mat-icon>
+      {{ expanded.ent ? 'Ocultar categorias' : 'De onde veio o dinheiro' }}
+    </button>
+    @if (expanded.ent) {
+      <div class="drill">
+        @for (c of data.entradasBreakdown!; track c.categoryName) {
+          <div class="drill-row">
+            <span class="drill-name">
+              <mat-icon class="drill-icon" [style.color]="c.categoryColor || null">{{
+                c.categoryIcon || 'label'
+              }}</mat-icon>
+              {{ c.categoryName }}
+            </span>
+            <span class="drill-val"
+              >{{ fmt(c.total) }}
+              <span class="drill-pct">{{ bucketPct(c.total, data.entradas) | number: '1.0-0' }}%</span></span
+            >
+          </div>
+        }
+      </div>
+    }
+  }
 
   <!-- 3. Estou seguindo o método 50/30/20? -->
   <div class="section-title">Está seguindo o 50/30/20?</div>

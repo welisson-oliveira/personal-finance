@@ -87,6 +87,13 @@ public class DashboardService {
     DashboardResponse.Breakdown breakdown = buildBudgetBreakdown(expenses);
     Destaques destaques = buildDestaques(userId, start, end, expenses);
 
+    // "De onde veio o dinheiro": entradas agrupadas por categoria (income uses raw amount, like the
+    // entradas total). Reuses the same category-total shape as the expense drill-down.
+    List<CategoryTotalResponse> entradasBreakdown =
+        categoriesFrom(
+            transactionRepository.findIncomeWithCategoryInPeriod(userId, start, end),
+            Transaction::getAmount);
+
     return DashboardResponse.builder()
         .year(year)
         .month(month)
@@ -106,6 +113,7 @@ public class DashboardService {
         .percentualNaoEssenciais(percentualNaoEssenciais)
         .percentualInvestimentos(percentualInvestimentos)
         .breakdown(breakdown)
+        .entradasBreakdown(entradasBreakdown)
         .destaques(destaques)
         .build();
   }
@@ -120,19 +128,24 @@ public class DashboardService {
 
   private List<CategoryTotalResponse> categoriesForGroup(
       List<Transaction> expenses, String budgetGroup) {
-    List<Transaction> inGroup =
-        expenses.stream().filter(t -> budgetGroup.equals(t.getBudgetGroup())).toList();
+    return categoriesFrom(
+        expenses.stream().filter(t -> budgetGroup.equals(t.getBudgetGroup())).toList(),
+        this::effectiveAmount);
+  }
 
+  /** Groups transactions by category (biggest first) with a "Sem categoria" bucket. */
+  private List<CategoryTotalResponse> categoriesFrom(
+      List<Transaction> txs, java.util.function.Function<Transaction, BigDecimal> amountFn) {
     Map<UUID, BigDecimal> totals =
-        inGroup.stream()
+        txs.stream()
             .filter(t -> t.getCategory() != null)
             .collect(
                 Collectors.groupingBy(
                     t -> t.getCategory().getId(),
-                    Collectors.reducing(BigDecimal.ZERO, this::effectiveAmount, BigDecimal::add)));
+                    Collectors.reducing(BigDecimal.ZERO, amountFn, BigDecimal::add)));
 
     Map<UUID, Transaction> byCategory =
-        inGroup.stream()
+        txs.stream()
             .filter(t -> t.getCategory() != null)
             .collect(Collectors.toMap(t -> t.getCategory().getId(), t -> t, (a, b) -> a));
 
@@ -149,9 +162,9 @@ public class DashboardService {
                 .toList());
 
     BigDecimal uncategorized =
-        inGroup.stream()
+        txs.stream()
             .filter(t -> t.getCategory() == null)
-            .map(this::effectiveAmount)
+            .map(amountFn)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     if (uncategorized.compareTo(BigDecimal.ZERO) > 0) {
       result.add(CategoryTotalResponse.of(null, "Sem categoria", "❓", "#9E9E9E", uncategorized));

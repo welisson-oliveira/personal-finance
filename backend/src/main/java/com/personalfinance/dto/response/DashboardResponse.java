@@ -46,6 +46,9 @@ public class DashboardResponse {
   // Drill-down do 50/30/20: quais categorias compõem cada bucket de despesa (maior→menor).
   private Breakdown breakdown;
 
+  // "De onde veio o dinheiro": entradas do mês agrupadas por categoria (maior→menor).
+  private List<CategoryTotalResponse> entradasBreakdown;
+
   private Destaques destaques;
 
   @Getter

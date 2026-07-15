@@ -223,6 +223,39 @@ class DashboardServiceTest {
   }
 
   @Test
+  void monthly_builds_entradas_breakdown_by_category_biggest_first() {
+    UUID userId = UUID.randomUUID();
+    stubIncome(userId, "5300.00");
+    stubExpenses(userId, "0", "0");
+    stubInvestments(userId, "0", "0");
+    stubDestaques(userId);
+
+    Category salario = Category.builder().id(UUID.randomUUID()).name("Salário").build();
+    Category freela = Category.builder().id(UUID.randomUUID()).name("Freelance").build();
+    when(transactionRepository.findIncomeWithCategoryInPeriod(userId, START, END))
+        .thenReturn(
+            List.of(incomeTx(freela, "1000"), incomeTx(salario, "4000"), incomeTx(null, "300")));
+
+    DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
+
+    assertThat(result.getEntradasBreakdown())
+        .extracting(CategoryTotalResponse::categoryName)
+        .containsExactly("Salário", "Freelance", "Sem categoria");
+    assertThat(result.getEntradasBreakdown().get(0).total()).isEqualByComparingTo("4000");
+  }
+
+  private Transaction incomeTx(Category category, String amount) {
+    return Transaction.builder()
+        .id(UUID.randomUUID())
+        .type(TransactionType.INCOME)
+        .category(category)
+        .amount(new BigDecimal(amount))
+        .shared(false)
+        .date(LocalDate.of(2026, 5, 10))
+        .build();
+  }
+
+  @Test
   void monthly_prefers_registered_income_over_configured_net_income() {
     UUID userId = UUID.randomUUID();
     stubIncome(userId, "4000.00");

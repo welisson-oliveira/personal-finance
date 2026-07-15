@@ -70,10 +70,15 @@ export class DashboardComponent {
     return (this.data?.rendaBase ?? 0) > 0;
   }
 
-  /** Which 50/30/20 buckets are expanded to show their category drill-down. */
-  expanded: { ess: boolean; nao: boolean; inv: boolean } = { ess: false, nao: false, inv: false };
+  /** Which buckets are expanded to show their category drill-down (50/30/20 + entradas). */
+  expanded: { ess: boolean; nao: boolean; inv: boolean; ent: boolean } = {
+    ess: false,
+    nao: false,
+    inv: false,
+    ent: false,
+  };
 
-  toggle(bucket: 'ess' | 'nao' | 'inv'): void {
+  toggle(bucket: 'ess' | 'nao' | 'inv' | 'ent'): void {
     this.expanded[bucket] = !this.expanded[bucket];
   }
 

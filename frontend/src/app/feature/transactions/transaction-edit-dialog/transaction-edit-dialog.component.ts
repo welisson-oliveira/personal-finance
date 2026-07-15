@@ -101,6 +101,10 @@ export class TransactionEditDialogComponent {
     return this.type === 'EXPENSE';
   }
 
+  get isIncome(): boolean {
+    return this.type === 'INCOME';
+  }
+
   get isInvestment(): boolean {
     return this.type === 'INVESTMENT';
   }
@@ -110,13 +114,16 @@ export class TransactionEditDialogComponent {
   }
 
   onTypeChange(): void {
-    // Expense carries category + budget group; investment carries a direction; income neither.
+    // Category applies to expense + income; budget group only to expense; direction only to
+    // investment. Investment carries no category.
     if (!this.isExpense) {
       this.budgetGroup = '';
-      this.categoryId = '';
     }
     if (!this.isInvestment) {
       this.investmentDirection = '';
+    }
+    if (this.isInvestment) {
+      this.categoryId = '';
     }
   }
 
@@ -130,7 +137,7 @@ export class TransactionEditDialogComponent {
       date: this.date,
       // First day of the chosen month; the aggregation window only cares about the month (with year).
       competenceDate: this.competenceMonth ? `${this.competenceMonth}-01` : this.date,
-      categoryId: this.isExpense ? this.categoryId || undefined : undefined,
+      categoryId: this.isInvestment ? undefined : this.categoryId || undefined,
       budgetGroup: this.isExpense ? this.budgetGroup || undefined : undefined,
       investmentDirection: this.isInvestment ? this.investmentDirection || undefined : undefined,
       ignored: this.ignored,
