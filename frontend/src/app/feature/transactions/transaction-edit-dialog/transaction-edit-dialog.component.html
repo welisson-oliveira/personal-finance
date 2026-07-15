@@ -86,6 +86,15 @@
     <div class="field-row ignore-row">
       <mat-checkbox [(ngModel)]="ignored">Ignorar nos cálculos (ex.: transferência entre contas próprias)</mat-checkbox>
     </div>
+
+    <div class="propagate-section">
+      <p class="propagate-label">Aplicar classificação para...</p>
+      <mat-radio-group [(ngModel)]="propagate" class="propagate-group">
+        <mat-radio-button value="CURRENT">Somente esta transação</mat-radio-button>
+        <mat-radio-button value="FUTURE">Esta e as futuras</mat-radio-button>
+        <mat-radio-button value="ALL">Todas</mat-radio-button>
+      </mat-radio-group>
+    </div>
   </div>
 </mat-dialog-content>
 

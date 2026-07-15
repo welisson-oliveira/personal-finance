@@ -1,0 +1,29 @@
+.scope-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+  min-width: 320px;
+}
+
+.scope-option {
+  display: flex;
+  align-items: flex-start;
+
+  ::ng-deep .mdc-radio {
+    margin-top: 2px;
+  }
+}
+
+.scope-label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.scope-desc {
+  display: block;
+  font-size: 0.78rem;
+  color: #777;
+  margin-top: 1px;
+}

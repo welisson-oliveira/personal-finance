@@ -35,6 +35,7 @@ export interface UpdateTransactionRequest {
   shared: boolean;
   totalAmount?: number;
   userShare?: number;
+  propagate?: 'ALL' | 'FUTURE' | 'CURRENT';
 }
 
 export interface Page<T> {

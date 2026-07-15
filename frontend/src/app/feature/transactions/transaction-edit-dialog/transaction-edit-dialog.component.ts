@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatRadioModule } from '@angular/material/radio';
 import { Transaction, UpdateTransactionRequest } from '../../../core/models/transaction.model';
 import { Category } from '../../../core/models/category.model';
 import { CurrencyMaskDirective } from '../../../shared/currency-mask/currency-mask.directive';
@@ -30,6 +31,7 @@ interface DialogData {
     MatSelectModule,
     MatInputModule,
     MatCheckboxModule,
+    MatRadioModule,
     CurrencyMaskDirective,
     CategorySelectComponent,
     MatTooltipModule,
@@ -48,6 +50,7 @@ export class TransactionEditDialogComponent {
   /** Competence as a yyyy-MM value for <input type="month">; only the month (with year) matters. */
   competenceMonth: string;
   categoryId: string;
+  propagate: 'ALL' | 'FUTURE' | 'CURRENT' = 'CURRENT';
 
   types = [
     { value: 'INCOME', label: 'Receita' },
@@ -135,6 +138,7 @@ export class TransactionEditDialogComponent {
       shared: tx.shared,
       totalAmount: tx.totalAmount,
       userShare: tx.userShare,
+      propagate: this.propagate,
     };
     this.dialogRef.close(req);
   }

@@ -32,6 +32,10 @@ import { Category } from '../../../core/models/category.model';
 import { CategoryService } from '../../../core/services/category.service';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { TransactionEditDialogComponent } from '../transaction-edit-dialog/transaction-edit-dialog.component';
+import {
+  PropagateScopeDialogComponent,
+  PropagateScope,
+} from '../propagate-scope-dialog/propagate-scope-dialog.component';
 import { CategoryFormDialogComponent } from '../../categories/category-form-dialog/category-form-dialog.component';
 import { AutofocusDirective } from '../../../shared/autofocus/autofocus.directive';
 import { PeriodService } from '../../../core/services/period.service';
@@ -352,7 +356,7 @@ export class TransactionListComponent implements OnInit {
     this.quickUpdate(tx, { ignored: true });
   }
 
-  /** Applies a single-field change, normalizing the fields that don't apply to the (new) type. */
+  /** Applies a single-field change after asking the user how far to propagate the classification. */
   private quickUpdate(
     tx: Transaction,
     patch: Partial<{
@@ -363,33 +367,45 @@ export class TransactionListComponent implements OnInit {
       ignored: boolean;
     }>
   ): void {
-    const type = patch.type ?? tx.type;
-    const isExpense = type === 'EXPENSE';
-    const isInvestment = type === 'INVESTMENT';
-    const req: UpdateTransactionRequest = {
-      description: tx.description,
-      amount: tx.amount,
-      type,
-      date: tx.date,
-      categoryId: isExpense ? (patch.categoryId ?? tx.categoryId) : undefined,
-      budgetGroup: isExpense ? (patch.budgetGroup ?? tx.budgetGroup) : undefined,
-      investmentDirection: isInvestment
-        ? (patch.investmentDirection ?? tx.investmentDirection)
-        : undefined,
-      ignored: patch.ignored ?? tx.ignored,
-      notes: tx.notes,
-      shared: tx.shared,
-      totalAmount: tx.totalAmount,
-      userShare: tx.userShare,
-    };
-    this.txService.update(tx.id, req).subscribe({
-      next: (updated) => {
-        this.patchRow(updated);
-        this.snackBar.open('Transação atualizada.', 'Fechar', { duration: 2000 });
-      },
-      error: (err) => {
-        this.snackBar.open(err.error?.message || 'Erro ao salvar.', 'Fechar', { duration: 4000 });
-      },
+    const ref = this.dialog.open(PropagateScopeDialogComponent);
+    ref.afterClosed().subscribe((scope: PropagateScope | undefined) => {
+      if (scope === undefined) {
+        // User cancelled — reload to restore the original value shown in the row
+        this.load();
+        return;
+      }
+      const type = patch.type ?? tx.type;
+      const isExpense = type === 'EXPENSE';
+      const isInvestment = type === 'INVESTMENT';
+      const req: UpdateTransactionRequest = {
+        description: tx.description,
+        amount: tx.amount,
+        type,
+        date: tx.date,
+        competenceDate: tx.competenceDate,
+        categoryId: isExpense ? (patch.categoryId ?? tx.categoryId) : undefined,
+        budgetGroup: isExpense ? (patch.budgetGroup ?? tx.budgetGroup) : undefined,
+        investmentDirection: isInvestment
+          ? (patch.investmentDirection ?? tx.investmentDirection)
+          : undefined,
+        ignored: patch.ignored ?? tx.ignored,
+        notes: tx.notes,
+        shared: tx.shared,
+        totalAmount: tx.totalAmount,
+        userShare: tx.userShare,
+        propagate: scope,
+      };
+      this.txService.update(tx.id, req).subscribe({
+        next: (updated) => {
+          this.patchRow(updated);
+          this.snackBar.open('Transação atualizada.', 'Fechar', { duration: 2000 });
+        },
+        error: (err) => {
+          this.snackBar.open(err.error?.message || 'Erro ao salvar.', 'Fechar', {
+            duration: 4000,
+          });
+        },
+      });
     });
   }
 
