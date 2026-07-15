@@ -99,8 +99,8 @@ public interface TransactionRepository
    * Running "cash in account" balance up to (and including) {@code end}: ALL income (including
    * ignored — e.g. own-account transfers that are excluded from the 50/30/20 budget but represent
    * real cash arriving), minus non-ignored expenses (ignored bill payments stay out to avoid
-   * double-counting fatura items), minus non-ignored net investment contributions.
-   * Uses competence date so card purchases land in their payment month.
+   * double-counting fatura items), minus non-ignored net investment contributions. Uses competence
+   * date so card purchases land in their payment month.
    */
   @Query(
       "SELECT COALESCE(SUM(CASE "

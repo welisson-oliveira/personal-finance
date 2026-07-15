@@ -343,22 +343,62 @@ class TransactionServiceTest {
   }
 
   @Test
-  void update_does_not_create_merchant_rule_for_income() {
+  void update_learns_income_override_with_type_and_ignored_flag() {
     UUID id = UUID.randomUUID();
 
+    // The user corrects an Open Banking transfer that was auto-ignored: it is actually their
+    // salary.
     Transaction edited =
         Transaction.builder()
             .id(id)
             .user(user)
-            .description("Salário")
-            .normalizedDescription("Salário")
+            .description("Transferência Open Banking Itaú")
+            .normalizedDescription("transferencia open banking itau")
             .type(TransactionType.INCOME)
+            .ignored(false)
             .build();
 
     CreateTransactionRequest req = new CreateTransactionRequest();
-    req.setDescription("Salário");
+    req.setDescription("Transferência Open Banking Itaú");
     req.setAmount(new BigDecimal("5000.00"));
     req.setType("INCOME");
+    req.setIgnored(false);
+    req.setDate(LocalDate.of(2026, 5, 5));
+
+    when(transactionRepository.findById(id)).thenReturn(Optional.of(edited));
+    when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    service.update(id, req, user);
+
+    ArgumentCaptor<MerchantRule> captor = ArgumentCaptor.forClass(MerchantRule.class);
+    verify(merchantRuleRepository).save(captor.capture());
+    MerchantRule rule = captor.getValue();
+    assertThat(rule.getType()).isEqualTo("INCOME");
+    assertThat(rule.isIgnored()).isFalse();
+    assertThat(rule.getCreatedBy()).isEqualTo("USER");
+  }
+
+  @Test
+  void update_does_not_learn_a_rule_for_bill_payments() {
+    UUID id = UUID.randomUUID();
+
+    // Counting a "Pagamento de fatura" this month must NOT teach future imports to stop ignoring
+    // it.
+    Transaction edited =
+        Transaction.builder()
+            .id(id)
+            .user(user)
+            .description("Pagamento de fatura")
+            .normalizedDescription("pagamento de fatura")
+            .type(TransactionType.EXPENSE)
+            .ignored(false)
+            .build();
+
+    CreateTransactionRequest req = new CreateTransactionRequest();
+    req.setDescription("Pagamento de fatura");
+    req.setAmount(new BigDecimal("500.00"));
+    req.setType("EXPENSE");
+    req.setIgnored(false);
     req.setDate(LocalDate.of(2026, 5, 5));
 
     when(transactionRepository.findById(id)).thenReturn(Optional.of(edited));

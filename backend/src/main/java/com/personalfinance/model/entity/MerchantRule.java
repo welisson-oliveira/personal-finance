@@ -39,6 +39,17 @@ public class MerchantRule {
   @Builder.Default
   private String expenseType = "NON_ESSENTIAL";
 
+  /** Transaction type to force (INCOME/EXPENSE/INVESTMENT); null on legacy expense-only rules. */
+  private String type;
+
+  /** Whether matched transactions should be ignored (e.g. a recurring own-account transfer). */
+  @Column(nullable = false)
+  @Builder.Default
+  private boolean ignored = false;
+
+  @Column(name = "investment_direction")
+  private String investmentDirection;
+
   @Builder.Default private Integer confidence = 100;
 
   @Column(name = "created_by", nullable = false)

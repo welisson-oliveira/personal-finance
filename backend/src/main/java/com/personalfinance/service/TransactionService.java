@@ -169,8 +169,13 @@ public class TransactionService {
       transactionRepository.saveAll(targets);
     }
 
-    // Always learn for future imports (merchant rules classify expenses by budget group + category)
-    if (source.getType() == TransactionType.EXPENSE && source.getBudgetGroup() != null) {
+    // Learn a USER override so future imports classify this merchant the same way — for ANY type,
+    // capturing the type and the ignored flag too (e.g. "this Open Banking transfer is my salary,
+    // not an own-transfer"). Skip "Pagamento de fatura": its ignore is a structural
+    // anti-duplication
+    // rule handled by reconciliation, not a per-merchant classification to learn.
+    String descLower = source.getDescription() != null ? source.getDescription().toLowerCase() : "";
+    if (!descLower.startsWith("pagamento de fatura")) {
       MerchantRule rule =
           merchantRuleRepository
               .findUserRuleByNormalizedName(effectiveName, user.getId())
@@ -182,8 +187,15 @@ public class TransactionService {
                           .normalizedName(effectiveName)
                           .createdBy("USER")
                           .build());
+      rule.setType(source.getType().name());
+      rule.setIgnored(source.isIgnored());
       rule.setCategory(source.getCategory());
-      rule.setExpenseType(source.getBudgetGroup());
+      // expense_type is NOT NULL; only overwrite it when the edited transaction actually has a
+      // group.
+      if (source.getBudgetGroup() != null) {
+        rule.setExpenseType(source.getBudgetGroup());
+      }
+      rule.setInvestmentDirection(source.getInvestmentDirection());
       rule.setConfidence(100);
       rule.setCreatedBy("USER");
       merchantRuleRepository.save(rule);

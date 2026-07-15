@@ -77,6 +77,15 @@ public class TransactionImportService {
       // Competence: fatura → payment (due) month; extrato/RDB → the purchase date itself.
       tx.setCompetenceDate(faturaDueDate != null ? faturaDueDate : tx.getDate());
 
+      // A user override (learned from a past correction) wins over every heuristic below —
+      // e.g. "this Open Banking transfer is my salary, not an own-transfer, don't ignore it".
+      var override =
+          classificationService.findUserOverride(tx.getNormalizedDescription(), user.getId());
+      if (override.isPresent()) {
+        applyUserOverride(tx, override.get());
+        continue;
+      }
+
       // Investments are fully classified by the parser (RDB aporte/resgate) — keep as-is.
       if ("INVESTMENT".equals(tx.getType())) {
         continue;
@@ -122,6 +131,35 @@ public class TransactionImportService {
         rawTx,
         reviewCount,
         buildReconciliation(resolvedType, rawTx, period[1], user.getId()));
+  }
+
+  /**
+   * Applies a user's learned override to a parsed transaction, taking precedence over the parser
+   * and the auto-classification heuristics. Clears the review flag (it is an explicit user
+   * decision).
+   */
+  private void applyUserOverride(ParsedTransactionDTO tx, ClassificationResult cr) {
+    if (cr.getType() != null) {
+      tx.setType(cr.getType());
+    }
+    tx.setIgnored(cr.isIgnored());
+    tx.setIncluded(!cr.isIgnored());
+    tx.setNeedsReview(false);
+    tx.setAutoClassification(null);
+    if ("EXPENSE".equals(tx.getType())) {
+      tx.setCategoryId(cr.getCategoryId());
+      tx.setCategoryName(cr.getCategoryName());
+      tx.setBudgetGroup(cr.getExpenseType());
+      tx.setInvestmentDirection(null);
+    } else if ("INVESTMENT".equals(tx.getType())) {
+      tx.setInvestmentDirection(cr.getInvestmentDirection());
+      tx.setBudgetGroup(null);
+      tx.setCategoryId(null);
+      tx.setCategoryName(null);
+    } else { // INCOME carries no category/budget group today
+      tx.setBudgetGroup(null);
+      tx.setInvestmentDirection(null);
+    }
   }
 
   /**
