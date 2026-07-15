@@ -96,19 +96,21 @@ public interface TransactionRepository
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 
   /**
-   * Running "cash in account" balance up to (and including) {@code end}: income, minus all expenses
-   * (respecting the shared split), minus net investment contributions (aportes − resgates).
-   * Excludes ignored rows; uses competence so card purchases land in their payment month.
+   * Running "cash in account" balance up to (and including) {@code end}: ALL income (including
+   * ignored — e.g. own-account transfers that are excluded from the 50/30/20 budget but represent
+   * real cash arriving), minus non-ignored expenses (ignored bill payments stay out to avoid
+   * double-counting fatura items), minus non-ignored net investment contributions.
+   * Uses competence date so card purchases land in their payment month.
    */
   @Query(
       "SELECT COALESCE(SUM(CASE "
           + "WHEN t.type = 'INCOME' THEN t.amount "
-          + "WHEN t.type = 'EXPENSE' THEN - (CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END) "
-          + "WHEN t.type = 'INVESTMENT' AND t.investmentDirection = 'CONTRIBUTION' THEN - t.amount "
-          + "WHEN t.type = 'INVESTMENT' AND t.investmentDirection = 'REDEMPTION' THEN t.amount "
+          + "WHEN t.type = 'EXPENSE' AND t.ignored = false THEN - (CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END) "
+          + "WHEN t.type = 'INVESTMENT' AND t.ignored = false AND t.investmentDirection = 'CONTRIBUTION' THEN - t.amount "
+          + "WHEN t.type = 'INVESTMENT' AND t.ignored = false AND t.investmentDirection = 'REDEMPTION' THEN t.amount "
           + "ELSE 0 END), 0) "
           + "FROM Transaction t "
-          + "WHERE t.user.id = :userId AND t.ignored = false "
+          + "WHERE t.user.id = :userId "
           + "AND COALESCE(t.competenceDate, t.date) <= :end")
   BigDecimal sumAccumulatedBalanceUntil(@Param("userId") UUID userId, @Param("end") LocalDate end);
 
