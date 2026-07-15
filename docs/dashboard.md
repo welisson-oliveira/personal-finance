@@ -9,6 +9,7 @@ Retorna `DashboardResponse`. Cálculos (mês corrente do usuário). **As agrega�
 | Métrica                                              | Cálculo                                                                                                              |
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `entradas`                                           | soma de `type=INCOME` (exclui `ignored`) — "Entradas do mês / Receita disponível"                                    |
+| `entradasBreakdown`                                  | **"De onde veio o dinheiro"**: entradas do mês agrupadas por **categoria** (`findIncomeWithCategoryInPeriod`, maior→menor, com "Sem categoria"). Receita agora pode ter categoria (ver [transacoes.md](./transacoes.md)); usa o valor bruto (como `entradas`). Drill-down expansível sob o card de Entradas |
 | `despesasEssenciais` / `despesasNaoEssenciais`       | soma de `type=EXPENSE` por `budget_group` (usa `userShare` quando `shared`, exclui `ignored`)                        |
 | `totalDespesas`                                      | **todas** as despesas não-ignoradas do mês (`sumAllExpenseByUserIdAndDateBetween`, com `userShare`) — não só as com grupo 50/30/20 |
 | `despesasSemGrupo`                                   | `totalDespesas − essenciais − naoEssenciais` — despesas fora do 50/30/20 (ex.: pagamento de fatura contabilizado no mês de transição). Card "Outras despesas (sem grupo)" só quando > 0 |

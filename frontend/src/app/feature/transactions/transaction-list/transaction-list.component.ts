@@ -419,13 +419,15 @@ export class TransactionListComponent implements OnInit {
     const type = patch.type ?? tx.type;
     const isExpense = type === 'EXPENSE';
     const isInvestment = type === 'INVESTMENT';
+    // Category applies to expense + income (investment carries none).
+    const keepsCategory = type === 'EXPENSE' || type === 'INCOME';
     const req: UpdateTransactionRequest = {
       description: tx.description,
       amount: tx.amount,
       type,
       date: tx.date,
       competenceDate: tx.competenceDate,
-      categoryId: isExpense ? (patch.categoryId ?? tx.categoryId) : undefined,
+      categoryId: keepsCategory ? (patch.categoryId ?? tx.categoryId) : undefined,
       budgetGroup: isExpense ? (patch.budgetGroup ?? tx.budgetGroup) : undefined,
       investmentDirection: isInvestment
         ? (patch.investmentDirection ?? tx.investmentDirection)

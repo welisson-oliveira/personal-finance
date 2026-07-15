@@ -73,7 +73,7 @@
       }
     </div>
 
-    @if (isExpense) {
+    @if (isExpense || isIncome) {
       <div class="field-row">
         <app-category-select
           [categories]="data.categories"

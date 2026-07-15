@@ -35,5 +35,6 @@ export interface DashboardResponse {
   percentualNaoEssenciais: number;
   percentualInvestimentos: number;
   breakdown?: BudgetBreakdown;
+  entradasBreakdown?: CategoryTotal[];
   destaques: Destaques;
 }
