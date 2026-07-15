@@ -8,3 +8,23 @@ body {
   margin: 0;
   font-family: Roboto, 'Helvetica Neue', sans-serif;
 }
+
+/*
+ * Category selector dropdown. Rendered in a CDK overlay (outside component scope), so it must be
+ * styled globally. In the compact/inline use (import table cell) the trigger is narrow, which made
+ * the panel inherit that width — truncating names and adding a horizontal scrollbar. Give the panel
+ * a comfortable width and ellipsize long names instead of scrolling sideways.
+ */
+.category-select-panel.mat-mdc-select-panel {
+  min-width: 260px;
+  max-width: 340px;
+  overflow-x: hidden;
+}
+
+.category-select-panel .mat-mdc-option {
+  .mdc-list-item__primary-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
