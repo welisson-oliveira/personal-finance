@@ -45,6 +45,7 @@ export class TransactionEditDialogComponent {
   investmentDirection: string;
   ignored: boolean;
   date: string;
+  competenceDate: string;
   categoryId: string;
 
   types = [
@@ -87,6 +88,7 @@ export class TransactionEditDialogComponent {
     this.investmentDirection = tx.investmentDirection || '';
     this.ignored = tx.ignored;
     this.date = tx.date;
+    this.competenceDate = tx.competenceDate || tx.date;
     this.categoryId = tx.categoryId || '';
   }
 
@@ -121,6 +123,7 @@ export class TransactionEditDialogComponent {
       amount: this.amount!,
       type: this.type,
       date: this.date,
+      competenceDate: this.competenceDate || this.date,
       categoryId: this.isExpense ? this.categoryId || undefined : undefined,
       budgetGroup: this.isExpense ? this.budgetGroup || undefined : undefined,
       investmentDirection: this.isInvestment ? this.investmentDirection || undefined : undefined,

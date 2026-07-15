@@ -27,6 +27,9 @@ public class CreateTransactionRequest {
 
   @NotNull private LocalDate date;
 
+  /** Optional: month the transaction counts in Dashboard/Reports. Defaults to {@code date}. */
+  private LocalDate competenceDate;
+
   private UUID categoryId;
   private String budgetGroup; // EXPENSE: ESSENTIAL | NON_ESSENTIAL
   private String investmentDirection; // INVESTMENT: CONTRIBUTION | REDEMPTION

@@ -9,6 +9,7 @@ export interface Transaction {
   ignored: boolean;
   needsReview: boolean;
   date: string;
+  competenceDate?: string;
   notes?: string;
   categoryId?: string;
   categoryName?: string;
@@ -25,6 +26,7 @@ export interface UpdateTransactionRequest {
   amount: number;
   type: string;
   date: string;
+  competenceDate?: string;
   categoryId?: string;
   budgetGroup?: string;
   investmentDirection?: string;

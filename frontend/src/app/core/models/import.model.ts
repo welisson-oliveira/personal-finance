@@ -1,5 +1,6 @@
 export interface ParsedTransaction {
   date: string;
+  competenceDate?: string;
   description: string;
   amount: number;
   type: string;

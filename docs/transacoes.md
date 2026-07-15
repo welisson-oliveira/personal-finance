@@ -49,6 +49,7 @@ Mês selecionado na toolbar → lista recarrega → usuário edita categoria/gru
 - Por tipo (regra recorrente; ver glossário no [índice](./README.md)): EXPENSE tem `budget_group`/categoria, INVESTMENT tem `investment_direction`, INCOME nenhum.
 - Transações `ignored` (ex.: transferência própria) não entram nos cálculos e, por padrão, não aparecem na lista (`excludingIgnored`) — mas o toggle **"Mostrar ignoradas"** (`includeIgnored`) as exibe.
 - `needs_review` só é resolvido por **confirmação explícita** (`confirmReview` / botão de check na linha); editar campos preserva o selo.
+- **Competência (regime de caixa):** `competence_date` é o mês em que a transação conta no **Dashboard/Relatórios/metas**. Compras de **fatura** têm competência = **mês do vencimento** (definido em lote na importação, ajustável); Pix/débito/manual usam a própria `date`. As agregações usam **`COALESCE(competence_date, date)`**. A **tabela** exibe a `date` da compra, mas o **filtro de mês** da lista usa a competência (`inDateRange` → `COALESCE`). Editável por transação no dialog. Ordenação e reconciliação continuam na `date`.
 - Rateio: quando `shared`, o dashboard soma `userShare` (ver [dashboard.md](./dashboard.md)).
 
 ## Onde mexer

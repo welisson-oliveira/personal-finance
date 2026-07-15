@@ -4,7 +4,7 @@ Visão mensal 50/30/20: receita real, despesas por grupo, investimentos, saldo e
 
 ## Backend — `DashboardService.getMonthly(user, year, month)`
 
-Retorna `DashboardResponse`. Cálculos (mês corrente do usuário):
+Retorna `DashboardResponse`. Cálculos (mês corrente do usuário). **As agregações usam a competência (`COALESCE(competence_date, date)`), não a data da compra** — compras de cartão contam no mês de pagamento da fatura (regime de caixa). Ver [transacoes.md](./transacoes.md#regras-de-domínio).
 
 | Métrica                                              | Cálculo                                                                                                              |
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
