@@ -31,8 +31,8 @@
     <div class="field-row">
       <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
         <mat-label>Competência (mês de pagamento)</mat-label>
-        <input matInput type="date" [(ngModel)]="competenceDate" />
-        <mat-hint>Mês em que conta no Dashboard/Relatórios. Padrão: a própria data.</mat-hint>
+        <input matInput type="month" [(ngModel)]="competenceMonth" />
+        <mat-hint>Mês em que conta no Dashboard/Relatórios. Padrão: o mês da data.</mat-hint>
       </mat-form-field>
     </div>
 

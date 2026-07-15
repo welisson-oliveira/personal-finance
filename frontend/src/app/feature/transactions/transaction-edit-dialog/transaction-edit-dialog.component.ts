@@ -45,7 +45,8 @@ export class TransactionEditDialogComponent {
   investmentDirection: string;
   ignored: boolean;
   date: string;
-  competenceDate: string;
+  /** Competence as a yyyy-MM value for <input type="month">; only the month (with year) matters. */
+  competenceMonth: string;
   categoryId: string;
 
   types = [
@@ -88,7 +89,8 @@ export class TransactionEditDialogComponent {
     this.investmentDirection = tx.investmentDirection || '';
     this.ignored = tx.ignored;
     this.date = tx.date;
-    this.competenceDate = tx.competenceDate || tx.date;
+    // Keep year+month (yyyy-MM); the day is irrelevant for the monthly Dashboard/Reports window.
+    this.competenceMonth = (tx.competenceDate || tx.date).slice(0, 7);
     this.categoryId = tx.categoryId || '';
   }
 
@@ -123,7 +125,8 @@ export class TransactionEditDialogComponent {
       amount: this.amount!,
       type: this.type,
       date: this.date,
-      competenceDate: this.competenceDate || this.date,
+      // First day of the chosen month; the aggregation window only cares about the month (with year).
+      competenceDate: this.competenceMonth ? `${this.competenceMonth}-01` : this.date,
       categoryId: this.isExpense ? this.categoryId || undefined : undefined,
       budgetGroup: this.isExpense ? this.budgetGroup || undefined : undefined,
       investmentDirection: this.isInvestment ? this.investmentDirection || undefined : undefined,
