@@ -34,7 +34,9 @@ Upload de extrato/fatura Nubank (PDF) → parse + classificação automática �
 
 - **`DocumentTypeDetector`** — heurística `detect(text)` → `FATURA` (período vigente, vencimento…) ou `EXTRATO` (total de entradas/saídas, conta…).
 - **`NubankExtratoParser`** — percorre linhas após "Movimenta…", rastreia blocos entradas/saídas; trata "Pagamento de fatura" como `INTERNAL` **`ignored=true` por padrão** (fica registrado mas **não conta** nos totais/relatórios, evitando dupla contagem com os itens da fatura mesmo se a reconciliação não rodar), crédito em conta, boletos, transferências multilinha; nomes de mês PT. **RDB vira investimento** (`type=INVESTMENT`, `autoClassification=INVESTMENT`, `included=true`): Aplicação RDB → `investmentDirection=CONTRIBUTION` (aporte); Resgate RDB → `investmentDirection=REDEMPTION` (resgate). **`resolveType` sobrepõe o bloco pela palavra "recebida"/"enviada"** (correção de tipo). Retorna `ParseResult(periodStart, periodEnd, transactions)`.
-- **`NubankFaturaParser`** — período + ano do vencimento (trata virada de ano); seções por portador ("Welisson W Oliveira", "Rosangela Oliveira"); filtra "Pagamentos"; parcela `Parcela n/n` → `installmentInfo`; estorno (`-R$`) → `INCOME`.
+- **`NubankFaturaParser`** — período + **data de vencimento completa** (dia/mês/ano; trata virada de ano) exposta como `ParseResult.dueDate`; seções por portador ("Welisson W Oliveira", "Rosangela Oliveira"); filtra "Pagamentos"; parcela `Parcela n/n` → `installmentInfo`; estorno (`-R$`) → `INCOME`.
+
+**Competência (regime de caixa):** no `parseAndPreview`, cada item recebe `competenceDate` = **vencimento** (fatura) ou a própria `date` (extrato/RDB). No preview da fatura há um controle **"Competência (mês de pagamento)"** que redefine em lote; o `confirm` persiste `competence_date` (fallback `date`). Dashboard/Relatórios/metas agregam por `COALESCE(competence_date, date)`. Ver [transacoes.md](./transacoes.md).
 
 ### Endpoints — `ImportController` (`/api/import`)
 

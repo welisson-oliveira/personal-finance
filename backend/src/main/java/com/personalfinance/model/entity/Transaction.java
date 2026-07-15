@@ -57,6 +57,14 @@ public class Transaction {
   @Column(nullable = false)
   private LocalDate date;
 
+  /**
+   * Month this transaction counts in the Dashboard/Reports (cash regime). For fatura purchases it
+   * is the payment (due) month; for Pix/débito/manual it mirrors {@link #date}. Nullable —
+   * aggregation queries use {@code COALESCE(competenceDate, date)}.
+   */
+  @Column(name = "competence_date")
+  private LocalDate competenceDate;
+
   private String notes;
 
   @ManyToOne(fetch = FetchType.LAZY)

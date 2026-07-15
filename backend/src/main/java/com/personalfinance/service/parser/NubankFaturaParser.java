@@ -16,7 +16,7 @@ public class NubankFaturaParser {
       Pattern.compile("Per.odo vigente: (\\d{2}) ([A-Z]{3}) a (\\d{2}) ([A-Z]{3})");
 
   private static final Pattern DUE_DATE =
-      Pattern.compile("Data de vencimento: \\d{2} ([A-Z]{3}) (\\d{4})");
+      Pattern.compile("Data de vencimento: (\\d{2}) ([A-Z]{3}) (\\d{4})");
 
   // Matches: DD MMM [???? XXXX] DESCRIPTION R$ AMOUNT  (or ?R$ AMOUNT for credits)
   private static final Pattern TX_LINE =
@@ -37,6 +37,7 @@ public class NubankFaturaParser {
   public ParseResult parse(String text) {
     LocalDate periodStart = null;
     LocalDate periodEnd = null;
+    LocalDate dueDate = null;
     int year = LocalDate.now().getYear();
 
     String[] lines = text.split("\\n");
@@ -52,9 +53,11 @@ public class NubankFaturaParser {
 
         Matcher due = DUE_DATE.matcher(text);
         int dueMonth = endMonth;
+        int dueDay = 0;
         if (due.find()) {
-          dueMonth = monthNum(due.group(1));
-          year = Integer.parseInt(due.group(2));
+          dueDay = Integer.parseInt(due.group(1));
+          dueMonth = monthNum(due.group(2));
+          year = Integer.parseInt(due.group(3));
         }
         // The due date year is on the invoice; the closing month can fall in the previous year
         // (statement closes in December but is due in January). Anchor the closing year off it.
@@ -62,6 +65,8 @@ public class NubankFaturaParser {
         int startYear = (startMonth > endMonth) ? closingYear - 1 : closingYear;
         periodStart = LocalDate.of(startYear, startMonth, startDay);
         periodEnd = LocalDate.of(closingYear, endMonth, endDay);
+        // Payment (due) date = the fatura's competence month for its purchases.
+        if (dueDay > 0) dueDate = LocalDate.of(year, dueMonth, dueDay);
       }
     }
 
@@ -194,7 +199,7 @@ public class NubankFaturaParser {
       }
     }
 
-    return new ParseResult(periodStart, periodEnd, transactions);
+    return new ParseResult(periodStart, periodEnd, dueDate, transactions);
   }
 
   private void addTransaction(
@@ -267,5 +272,8 @@ public class NubankFaturaParser {
   }
 
   public record ParseResult(
-      LocalDate periodStart, LocalDate periodEnd, List<ParsedTransactionDTO> transactions) {}
+      LocalDate periodStart,
+      LocalDate periodEnd,
+      LocalDate dueDate,
+      List<ParsedTransactionDTO> transactions) {}
 }

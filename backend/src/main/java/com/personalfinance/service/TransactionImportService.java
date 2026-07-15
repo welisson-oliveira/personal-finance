@@ -54,6 +54,8 @@ public class TransactionImportService {
     List<ParsedTransactionDTO> rawTx;
     LocalDate[] period = new LocalDate[2];
 
+    // For faturas, the whole statement shares one competence month = the payment (due) date.
+    LocalDate faturaDueDate = null;
     if ("EXTRATO".equals(resolvedType)) {
       var result = extratoParser.parse(text, holderName);
       rawTx = result.transactions();
@@ -64,10 +66,13 @@ public class TransactionImportService {
       rawTx = result.transactions();
       period[0] = result.periodStart();
       period[1] = result.periodEnd();
+      faturaDueDate = result.dueDate();
     }
 
     for (ParsedTransactionDTO tx : rawTx) {
       tx.setNormalizedDescription(normalizationService.normalize(tx.getDescription()));
+      // Competence: fatura → payment (due) month; extrato/RDB → the purchase date itself.
+      tx.setCompetenceDate(faturaDueDate != null ? faturaDueDate : tx.getDate());
 
       // Investments are fully classified by the parser (RDB aporte/resgate) — keep as-is.
       if ("INVESTMENT".equals(tx.getType())) {
@@ -240,6 +245,8 @@ public class TransactionImportService {
               .ignored(dto.isIgnored())
               .needsReview(dto.isNeedsReview())
               .date(dto.getDate())
+              .competenceDate(
+                  dto.getCompetenceDate() != null ? dto.getCompetenceDate() : dto.getDate())
               .notes(resolvedNotes)
               .category(category)
               .source(session.getDocumentType().equals("EXTRATO") ? "EXTRATO" : "FATURA")

@@ -24,6 +24,7 @@ public class TransactionResponse {
   private boolean ignored;
   private boolean needsReview;
   private LocalDate date;
+  private LocalDate competenceDate;
   private String notes;
   private UUID categoryId;
   private String categoryName;
