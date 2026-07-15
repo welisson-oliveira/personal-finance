@@ -82,7 +82,12 @@
           <div class="drill">
             @for (c of data.breakdown!.essenciais; track c.categoryName) {
               <div class="drill-row">
-                <span class="drill-name">{{ c.categoryIcon }} {{ c.categoryName }}</span>
+                <span class="drill-name">
+                  <mat-icon class="drill-icon" [style.color]="c.categoryColor || null">{{
+                    c.categoryIcon || 'label'
+                  }}</mat-icon>
+                  {{ c.categoryName }}
+                </span>
                 <span class="drill-val"
                   >{{ fmt(c.total) }}
                   <span class="drill-pct"
@@ -138,7 +143,12 @@
           <div class="drill">
             @for (c of data.breakdown!.naoEssenciais; track c.categoryName) {
               <div class="drill-row">
-                <span class="drill-name">{{ c.categoryIcon }} {{ c.categoryName }}</span>
+                <span class="drill-name">
+                  <mat-icon class="drill-icon" [style.color]="c.categoryColor || null">{{
+                    c.categoryIcon || 'label'
+                  }}</mat-icon>
+                  {{ c.categoryName }}
+                </span>
                 <span class="drill-val"
                   >{{ fmt(c.total) }}
                   <span class="drill-pct"
