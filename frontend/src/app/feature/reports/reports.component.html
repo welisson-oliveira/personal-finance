@@ -56,7 +56,13 @@
     } @else {
       <div class="breakdown">
         @for (cat of breakdown; track cat.categoryId) {
-          <div class="breakdown-row" [class.over-goal]="isOverGoal(cat.categoryId)">
+          <div
+            class="breakdown-row"
+            [class.over-goal]="isOverGoal(cat.categoryId)"
+            [class.clickable]="cat.categoryId"
+            (click)="goToCategory(cat)"
+            [matTooltip]="cat.categoryId ? 'Ver lançamentos desta categoria' : ''"
+          >
             <div class="breakdown-label">
               <mat-icon [style.color]="cat.categoryColor || null">{{ cat.categoryIcon || 'label' }}</mat-icon>
               <span>{{ cat.categoryName }}</span>
