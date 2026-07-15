@@ -49,8 +49,8 @@ describe('ImportService', () => {
 
     const req = httpMock.expectOne(`/api/import/${sessionId}/confirm`);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual(transactions);
-    expect(req.request.body.length).toBe(2);
+    expect(req.request.body.transactions).toEqual(transactions);
+    expect(req.request.body.transactions.length).toBe(2);
     req.flush(null);
   });
 
@@ -79,7 +79,7 @@ describe('ImportService', () => {
 
     const req = httpMock.expectOne(`/api/import/${sessionId}/confirm`);
     // Frontend sends ALL transactions; backend filters by included
-    expect(req.request.body).toHaveSize(2);
+    expect(req.request.body.transactions).toHaveSize(2);
     req.flush(null);
   });
 });

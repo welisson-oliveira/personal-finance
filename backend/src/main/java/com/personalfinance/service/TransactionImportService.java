@@ -6,6 +6,9 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.personalfinance.dto.response.ImportPreviewResponse;
 import com.personalfinance.dto.response.ImportSessionResponse;
 import com.personalfinance.dto.response.ParsedTransactionDTO;
+import com.personalfinance.dto.response.PendingReconciliationDTO;
+import com.personalfinance.dto.response.ReconciliationCandidateDTO;
+import com.personalfinance.dto.response.ReconciliationSlotDTO;
 import com.personalfinance.model.entity.*;
 import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.*;
@@ -96,14 +99,6 @@ public class TransactionImportService {
       }
     }
 
-    if ("EXTRATO".equals(resolvedType)) {
-      for (ParsedTransactionDTO tx : rawTx) {
-        if ("INTERNAL".equals(tx.getAutoClassification())) {
-          checkAndMarkFaturaExists(tx, user.getId());
-        }
-      }
-    }
-
     ImportSession session =
         importSessionRepository.save(
             ImportSession.builder()
@@ -120,7 +115,13 @@ public class TransactionImportService {
     int reviewCount = (int) rawTx.stream().filter(ParsedTransactionDTO::isNeedsReview).count();
 
     return new ImportPreviewResponse(
-        session.getId(), resolvedType, period[0], period[1], rawTx, reviewCount);
+        session.getId(),
+        resolvedType,
+        period[0],
+        period[1],
+        rawTx,
+        reviewCount,
+        buildReconciliation(resolvedType, rawTx, period[1], user.getId()));
   }
 
   /**
@@ -148,7 +149,9 @@ public class TransactionImportService {
         session.getPeriodStart(),
         session.getPeriodEnd(),
         txList,
-        reviewCount);
+        reviewCount,
+        buildReconciliation(
+            session.getDocumentType(), txList, session.getPeriodEnd(), user.getId()));
   }
 
   /**
@@ -191,7 +194,11 @@ public class TransactionImportService {
   }
 
   @Transactional
-  public void confirm(UUID sessionId, List<ParsedTransactionDTO> clientList, User user) {
+  public void confirm(
+      UUID sessionId,
+      List<ParsedTransactionDTO> clientList,
+      List<UUID> reconcileExtratoPaymentIds,
+      User user) {
     ImportSession session =
         importSessionRepository
             .findById(sessionId)
@@ -203,17 +210,18 @@ public class TransactionImportService {
 
     boolean isFatura = "FATURA".equals(session.getDocumentType());
     if (isFatura) {
-      // Extrato-first order: the lump "Pagamento de fatura" already in the extrato is replaced by
-      // the itemized fatura being confirmed now.
-      reconcileBillPayment(session, user.getId(), netTotal(txList));
+      // Extrato-first order: the lump "Pagamento de fatura" is replaced by the fatura's items. The
+      // user's explicit choices win; a null list falls back to automatic value matching.
+      if (reconcileExtratoPaymentIds != null) {
+        deleteOwnedPayments(reconcileExtratoPaymentIds, user.getId());
+      } else {
+        reconcileBillPayment(session, user.getId(), netTotal(txList));
+      }
     }
 
     for (ParsedTransactionDTO dto : txList) {
-      // Fatura-first order: skip a bill payment already represented by a confirmed fatura, so the
-      // import order never matters.
-      if (!isFatura
-          && isBillPayment(dto)
-          && hasMatchingConfirmedFatura(user.getId(), dto.getAmount(), dto.getDate())) {
+      // Fatura-first order: skip a bill payment the user reconciled to a fatura (don't persist it).
+      if (!isFatura && dto.isReconciled()) {
         continue;
       }
 
@@ -313,13 +321,113 @@ public class TransactionImportService {
 
   private static final int WINDOW_AFTER_DAYS = 45;
 
-  private void checkAndMarkFaturaExists(ParsedTransactionDTO tx, UUID userId) {
-    // Preview hint (matched by value + date) so the user sees the payment already covered by a
-    // fatura.
-    if (hasMatchingConfirmedFatura(userId, tx.getAmount(), tx.getDate())) {
-      tx.setAutoClassification("INTERNAL_FATURA_EXISTS");
-      tx.setIncluded(false);
+  /** Candidate window for manual reconciliation (broader than the automatic match window). */
+  private static final int CANDIDATE_WINDOW_DAYS = 60;
+
+  /**
+   * Builds the reconciliation suggestions shown on the preview of the second import. Read-only —
+   * the user's approval/choice is applied at confirm time. Empty when there is no counterpart yet.
+   */
+  private List<ReconciliationSlotDTO> buildReconciliation(
+      String type, List<ParsedTransactionDTO> transactions, LocalDate periodEnd, UUID userId) {
+    if ("FATURA".equals(type)) {
+      if (periodEnd == null) return List.of();
+      List<Transaction> payments =
+          transactionRepository.findBillPaymentsByUserAndDateBetween(
+              userId,
+              periodEnd.minusDays(CANDIDATE_WINDOW_DAYS),
+              periodEnd.plusDays(CANDIDATE_WINDOW_DAYS));
+      if (payments.isEmpty()) return List.of();
+      BigDecimal net = netTotal(transactions);
+      List<ReconciliationCandidateDTO> candidates =
+          payments.stream()
+              .map(
+                  p ->
+                      new ReconciliationCandidateDTO(
+                          p.getId(), p.getDescription(), p.getAmount(), p.getDate()))
+              .toList();
+      UUID suggested =
+          payments.stream()
+              .filter(p -> amountsMatch(p.getAmount(), net))
+              .map(Transaction::getId)
+              .findFirst()
+              .orElse(null);
+      return List.of(
+          new ReconciliationSlotDTO("FATURA", null, net, periodEnd, suggested, candidates));
     }
+
+    // EXTRATO: one slot per parsed bill payment, candidates = confirmed faturas nearby.
+    List<ReconciliationSlotDTO> slots = new ArrayList<>();
+    for (int i = 0; i < transactions.size(); i++) {
+      ParsedTransactionDTO dto = transactions.get(i);
+      if (!isBillPayment(dto) || dto.getDate() == null) continue;
+      List<ImportSession> faturas =
+          importSessionRepository.findConfirmedFaturaByUserAndPeriodEndBetween(
+              userId,
+              dto.getDate().minusDays(CANDIDATE_WINDOW_DAYS),
+              dto.getDate().plusDays(CANDIDATE_WINDOW_DAYS));
+      if (faturas.isEmpty()) continue;
+      List<ReconciliationCandidateDTO> candidates = new ArrayList<>();
+      UUID suggested = null;
+      for (ImportSession s : faturas) {
+        BigDecimal total = transactionRepository.sumNetByImportSession(s.getId());
+        candidates.add(
+            new ReconciliationCandidateDTO(s.getId(), s.getFileName(), total, s.getPeriodEnd()));
+        if (suggested == null && amountsMatch(dto.getAmount(), total)) suggested = s.getId();
+      }
+      slots.add(
+          new ReconciliationSlotDTO(
+              "EXTRATO", i, dto.getAmount(), dto.getDate(), suggested, candidates));
+    }
+    return slots;
+  }
+
+  /** Deletes the user's own extrato bill payments by id (used to apply approved fatura links). */
+  private void deleteOwnedPayments(List<UUID> paymentIds, UUID userId) {
+    for (UUID id : paymentIds) {
+      transactionRepository
+          .findById(id)
+          .filter(t -> t.getUser().getId().equals(userId))
+          .ifPresent(transactionRepository::delete);
+    }
+  }
+
+  /** Lists still-unreconciled extrato bill payments with fatura candidates (dedicated screen). */
+  @Transactional(readOnly = true)
+  public List<PendingReconciliationDTO> getReconciliation(UUID userId) {
+    List<PendingReconciliationDTO> result = new ArrayList<>();
+    for (Transaction p : transactionRepository.findBillPaymentsByUser(userId)) {
+      List<ImportSession> faturas =
+          importSessionRepository.findConfirmedFaturaByUserAndPeriodEndBetween(
+              userId,
+              p.getDate().minusDays(CANDIDATE_WINDOW_DAYS),
+              p.getDate().plusDays(CANDIDATE_WINDOW_DAYS));
+      List<ReconciliationCandidateDTO> candidates = new ArrayList<>();
+      UUID suggested = null;
+      for (ImportSession s : faturas) {
+        BigDecimal total = transactionRepository.sumNetByImportSession(s.getId());
+        candidates.add(
+            new ReconciliationCandidateDTO(s.getId(), s.getFileName(), total, s.getPeriodEnd()));
+        if (suggested == null && amountsMatch(p.getAmount(), total)) suggested = s.getId();
+      }
+      result.add(
+          new PendingReconciliationDTO(
+              p.getId(), p.getDate(), p.getAmount(), p.getDescription(), suggested, candidates));
+    }
+    return result;
+  }
+
+  /**
+   * Manually reconciles (substitutes) an extrato bill payment: deletes it after validating owner.
+   */
+  @Transactional
+  public void reconcile(UUID extratoPaymentId, User user) {
+    Transaction payment =
+        transactionRepository
+            .findById(extratoPaymentId)
+            .filter(t -> t.getUser().getId().equals(user.getId()))
+            .orElseThrow(() -> new IllegalArgumentException("Payment not found"));
+    transactionRepository.delete(payment);
   }
 
   private boolean isBillPayment(ParsedTransactionDTO dto) {
@@ -339,16 +447,6 @@ public class TransactionImportService {
 
   private boolean amountsMatch(BigDecimal a, BigDecimal b) {
     return a != null && b != null && a.subtract(b).abs().compareTo(RECONCILE_TOLERANCE) <= 0;
-  }
-
-  /** True if a confirmed fatura near this date has a net total matching the payment amount. */
-  private boolean hasMatchingConfirmedFatura(UUID userId, BigDecimal amount, LocalDate date) {
-    List<ImportSession> faturas =
-        importSessionRepository.findConfirmedFaturaByUserAndPeriodEndBetween(
-            userId, date.minusDays(WINDOW_AFTER_DAYS), date.plusDays(WINDOW_BEFORE_DAYS));
-    return faturas.stream()
-        .anyMatch(
-            s -> amountsMatch(amount, transactionRepository.sumNetByImportSession(s.getId())));
   }
 
   /**

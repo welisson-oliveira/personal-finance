@@ -1,0 +1,48 @@
+<div class="page-header">
+  <a mat-icon-button routerLink="/import" aria-label="Voltar"><mat-icon>arrow_back</mat-icon></a>
+  <h1>Conciliar pagamentos de fatura</h1>
+</div>
+
+@if (loading) {
+  <div class="loading-center"><mat-spinner diameter="40"></mat-spinner></div>
+} @else if (items.length === 0) {
+  <mat-card class="empty-card">
+    <mat-icon>check_circle</mat-icon>
+    <p>Nenhum "Pagamento de fatura" pendente de conciliação.</p>
+    <a mat-stroked-button routerLink="/import">Voltar para Importar</a>
+  </mat-card>
+} @else {
+  <p class="intro">
+    Vincule cada "Pagamento de fatura" do extrato à fatura correspondente. Ao conciliar, o pagamento é
+    <strong>substituído</strong> pelos itens da fatura. Sugerimos a fatura que casa por valor.
+  </p>
+
+  @for (item of items; track item.paymentId; let i = $index) {
+    <mat-card class="reconcile-card">
+      <div class="reconcile-payment">
+        <span class="reconcile-amount">{{ fmtBRL(item.amount) }}</span>
+        <span class="reconcile-desc">{{ item.description }}</span>
+        <span class="reconcile-date">{{ item.date | date: 'dd/MM/yyyy' }}</span>
+      </div>
+
+      <mat-icon class="reconcile-arrow">sync_alt</mat-icon>
+
+      <mat-form-field appearance="outline" class="reconcile-select" subscriptSizing="dynamic">
+        <mat-label>Fatura</mat-label>
+        <mat-select [(ngModel)]="selection[i]">
+          <mat-option [value]="null">Selecione…</mat-option>
+          @for (c of item.candidates; track c.id) {
+            <mat-option [value]="c.id">
+              {{ c.label }} · {{ fmtBRL(c.amount) }} · {{ c.date | date: 'dd/MM' }}
+              @if (c.id === item.suggestedFaturaId) {
+                <span class="suggested-tag">sugerido</span>
+              }
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" [disabled]="!selection[i]" (click)="reconcile(i)">Conciliar</button>
+    </mat-card>
+  }
+}

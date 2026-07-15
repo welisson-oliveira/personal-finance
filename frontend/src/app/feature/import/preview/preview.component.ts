@@ -58,6 +58,8 @@ export class PreviewComponent implements OnInit {
   private finalized = false;
   /** Debounces free-text (notes) edits so we don't PUT on every keystroke. */
   private notesEdited$ = new Subject<void>();
+  /** Per reconciliation slot: the selected candidate id (or null = "Não conciliar"). */
+  reconcileSelection: (string | null)[] = [];
 
   displayedColumns = [
     'included',
@@ -109,6 +111,7 @@ export class PreviewComponent implements OnInit {
     const state = nav?.extras?.state as { preview: ImportPreviewResponse } | undefined;
     if (state?.preview) {
       this.preview = state.preview;
+      this.reconcileSelection = (state.preview.reconciliation ?? []).map((s) => s.suggestedId);
       // Seed the batch competence control from the parsed default (= fatura due month).
       const seed = state.preview.transactions.find((t) => t.competenceDate)?.competenceDate;
       if (seed) this.faturaCompetence = seed.slice(0, 7); // yyyy-MM for <input type="month">
@@ -188,13 +191,30 @@ export class PreviewComponent implements OnInit {
     if (!this.preview) return;
     this.loading = true;
     this.finalized = true;
+
+    // Apply the reconciliation choices: FATURA → ids of extrato payments to delete; EXTRATO →
+    // flag the chosen bill payments as reconciled so the backend skips creating them.
+    let reconcileIds: string[] | undefined;
+    const slots = this.preview.reconciliation ?? [];
+    if (this.preview.documentType === 'FATURA') {
+      reconcileIds = slots
+        .map((_, i) => this.reconcileSelection[i])
+        .filter((id): id is string => !!id);
+    } else {
+      slots.forEach((slot, i) => {
+        if (slot.paymentIndex != null) {
+          this.preview!.transactions[slot.paymentIndex].reconciled = !!this.reconcileSelection[i];
+        }
+      });
+    }
+
     // The category selector uses '' for "no category"; send undefined so the backend doesn't
     // try to parse an empty string as a UUID.
     const transactions = this.preview.transactions.map((tx) => ({
       ...tx,
       categoryId: tx.categoryId || undefined,
     }));
-    this.importService.confirm(this.preview.sessionId, transactions).subscribe({
+    this.importService.confirm(this.preview.sessionId, transactions, reconcileIds).subscribe({
       next: () => {
         this.snackBar.open('Import confirmed successfully!', 'Close', { duration: 3000 });
         this.router.navigate(['/dashboard']);
@@ -227,6 +247,20 @@ export class PreviewComponent implements OnInit {
 
   needsReviewCount(): number {
     return this.preview?.transactions.filter((t) => t.needsReview).length ?? 0;
+  }
+
+  hasReconciliation(): boolean {
+    return (this.preview?.reconciliation?.length ?? 0) > 0;
+  }
+
+  reconcileTitle(): string {
+    return this.preview?.documentType === 'FATURA'
+      ? 'Conciliar com o pagamento no extrato'
+      : 'Conciliar com uma fatura importada';
+  }
+
+  fmtBRL(v: number): string {
+    return v?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
   formatAmount(tx: ParsedTransaction): string {

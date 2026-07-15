@@ -116,6 +116,14 @@ public interface TransactionRepository
   List<Transaction> findBillPaymentsByUserAndDateBetween(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 
+  @Query(
+      "SELECT t FROM Transaction t "
+          + "WHERE t.user.id = :userId "
+          + "AND t.source = 'EXTRATO' "
+          + "AND LOWER(t.description) LIKE 'pagamento de fatura%' "
+          + "ORDER BY t.date DESC")
+  List<Transaction> findBillPaymentsByUser(@Param("userId") UUID userId);
+
   /** Net total of an import session's items (expenses minus estornos) ≈ the invoice amount paid. */
   @Query(
       "SELECT COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount "

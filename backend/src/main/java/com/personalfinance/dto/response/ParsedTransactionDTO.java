@@ -30,4 +30,8 @@ public class ParsedTransactionDTO {
   private boolean needsReview;
   @Builder.Default private boolean included = true;
   private String autoClassification;
+
+  // EXTRATO import only: when true, this "Pagamento de fatura" was reconciled to a fatura and must
+  // not be persisted (the fatura's items already represent it).
+  @Builder.Default private boolean reconciled = false;
 }

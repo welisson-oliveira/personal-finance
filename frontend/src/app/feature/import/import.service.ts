@@ -5,6 +5,7 @@ import {
   ImportPreviewResponse,
   ImportSessionResponse,
   ParsedTransaction,
+  PendingReconciliation,
 } from '../../core/models/import.model';
 
 @Injectable({ providedIn: 'root' })
@@ -26,8 +27,15 @@ export class ImportService {
     return this.http.put<void>(`/api/import/${sessionId}/preview`, transactions);
   }
 
-  confirm(sessionId: string, transactions: ParsedTransaction[]): Observable<void> {
-    return this.http.post<void>(`/api/import/${sessionId}/confirm`, transactions);
+  confirm(
+    sessionId: string,
+    transactions: ParsedTransaction[],
+    reconcileExtratoPaymentIds?: string[]
+  ): Observable<void> {
+    return this.http.post<void>(`/api/import/${sessionId}/confirm`, {
+      transactions,
+      reconcileExtratoPaymentIds,
+    });
   }
 
   cancel(sessionId: string): Observable<void> {
@@ -40,5 +48,15 @@ export class ImportService {
 
   deleteSession(sessionId: string): Observable<void> {
     return this.http.delete<void>(`/api/import/${sessionId}`);
+  }
+
+  /** Lists still-unreconciled extrato bill payments with fatura candidates (dedicated screen). */
+  getReconciliation(): Observable<PendingReconciliation[]> {
+    return this.http.get<PendingReconciliation[]>('/api/import/reconciliation');
+  }
+
+  /** Manually reconciles (substitutes) an extrato bill payment against a fatura. */
+  reconcile(extratoPaymentId: string, faturaSessionId: string): Observable<void> {
+    return this.http.post<void>('/api/import/reconcile', { extratoPaymentId, faturaSessionId });
   }
 }

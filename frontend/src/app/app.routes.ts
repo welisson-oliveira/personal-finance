@@ -42,6 +42,13 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./feature/import/preview/preview.component').then((m) => m.PreviewComponent),
           },
+          {
+            path: 'reconciliation',
+            loadComponent: () =>
+              import('./feature/import/reconciliation/reconciliation.component').then(
+                (m) => m.ReconciliationComponent
+              ),
+          },
         ],
       },
       {

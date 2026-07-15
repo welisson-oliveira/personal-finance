@@ -34,6 +34,42 @@
     <mat-progress-bar mode="indeterminate"></mat-progress-bar>
   }
 
+  @if (hasReconciliation()) {
+    <mat-card class="reconcile-card">
+      <div class="reconcile-title">
+        <mat-icon>link</mat-icon>
+        <span>{{ reconcileTitle() }}</span>
+      </div>
+      <p class="reconcile-hint">
+        Sugerimos o vínculo automaticamente — confirme ou ajuste. Ao vincular, o "Pagamento de fatura" do extrato é
+        substituído pelos itens da fatura.
+      </p>
+      @for (slot of preview.reconciliation; track $index) {
+        <div class="reconcile-row">
+          <div class="reconcile-payment">
+            <span class="reconcile-amount">{{ fmtBRL(slot.paymentAmount) }}</span>
+            <span class="reconcile-date">{{ slot.paymentDate | date: 'dd/MM/yyyy' }}</span>
+          </div>
+          <mat-icon class="reconcile-arrow">sync_alt</mat-icon>
+          <mat-form-field appearance="outline" class="reconcile-select" subscriptSizing="dynamic">
+            <mat-label>{{ preview.documentType === 'FATURA' ? 'Pagamento no extrato' : 'Fatura' }}</mat-label>
+            <mat-select [(ngModel)]="reconcileSelection[$index]">
+              <mat-option [value]="null">Não conciliar</mat-option>
+              @for (c of slot.candidates; track c.id) {
+                <mat-option [value]="c.id">
+                  {{ c.label }} · {{ fmtBRL(c.amount) }} · {{ c.date | date: 'dd/MM' }}
+                  @if (c.id === slot.suggestedId) {
+                    <span class="suggested-tag">sugerido</span>
+                  }
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+      }
+    </mat-card>
+  }
+
   @if (isFatura) {
     <mat-card class="competence-card">
       <mat-icon>event_available</mat-icon>
