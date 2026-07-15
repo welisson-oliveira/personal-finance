@@ -1,5 +1,6 @@
 package com.personalfinance.service;
 
+import com.personalfinance.dto.response.CategoryTotalResponse;
 import com.personalfinance.dto.response.DashboardResponse;
 import com.personalfinance.dto.response.DashboardResponse.Destaques;
 import com.personalfinance.model.entity.Transaction;
@@ -64,7 +65,13 @@ public class DashboardService {
     BigDecimal percentualNaoEssenciais = percent(despesasNaoEssenciais, rendaBase);
     BigDecimal percentualInvestimentos = percent(aplicado, rendaBase);
 
-    Destaques destaques = buildDestaques(userId, start, end);
+    // Single fetch of the month's expenses (with category + budgetGroup) feeds both the highlights
+    // and the 50/30/20 drill-down.
+    List<Transaction> expenses =
+        transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end);
+
+    DashboardResponse.Breakdown breakdown = buildBudgetBreakdown(expenses);
+    Destaques destaques = buildDestaques(userId, start, end, expenses);
 
     return DashboardResponse.builder()
         .year(year)
@@ -81,14 +88,63 @@ public class DashboardService {
         .percentualEssenciais(percentualEssenciais)
         .percentualNaoEssenciais(percentualNaoEssenciais)
         .percentualInvestimentos(percentualInvestimentos)
+        .breakdown(breakdown)
         .destaques(destaques)
         .build();
   }
 
-  private Destaques buildDestaques(UUID userId, LocalDate start, LocalDate end) {
-    List<Transaction> expenses =
-        transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end);
+  /** Categories composing each expense bucket (ESSENTIAL / NON_ESSENTIAL), biggest first. */
+  private DashboardResponse.Breakdown buildBudgetBreakdown(List<Transaction> expenses) {
+    return DashboardResponse.Breakdown.builder()
+        .essenciais(categoriesForGroup(expenses, "ESSENTIAL"))
+        .naoEssenciais(categoriesForGroup(expenses, "NON_ESSENTIAL"))
+        .build();
+  }
 
+  private List<CategoryTotalResponse> categoriesForGroup(
+      List<Transaction> expenses, String budgetGroup) {
+    List<Transaction> inGroup =
+        expenses.stream().filter(t -> budgetGroup.equals(t.getBudgetGroup())).toList();
+
+    Map<UUID, BigDecimal> totals =
+        inGroup.stream()
+            .filter(t -> t.getCategory() != null)
+            .collect(
+                Collectors.groupingBy(
+                    t -> t.getCategory().getId(),
+                    Collectors.reducing(BigDecimal.ZERO, this::effectiveAmount, BigDecimal::add)));
+
+    Map<UUID, Transaction> byCategory =
+        inGroup.stream()
+            .filter(t -> t.getCategory() != null)
+            .collect(Collectors.toMap(t -> t.getCategory().getId(), t -> t, (a, b) -> a));
+
+    List<CategoryTotalResponse> result =
+        new java.util.ArrayList<>(
+            totals.entrySet().stream()
+                .map(
+                    e -> {
+                      var cat = byCategory.get(e.getKey()).getCategory();
+                      return CategoryTotalResponse.of(
+                          cat.getId(), cat.getName(), cat.getIcon(), cat.getColor(), e.getValue());
+                    })
+                .sorted(Comparator.comparing(CategoryTotalResponse::total).reversed())
+                .toList());
+
+    BigDecimal uncategorized =
+        inGroup.stream()
+            .filter(t -> t.getCategory() == null)
+            .map(this::effectiveAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    if (uncategorized.compareTo(BigDecimal.ZERO) > 0) {
+      result.add(CategoryTotalResponse.of(null, "Sem categoria", "❓", "#9E9E9E", uncategorized));
+    }
+
+    return result;
+  }
+
+  private Destaques buildDestaques(
+      UUID userId, LocalDate start, LocalDate end, List<Transaction> expenses) {
     String maiorSupermercado = null;
     BigDecimal maiorSupermercadoValor = BigDecimal.ZERO;
     String maiorDelivery = null;

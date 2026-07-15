@@ -80,6 +80,62 @@ class ReportServiceTest {
     assertThat(result.get(1).total()).isEqualByComparingTo("30");
   }
 
+  @Test
+  void category_breakdown_computes_month_over_month_delta() {
+    Category alim = Category.builder().id(UUID.randomUUID()).name("Alimentação").build();
+
+    // Current month (May): 100; previous month (April): 50 → delta = +100%
+    when(transactionRepository.findExpensesWithCategoryInPeriod(
+            eq(userId), eq(LocalDate.of(2026, 5, 1)), any()))
+        .thenReturn(List.of(tx(alim, new BigDecimal("100"), false, null)));
+    when(transactionRepository.findExpensesWithCategoryInPeriod(
+            eq(userId), eq(LocalDate.of(2026, 4, 1)), any()))
+        .thenReturn(List.of(tx(alim, new BigDecimal("50"), false, null)));
+
+    List<CategoryTotalResponse> result = service.categoryBreakdown(userId, 2026, 5);
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).total()).isEqualByComparingTo("100");
+    assertThat(result.get(0).previousTotal()).isEqualByComparingTo("50");
+    assertThat(result.get(0).deltaPercent()).isEqualByComparingTo("100.0");
+  }
+
+  @Test
+  void category_breakdown_delta_is_null_when_no_previous_base() {
+    Category alim = Category.builder().id(UUID.randomUUID()).name("Alimentação").build();
+
+    when(transactionRepository.findExpensesWithCategoryInPeriod(
+            eq(userId), eq(LocalDate.of(2026, 5, 1)), any()))
+        .thenReturn(List.of(tx(alim, new BigDecimal("100"), false, null)));
+    when(transactionRepository.findExpensesWithCategoryInPeriod(
+            eq(userId), eq(LocalDate.of(2026, 4, 1)), any()))
+        .thenReturn(List.of());
+
+    List<CategoryTotalResponse> result = service.categoryBreakdown(userId, 2026, 5);
+
+    assertThat(result.get(0).previousTotal()).isEqualByComparingTo("0");
+    assertThat(result.get(0).deltaPercent()).isNull();
+  }
+
+  @Test
+  void top_expenses_ranks_by_effective_amount_desc_and_respects_limit() {
+    Category alim = Category.builder().id(UUID.randomUUID()).name("Alimentação").build();
+    Transaction small = tx(alim, new BigDecimal("100"), false, null);
+    // shared: effective is userShare (30), not amount (300)
+    Transaction shared = tx(alim, new BigDecimal("300"), true, new BigDecimal("30"));
+    Transaction big = tx(alim, new BigDecimal("200"), false, null);
+
+    when(transactionRepository.findExpensesWithCategoryInPeriod(eq(userId), any(), any()))
+        .thenReturn(List.of(small, shared, big));
+
+    var result = service.topExpenses(userId, 2026, 5, 2);
+
+    assertThat(result).hasSize(2);
+    assertThat(result.get(0).amount()).isEqualByComparingTo("200");
+    assertThat(result.get(1).amount()).isEqualByComparingTo("100");
+    assertThat(result.get(0).categoryName()).isEqualTo("Alimentação");
+  }
+
   private Transaction tx(
       Category category, BigDecimal amount, boolean shared, BigDecimal userShare) {
     return Transaction.builder()

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CategoryTotal, MonthlyPoint } from '../../core/models/report.model';
+import { CategoryTotal, MonthlyPoint, TopExpense } from '../../core/models/report.model';
 
 @Injectable({ providedIn: 'root' })
 export class ReportService {
@@ -15,5 +15,10 @@ export class ReportService {
   categoryBreakdown(year: number, month: number): Observable<CategoryTotal[]> {
     const params = new HttpParams().set('year', year).set('month', month);
     return this.http.get<CategoryTotal[]>('/api/reports/category-breakdown', { params });
+  }
+
+  topExpenses(year: number, month: number, limit = 10): Observable<TopExpense[]> {
+    const params = new HttpParams().set('year', year).set('month', month).set('limit', limit);
+    return this.http.get<TopExpense[]>('/api/reports/top-expenses', { params });
   }
 }

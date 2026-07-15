@@ -1,6 +1,7 @@
 package com.personalfinance.dto.response;
 
 import java.math.BigDecimal;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,7 +36,19 @@ public class DashboardResponse {
   private BigDecimal percentualNaoEssenciais;
   private BigDecimal percentualInvestimentos;
 
+  // Drill-down do 50/30/20: quais categorias compõem cada bucket de despesa (maior→menor).
+  private Breakdown breakdown;
+
   private Destaques destaques;
+
+  @Getter
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class Breakdown {
+    private List<CategoryTotalResponse> essenciais;
+    private List<CategoryTotalResponse> naoEssenciais;
+  }
 
   @Getter
   @Builder

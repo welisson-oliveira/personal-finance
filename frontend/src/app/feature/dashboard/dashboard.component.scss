@@ -205,10 +205,74 @@
 .budget-bar {
   height: 8px;
   border-radius: 4px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
 
   &:last-child {
     margin-bottom: 0;
+  }
+}
+
+.budget-meta {
+  font-size: 0.78rem;
+  color: #666;
+  margin: 0 0 4px;
+
+  .folga {
+    color: #2e7d32;
+  }
+  .estouro {
+    color: #c62828;
+  }
+  .falta {
+    color: #ef6c00;
+  }
+  .folga,
+  .estouro,
+  .falta {
+    font-weight: 600;
+  }
+}
+
+.drill-toggle {
+  font-size: 0.75rem;
+  min-height: 0;
+  padding: 2px 8px;
+  margin-bottom: 12px;
+  color: #3f51b5;
+
+  mat-icon {
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+    margin-right: 2px;
+  }
+}
+
+.drill {
+  margin: -4px 0 16px;
+  padding: 8px 12px;
+  background: rgba(63, 81, 181, 0.04);
+  border-radius: 8px;
+
+  .drill-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 0.82rem;
+    color: #444;
+  }
+
+  .drill-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 12px;
+  }
+
+  .drill-pct {
+    color: #999;
+    font-size: 0.72rem;
+    margin-left: 4px;
   }
 }
 

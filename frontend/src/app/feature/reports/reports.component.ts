@@ -3,36 +3,46 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ReportService } from './report.service';
-import { CategoryTotal, MonthlyPoint } from '../../core/models/report.model';
+import { CategoryTotal, MonthlyPoint, TopExpense } from '../../core/models/report.model';
+import { BudgetGoalService } from '../budget-goals/budget-goal.service';
+import { BudgetGoal } from '../../core/models/budget-goal.model';
 import { PeriodService } from '../../core/services/period.service';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.scss',
 })
 export class ReportsComponent {
   evolution: MonthlyPoint[] = [];
   breakdown: CategoryTotal[] = [];
+  topExpenses: TopExpense[] = [];
+  /** Budget-goal cap per category (by categoryId), for the over-cap "gargalo" signal. */
+  goalsByCategory = new Map<string, BudgetGoal>();
   loadingEvolution = true;
   loadingBreakdown = true;
+  loadingTop = true;
 
   readonly months = 6;
   readonly chartHeight = 160;
 
   constructor(
     private reportService: ReportService,
+    private budgetGoalService: BudgetGoalService,
     public period: PeriodService
   ) {
     // Evolution is independent of the selected month (last N months)
     this.loadEvolution();
-    // Breakdown follows the global month
+    // Breakdown, goals and top expenses all follow the global month
     effect(() => {
       this.period.period();
       this.loadBreakdown();
+      this.loadGoals();
+      this.loadTopExpenses();
     });
   }
 
@@ -56,6 +66,48 @@ export class ReportsComponent {
       },
       error: () => (this.loadingBreakdown = false),
     });
+  }
+
+  private loadGoals(): void {
+    this.budgetGoalService.getAll(this.period.year(), this.period.month()).subscribe({
+      next: (goals) => {
+        this.goalsByCategory = new Map(goals.map((g) => [g.categoryId, g]));
+      },
+      error: () => (this.goalsByCategory = new Map()),
+    });
+  }
+
+  private loadTopExpenses(): void {
+    this.loadingTop = true;
+    this.reportService.topExpenses(this.period.year(), this.period.month(), 10).subscribe({
+      next: (t) => {
+        this.topExpenses = t;
+        this.loadingTop = false;
+      },
+      error: () => (this.loadingTop = false),
+    });
+  }
+
+  /** Total of all categories in the breakdown, for the % share of each. */
+  get breakdownTotal(): number {
+    return this.breakdown.reduce((sum, c) => sum + c.total, 0);
+  }
+
+  pctOfTotal(total: number): number {
+    return this.breakdownTotal > 0 ? (total / this.breakdownTotal) * 100 : 0;
+  }
+
+  abs(v: number): number {
+    return Math.abs(v);
+  }
+
+  goalFor(categoryId: string): BudgetGoal | undefined {
+    return this.goalsByCategory.get(categoryId);
+  }
+
+  isOverGoal(categoryId: string): boolean {
+    const goal = this.goalsByCategory.get(categoryId);
+    return !!goal && goal.remaining < 0;
   }
 
   monthLabel(p: MonthlyPoint): string {

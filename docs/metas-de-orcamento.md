@@ -47,7 +47,7 @@ Usuário define meta por categoria → ao abrir a tela (ou trocar o mês global)
 
 - Meta por mês específico → adicionar `year_month` à tabela/entidade e ao filtro de `findAll`.
 - Meta por grupo 50/30/20 (além de categoria) → nova dimensão em `BudgetGoal` + query por `budgetGroup`.
-- Resumo no dashboard → consumir `GET /api/budget-goals` no `dashboard.component`.
+- ~~Resumo no dashboard~~ → **feito nos Relatórios**: o `reports.component` consome `GET /api/budget-goals?year=&month=` e cruza por `categoryId` com o "Gasto por categoria", destacando categorias que estouraram o teto (`remaining < 0`). Ver [relatorios.md](./relatorios.md#integração-com-as-metas-gargalo--teto).
 
 ## Testes relevantes
 
