@@ -40,6 +40,15 @@ import { CategoryFormDialogComponent } from '../../categories/category-form-dial
 import { AutofocusDirective } from '../../../shared/autofocus/autofocus.directive';
 import { PeriodService } from '../../../core/services/period.service';
 
+/** Single-field change applied inline in the list (via {@link TransactionListComponent.quickUpdate}). */
+type QuickPatch = Partial<{
+  type: string;
+  categoryId?: string;
+  budgetGroup?: string;
+  investmentDirection?: string;
+  ignored: boolean;
+}>;
+
 @Component({
   selector: 'app-transaction-list',
   standalone: true,
@@ -356,17 +365,24 @@ export class TransactionListComponent implements OnInit {
     this.quickUpdate(tx, { ignored: true });
   }
 
-  /** Applies a single-field change after asking the user how far to propagate the classification. */
-  private quickUpdate(
-    tx: Transaction,
-    patch: Partial<{
-      type: string;
-      categoryId?: string;
-      budgetGroup?: string;
-      investmentDirection?: string;
-      ignored: boolean;
-    }>
-  ): void {
+  /**
+   * Applies a single-field change. A classification change asks how far to propagate; a pure
+   * ignore/unignore toggle (e.g. counting a bill payment) skips that dialog — there's nothing to
+   * propagate — and applies only to this transaction.
+   */
+  private quickUpdate(tx: Transaction, patch: QuickPatch): void {
+    const onlyIgnoredToggle =
+      patch.ignored !== undefined &&
+      patch.type === undefined &&
+      patch.categoryId === undefined &&
+      patch.budgetGroup === undefined &&
+      patch.investmentDirection === undefined;
+
+    if (onlyIgnoredToggle) {
+      this.applyUpdate(tx, patch, 'CURRENT');
+      return;
+    }
+
     const ref = this.dialog.open(PropagateScopeDialogComponent);
     ref.afterClosed().subscribe((scope: PropagateScope | undefined) => {
       if (scope === undefined) {
@@ -374,38 +390,42 @@ export class TransactionListComponent implements OnInit {
         this.load();
         return;
       }
-      const type = patch.type ?? tx.type;
-      const isExpense = type === 'EXPENSE';
-      const isInvestment = type === 'INVESTMENT';
-      const req: UpdateTransactionRequest = {
-        description: tx.description,
-        amount: tx.amount,
-        type,
-        date: tx.date,
-        competenceDate: tx.competenceDate,
-        categoryId: isExpense ? (patch.categoryId ?? tx.categoryId) : undefined,
-        budgetGroup: isExpense ? (patch.budgetGroup ?? tx.budgetGroup) : undefined,
-        investmentDirection: isInvestment
-          ? (patch.investmentDirection ?? tx.investmentDirection)
-          : undefined,
-        ignored: patch.ignored ?? tx.ignored,
-        notes: tx.notes,
-        shared: tx.shared,
-        totalAmount: tx.totalAmount,
-        userShare: tx.userShare,
-        propagate: scope,
-      };
-      this.txService.update(tx.id, req).subscribe({
-        next: (updated) => {
-          this.patchRow(updated);
-          this.snackBar.open('Transação atualizada.', 'Fechar', { duration: 2000 });
-        },
-        error: (err) => {
-          this.snackBar.open(err.error?.message || 'Erro ao salvar.', 'Fechar', {
-            duration: 4000,
-          });
-        },
-      });
+      this.applyUpdate(tx, patch, scope);
+    });
+  }
+
+  private applyUpdate(tx: Transaction, patch: QuickPatch, scope: PropagateScope): void {
+    const type = patch.type ?? tx.type;
+    const isExpense = type === 'EXPENSE';
+    const isInvestment = type === 'INVESTMENT';
+    const req: UpdateTransactionRequest = {
+      description: tx.description,
+      amount: tx.amount,
+      type,
+      date: tx.date,
+      competenceDate: tx.competenceDate,
+      categoryId: isExpense ? (patch.categoryId ?? tx.categoryId) : undefined,
+      budgetGroup: isExpense ? (patch.budgetGroup ?? tx.budgetGroup) : undefined,
+      investmentDirection: isInvestment
+        ? (patch.investmentDirection ?? tx.investmentDirection)
+        : undefined,
+      ignored: patch.ignored ?? tx.ignored,
+      notes: tx.notes,
+      shared: tx.shared,
+      totalAmount: tx.totalAmount,
+      userShare: tx.userShare,
+      propagate: scope,
+    };
+    this.txService.update(tx.id, req).subscribe({
+      next: (updated) => {
+        this.patchRow(updated);
+        this.snackBar.open('Transação atualizada.', 'Fechar', { duration: 2000 });
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.message || 'Erro ao salvar.', 'Fechar', {
+          duration: 4000,
+        });
+      },
     });
   }
 
