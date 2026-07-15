@@ -28,7 +28,7 @@ O cruzamento com **Metas de orçamento** (ver [metas-de-orcamento.md](./metas-de
 
 - **`reports`** (`app-reports`) — página `/reports`. Injeta `ReportService`, `BudgetGoalService` e `PeriodService`.
   - **Evolução mensal:** barras agrupadas (receita verde × despesa vermelha) por mês + saldo abaixo de cada mês. É **independente** do seletor global (mostra sempre os últimos 6 meses); escala pelas maiores barras.
-  - **Onde vai seu dinheiro:** barras horizontais na cor da categoria + **% do total** (`pctOfTotal`), **Δ vs mês anterior** (`deltaPercent`: ▲ vermelho quando sobe / ▼ verde quando cai) e, quando há meta, `meta R$` com selo **"estourou a meta"** (`isOverGoal`/`goalFor`). **Segue o mês global** via `effect(() => { period.period(); loadBreakdown(); loadGoals(); loadTopExpenses(); })`.
+  - **Onde vai seu dinheiro:** barras horizontais na cor da categoria + **% do total** (`pctOfTotal`), **Δ vs mês anterior** (`deltaPercent`: ▲ vermelho quando sobe / ▼ verde quando cai) e, quando há meta, `meta R$` com selo **"estourou a meta"** (`isOverGoal`/`goalFor`). **Segue o mês global** via `effect(() => { period.period(); loadBreakdown(); loadGoals(); loadTopExpenses(); })`. **Clicar numa categoria** (`goToCategory`) navega para `/transactions?categoryId=&month=` — a lista de Transações lê esses query params e já abre filtrada pela categoria naquele mês. A linha "Sem categoria" não é clicável.
   - **Maiores gastos do mês:** ranking dos 10 maiores lançamentos (posição, descrição, categoria, data e valor). Segue o mês global.
   - Gráficos são `div`/CSS puros (altura/largura proporcionais), sem lib de chart.
 - Rota em `app.routes.ts` e item **"Relatórios"** (ícone `insights`) no `navItems` do `LayoutComponent` (logo após o Dashboard).

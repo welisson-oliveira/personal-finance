@@ -160,9 +160,13 @@ export class TransactionListComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const monthParam = this.route.snapshot.queryParams['month'];
-    if (monthParam) {
-      this.period.setFromMonthString(monthParam);
+    const params = this.route.snapshot.queryParams;
+    if (params['month']) {
+      this.period.setFromMonthString(params['month']);
+    }
+    // Deep-link from the Reports "onde vai seu dinheiro" chart: pre-filter by category.
+    if (params['categoryId']) {
+      this.filterCategoryId = params['categoryId'];
     }
     this.categoryService.getAll().subscribe((cats) => (this.categories = cats));
   }

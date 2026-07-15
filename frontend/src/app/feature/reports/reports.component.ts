@@ -1,4 +1,5 @@
 import { Component, effect } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -33,6 +34,7 @@ export class ReportsComponent {
   constructor(
     private reportService: ReportService,
     private budgetGoalService: BudgetGoalService,
+    private router: Router,
     public period: PeriodService
   ) {
     // Evolution is independent of the selected month (last N months)
@@ -108,6 +110,14 @@ export class ReportsComponent {
   isOverGoal(categoryId: string): boolean {
     const goal = this.goalsByCategory.get(categoryId);
     return !!goal && goal.remaining < 0;
+  }
+
+  /** Deep-links to Transactions filtered by this category + the current month. */
+  goToCategory(cat: CategoryTotal): void {
+    if (!cat.categoryId) return; // the "Sem categoria" bucket has no filter target
+    this.router.navigate(['/transactions'], {
+      queryParams: { categoryId: cat.categoryId, month: this.period.monthString() },
+    });
   }
 
   monthLabel(p: MonthlyPoint): string {
