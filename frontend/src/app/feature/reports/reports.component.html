@@ -42,11 +42,11 @@
   </mat-card-content>
 </mat-card>
 
-<!-- Gasto por categoria -->
+<!-- Gasto por categoria (onde vai o dinheiro) -->
 <mat-card class="report-card">
   <mat-card-header>
-    <mat-card-title>Gasto por categoria</mat-card-title>
-    <mat-card-subtitle>{{ period.label() }}</mat-card-subtitle>
+    <mat-card-title>Onde vai seu dinheiro</mat-card-title>
+    <mat-card-subtitle>{{ period.label() }} — % do total, variação vs mês anterior e metas</mat-card-subtitle>
   </mat-card-header>
   <mat-card-content>
     @if (loadingBreakdown) {
@@ -56,10 +56,13 @@
     } @else {
       <div class="breakdown">
         @for (cat of breakdown; track cat.categoryId) {
-          <div class="breakdown-row">
+          <div class="breakdown-row" [class.over-goal]="isOverGoal(cat.categoryId)">
             <div class="breakdown-label">
               <mat-icon [style.color]="cat.categoryColor || null">{{ cat.categoryIcon || 'label' }}</mat-icon>
               <span>{{ cat.categoryName }}</span>
+              @if (isOverGoal(cat.categoryId)) {
+                <span class="goal-badge" matTooltip="Gasto acima da meta desta categoria">estourou a meta</span>
+              }
             </div>
             <div class="breakdown-track">
               <div
@@ -68,7 +71,61 @@
                 [style.background]="cat.categoryColor || '#3f51b5'"
               ></div>
             </div>
-            <div class="breakdown-value">{{ fmt(cat.total) }}</div>
+            <div class="breakdown-value">
+              {{ fmt(cat.total) }}
+              <span class="breakdown-pct">{{ pctOfTotal(cat.total) | number: '1.0-0' }}%</span>
+            </div>
+            <div class="breakdown-extra">
+              @if (cat.deltaPercent !== null && cat.deltaPercent !== undefined) {
+                <span
+                  class="delta"
+                  [class.up]="cat.deltaPercent > 0"
+                  [class.down]="cat.deltaPercent < 0"
+                  matTooltip="Variação vs mês anterior"
+                >
+                  {{ cat.deltaPercent > 0 ? '▲' : '▼' }} {{ abs(cat.deltaPercent) | number: '1.0-0' }}%
+                </span>
+              }
+              @if (goalFor(cat.categoryId); as g) {
+                <span class="goal-info" [class.over]="g.remaining < 0" matTooltip="Meta desta categoria">
+                  meta {{ fmt(g.amount) }}
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </mat-card-content>
+</mat-card>
+
+<!-- Maiores gastos do mês -->
+<mat-card class="report-card">
+  <mat-card-header>
+    <mat-card-title>Maiores gastos do mês</mat-card-title>
+    <mat-card-subtitle>{{ period.label() }} — os lançamentos que mais pesaram</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (loadingTop) {
+      <div class="loading-center"><mat-spinner diameter="36"></mat-spinner></div>
+    } @else if (topExpenses.length === 0) {
+      <p class="empty">Sem despesas neste mês.</p>
+    } @else {
+      <div class="top-list">
+        @for (t of topExpenses; track t.id) {
+          <div class="top-row">
+            <span class="top-rank">{{ $index + 1 }}</span>
+            <div class="top-info">
+              <div class="top-desc">{{ t.description }}</div>
+              <div class="top-sub">
+                @if (t.categoryName) {
+                  <span class="top-cat" [style.color]="t.categoryColor || null">{{ t.categoryName }}</span>
+                  ·
+                }
+                {{ t.date | date: 'dd/MM' }}
+              </div>
+            </div>
+            <span class="top-amount">{{ fmt(t.amount) }}</span>
           </div>
         }
       </div>

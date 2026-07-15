@@ -36,6 +36,7 @@
           <a routerLink="/settings">configure seu salário líquido</a> ou importe o extrato do mês.
         </p>
       }
+      <!-- Essenciais (teto 50%) -->
       <div class="budget-row">
         <div
           class="budget-label"
@@ -62,7 +63,39 @@
         color="primary"
         class="budget-bar"
       ></mat-progress-bar>
+      @if (hasBase()) {
+        <div class="budget-meta">
+          Meta {{ fmt(meta(0.5)) }} ·
+          @if (folga(data.despesasEssenciais, 0.5) >= 0) {
+            <span class="folga">{{ fmt(folga(data.despesasEssenciais, 0.5)) }} de folga</span>
+          } @else {
+            <span class="estouro">{{ fmt(-folga(data.despesasEssenciais, 0.5)) }} acima da meta</span>
+          }
+        </div>
+      }
+      @if (data.breakdown?.essenciais?.length) {
+        <button mat-button class="drill-toggle" (click)="toggle('ess')">
+          <mat-icon>{{ expanded.ess ? 'expand_less' : 'expand_more' }}</mat-icon>
+          {{ expanded.ess ? 'Ocultar categorias' : 'Ver categorias' }}
+        </button>
+        @if (expanded.ess) {
+          <div class="drill">
+            @for (c of data.breakdown!.essenciais; track c.categoryName) {
+              <div class="drill-row">
+                <span class="drill-name">{{ c.categoryIcon }} {{ c.categoryName }}</span>
+                <span class="drill-val"
+                  >{{ fmt(c.total) }}
+                  <span class="drill-pct"
+                    >{{ bucketPct(c.total, data.despesasEssenciais) | number: '1.0-0' }}%</span
+                  ></span
+                >
+              </div>
+            }
+          </div>
+        }
+      }
 
+      <!-- Não Essenciais (teto 30%) -->
       <div class="budget-row">
         <div class="budget-label" matTooltip="Lazer, assinaturas, compras não prioritárias. Meta: até 30% da renda">
           <span class="dot non-essential"></span>
@@ -86,7 +119,39 @@
         color="accent"
         class="budget-bar"
       ></mat-progress-bar>
+      @if (hasBase()) {
+        <div class="budget-meta">
+          Meta {{ fmt(meta(0.3)) }} ·
+          @if (folga(data.despesasNaoEssenciais, 0.3) >= 0) {
+            <span class="folga">{{ fmt(folga(data.despesasNaoEssenciais, 0.3)) }} de folga</span>
+          } @else {
+            <span class="estouro">{{ fmt(-folga(data.despesasNaoEssenciais, 0.3)) }} acima da meta</span>
+          }
+        </div>
+      }
+      @if (data.breakdown?.naoEssenciais?.length) {
+        <button mat-button class="drill-toggle" (click)="toggle('nao')">
+          <mat-icon>{{ expanded.nao ? 'expand_less' : 'expand_more' }}</mat-icon>
+          {{ expanded.nao ? 'Ocultar categorias' : 'Ver categorias' }}
+        </button>
+        @if (expanded.nao) {
+          <div class="drill">
+            @for (c of data.breakdown!.naoEssenciais; track c.categoryName) {
+              <div class="drill-row">
+                <span class="drill-name">{{ c.categoryIcon }} {{ c.categoryName }}</span>
+                <span class="drill-val"
+                  >{{ fmt(c.total) }}
+                  <span class="drill-pct"
+                    >{{ bucketPct(c.total, data.despesasNaoEssenciais) | number: '1.0-0' }}%</span
+                  ></span
+                >
+              </div>
+            }
+          </div>
+        }
+      }
 
+      <!-- Investimentos (piso 20%) -->
       <div class="budget-row">
         <div class="budget-label" matTooltip="Aportes e reservas financeiras. Meta: ao menos 20% da renda">
           <span class="dot investment"></span>
@@ -110,6 +175,32 @@
         color="warn"
         class="budget-bar"
       ></mat-progress-bar>
+      @if (hasBase()) {
+        <div class="budget-meta">
+          Meta {{ fmt(meta(0.2)) }} ·
+          @if (data.aplicado >= meta(0.2)) {
+            <span class="folga">meta de 20% atingida</span>
+          } @else {
+            <span class="falta">faltam {{ fmt(meta(0.2) - data.aplicado) }} para os 20%</span>
+          }
+        </div>
+      }
+      <button mat-button class="drill-toggle" (click)="toggle('inv')">
+        <mat-icon>{{ expanded.inv ? 'expand_less' : 'expand_more' }}</mat-icon>
+        {{ expanded.inv ? 'Ocultar detalhes' : 'Ver detalhes' }}
+      </button>
+      @if (expanded.inv) {
+        <div class="drill">
+          <div class="drill-row">
+            <span class="drill-name">Aportes brutos</span>
+            <span class="drill-val">{{ fmt(data.aportes) }}</span>
+          </div>
+          <div class="drill-row">
+            <span class="drill-name">Resgates brutos</span>
+            <span class="drill-val">− {{ fmt(data.resgatado) }}</span>
+          </div>
+        </div>
+      }
 
       @if (hasBase()) {
         <p class="budget-base-info">Base do cálculo: {{ fmt(data.rendaBase) }} ({{ baseLabel() }})</p>

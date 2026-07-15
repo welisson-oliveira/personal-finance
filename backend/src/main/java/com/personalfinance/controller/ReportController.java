@@ -2,6 +2,7 @@ package com.personalfinance.controller;
 
 import com.personalfinance.dto.response.CategoryTotalResponse;
 import com.personalfinance.dto.response.MonthlyPointResponse;
+import com.personalfinance.dto.response.TopExpenseResponse;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.service.ReportService;
 import java.time.YearMonth;
@@ -35,5 +36,16 @@ public class ReportController {
     YearMonth ym = (year != null && month != null) ? YearMonth.of(year, month) : YearMonth.now();
     return ResponseEntity.ok(
         reportService.categoryBreakdown(user.getId(), ym.getYear(), ym.getMonthValue()));
+  }
+
+  @GetMapping("/top-expenses")
+  public ResponseEntity<List<TopExpenseResponse>> topExpenses(
+      @RequestParam(required = false) Integer year,
+      @RequestParam(required = false) Integer month,
+      @RequestParam(defaultValue = "10") int limit,
+      @AuthenticationPrincipal User user) {
+    YearMonth ym = (year != null && month != null) ? YearMonth.of(year, month) : YearMonth.now();
+    return ResponseEntity.ok(
+        reportService.topExpenses(user.getId(), ym.getYear(), ym.getMonthValue(), limit));
   }
 }

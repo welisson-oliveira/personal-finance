@@ -1,3 +1,10 @@
+import { CategoryTotal } from './report.model';
+
+export interface BudgetBreakdown {
+  essenciais: CategoryTotal[];
+  naoEssenciais: CategoryTotal[];
+}
+
 export interface Destaques {
   maiorSupermercado?: string;
   maiorSupermercadoValor?: number;
@@ -24,5 +31,6 @@ export interface DashboardResponse {
   percentualEssenciais: number;
   percentualNaoEssenciais: number;
   percentualInvestimentos: number;
+  breakdown?: BudgetBreakdown;
   destaques: Destaques;
 }

@@ -70,6 +70,31 @@ export class DashboardComponent {
     return (this.data?.rendaBase ?? 0) > 0;
   }
 
+  /** Which 50/30/20 buckets are expanded to show their category drill-down. */
+  expanded: { ess: boolean; nao: boolean; inv: boolean } = { ess: false, nao: false, inv: false };
+
+  toggle(bucket: 'ess' | 'nao' | 'inv'): void {
+    this.expanded[bucket] = !this.expanded[bucket];
+  }
+
+  /** Target amount in R$ for a bucket (fraction of the income base): 0.5 / 0.3 / 0.2. */
+  meta(fraction: number): number {
+    return (this.data?.rendaBase ?? 0) * fraction;
+  }
+
+  /**
+   * Gap vs target for the two expense buckets (caps): positive = folga, negative = estouro.
+   * Investments are a floor, handled separately in the template.
+   */
+  folga(realizado: number, fraction: number): number {
+    return this.meta(fraction) - realizado;
+  }
+
+  /** Share (%) of a category within its bucket total, for the drill-down bars. */
+  bucketPct(total: number, bucketTotal: number): number {
+    return bucketTotal > 0 ? (total / bucketTotal) * 100 : 0;
+  }
+
   baseLabel(): string {
     if (!this.data) return '';
     return this.data.entradas > 0 ? 'renda do mês' : 'salário configurado';

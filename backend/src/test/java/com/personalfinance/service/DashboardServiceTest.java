@@ -3,8 +3,12 @@ package com.personalfinance.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.personalfinance.dto.response.CategoryTotalResponse;
 import com.personalfinance.dto.response.DashboardResponse;
+import com.personalfinance.model.entity.Category;
+import com.personalfinance.model.entity.Transaction;
 import com.personalfinance.model.entity.User;
+import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.MerchantRuleRepository;
 import com.personalfinance.repository.TransactionRepository;
 import java.math.BigDecimal;
@@ -140,6 +144,53 @@ class DashboardServiceTest {
     assertThat(result.getPercentualEssenciais()).isEqualByComparingTo("50.00");
     assertThat(result.getPercentualNaoEssenciais()).isEqualByComparingTo("30.00");
     assertThat(result.getPercentualInvestimentos()).isEqualByComparingTo("20.00");
+  }
+
+  @Test
+  void monthly_builds_5030_20_breakdown_by_category_biggest_first() {
+    UUID userId = UUID.randomUUID();
+    stubIncome(userId, "5000.00");
+    stubExpenses(userId, "1700.00", "300.00");
+    stubInvestments(userId, "0", "0");
+
+    Category moradia = Category.builder().id(UUID.randomUUID()).name("Moradia").build();
+    Category comida = Category.builder().id(UUID.randomUUID()).name("Comida").build();
+    Category lazer = Category.builder().id(UUID.randomUUID()).name("Lazer").build();
+    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, START, END))
+        .thenReturn(
+            List.of(
+                expense("ESSENTIAL", comida, "500"),
+                expense("ESSENTIAL", moradia, "1000"),
+                expense("ESSENTIAL", null, "200"),
+                expense("NON_ESSENTIAL", lazer, "300")));
+    when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
+    when(transactionRepository.countExpensesInPeriod(userId, START, END)).thenReturn(0L);
+    when(transactionRepository.countPixEnviadosInPeriod(userId, START, END)).thenReturn(0L);
+    when(transactionRepository.countPixRecebidosInPeriod(userId, START, END)).thenReturn(0L);
+
+    DashboardResponse result = service.getMonthly(User.builder().id(userId).build(), 2026, 5);
+
+    List<CategoryTotalResponse> ess = result.getBreakdown().getEssenciais();
+    assertThat(ess)
+        .extracting(CategoryTotalResponse::categoryName)
+        .containsExactly("Moradia", "Comida", "Sem categoria");
+    assertThat(ess.get(0).total()).isEqualByComparingTo("1000");
+    assertThat(ess.get(2).total()).isEqualByComparingTo("200");
+    assertThat(result.getBreakdown().getNaoEssenciais())
+        .singleElement()
+        .satisfies(c -> assertThat(c.categoryName()).isEqualTo("Lazer"));
+  }
+
+  private Transaction expense(String budgetGroup, Category category, String amount) {
+    return Transaction.builder()
+        .id(UUID.randomUUID())
+        .type(TransactionType.EXPENSE)
+        .budgetGroup(budgetGroup)
+        .category(category)
+        .amount(new BigDecimal(amount))
+        .shared(false)
+        .date(LocalDate.of(2026, 5, 10))
+        .build();
   }
 
   @Test
