@@ -42,7 +42,13 @@ public class DashboardService {
         transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
             userId, "NON_ESSENTIAL", start, end);
 
-    BigDecimal totalDespesas = despesasEssenciais.add(despesasNaoEssenciais);
+    // "Resultado do mês" counts ALL non-ignored expenses, not only the ones with a 50/30/20 group —
+    // so a re-counted "Pagamento de fatura" (setup month) shows up even without a group.
+    BigDecimal totalDespesas =
+        transactionRepository.sumAllExpenseByUserIdAndDateBetween(userId, start, end);
+    // Expenses that fall outside Essenciais/Não Essenciais (e.g. the transition bill payment).
+    BigDecimal despesasSemGrupo =
+        totalDespesas.subtract(despesasEssenciais).subtract(despesasNaoEssenciais);
 
     BigDecimal aportes =
         transactionRepository.sumInvestmentByDirectionAndDateBetween(
@@ -54,6 +60,14 @@ public class DashboardService {
     BigDecimal aplicado = aportes.subtract(resgatado);
 
     BigDecimal resultado = entradas.subtract(totalDespesas);
+
+    // Running "cash in account" up to the end of the selected month (income − expenses − net
+    // aportes).
+    BigDecimal saldoAcumulado = transactionRepository.sumAccumulatedBalanceUntil(userId, end);
+    // Bill payments still ignored this month = likely a transition-month "furo" (no matching
+    // fatura).
+    BigDecimal pagamentosFaturaIgnorados =
+        transactionRepository.sumIgnoredBillPaymentsInPeriod(userId, start, end);
 
     // 50/30/20 base: month's registered income, falling back to the configured net salary
     BigDecimal rendaBase =
@@ -80,10 +94,13 @@ public class DashboardService {
         .despesasEssenciais(despesasEssenciais)
         .despesasNaoEssenciais(despesasNaoEssenciais)
         .totalDespesas(totalDespesas)
+        .despesasSemGrupo(despesasSemGrupo)
         .aportes(aportes)
         .resgatado(resgatado)
         .aplicado(aplicado)
         .resultado(resultado)
+        .saldoAcumulado(saldoAcumulado)
+        .pagamentosFaturaIgnorados(pagamentosFaturaIgnorados)
         .rendaBase(rendaBase)
         .percentualEssenciais(percentualEssenciais)
         .percentualNaoEssenciais(percentualNaoEssenciais)

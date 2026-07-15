@@ -10,10 +10,13 @@ Retorna `DashboardResponse`. Cálculos (mês corrente do usuário). **As agrega�
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `entradas`                                           | soma de `type=INCOME` (exclui `ignored`) — "Entradas do mês / Receita disponível"                                    |
 | `despesasEssenciais` / `despesasNaoEssenciais`       | soma de `type=EXPENSE` por `budget_group` (usa `userShare` quando `shared`, exclui `ignored`)                        |
-| `totalDespesas`                                      | essenciais + não essenciais                                                                                          |
+| `totalDespesas`                                      | **todas** as despesas não-ignoradas do mês (`sumAllExpenseByUserIdAndDateBetween`, com `userShare`) — não só as com grupo 50/30/20 |
+| `despesasSemGrupo`                                   | `totalDespesas − essenciais − naoEssenciais` — despesas fora do 50/30/20 (ex.: pagamento de fatura contabilizado no mês de transição). Card "Outras despesas (sem grupo)" só quando > 0 |
 | `aplicado`                                           | **aporte líquido**: `INVESTMENT/CONTRIBUTION` − `INVESTMENT/REDEMPTION` — "Aplicado em investimentos"                |
 | `resgatado`                                          | soma de `INVESTMENT/REDEMPTION` — "Resgatado dos investimentos"                                                      |
-| `resultado`                                          | entradas − totalDespesas — "Resultado do mês" (evita o termo "Saldo")                                                |
+| `resultado`                                          | entradas − totalDespesas — "Resultado do mês" (performance **isolada** do mês; agora conta toda despesa não-ignorada) |
+| `saldoAcumulado`                                     | **Saldo Geral (em conta)**: `sumAccumulatedBalanceUntil` = Σ receitas − Σ despesas − aportes + resgates (não-ignorados, competência `<=` fim do mês). Card ao lado do Resultado; dá o contexto que o mês isolado não mostra |
+| `pagamentosFaturaIgnorados`                          | soma dos "Pagamento de fatura" **ainda ignorados** no mês (`sumIgnoredBillPaymentsInPeriod`). Quando > 0, o Dashboard mostra um aviso — sinal do **furo de transição** (um pagamento ignorado que ainda existe = não foi conciliado a nenhuma fatura) |
 | `rendaBase`                                          | base do 50/30/20: `entradas` do mês; **se 0, cai para `monthlyNetIncome`** do usuário                               |
 | `percentual{Essenciais,NaoEssenciais,Investimentos}` | cada grupo / `rendaBase` (investimentos usa `aplicado` líquido)                                                     |
 | `breakdown`                                          | **drill-down do 50/30/20**: `essenciais` e `naoEssenciais` — categorias que compõem cada bucket de despesa (`List<CategoryTotalResponse>`, maior→menor, com bucket "Sem categoria"). Reusa `findExpensesWithCategoryInPeriod` (uma única busca, compartilhada com `destaques`) agrupando por `budget_group`→categoria. Investimentos não têm categoria; o detalhe do 20% usa `aportes`/`resgatado`. |
@@ -22,6 +25,12 @@ Retorna `DashboardResponse`. Cálculos (mês corrente do usuário). **As agrega�
 > **Meta em R$ + folga/estouro** são calculados no **frontend** a partir de `rendaBase`: meta = 50%/30%/20% × base; folga/estouro = meta − realizado. Essenciais/não-essenciais são **teto** (acima = estouro); investimentos são **piso** (abaixo = "faltam R$ X para os 20%"). Sem novo backend para isso.
 
 > A Home segue os 4 blocos da visão de produto: **quanto entrou / para onde foi / está seguindo o 50-30-20 / quanto sobrou**. `reembolso` deixou de existir (vira `INCOME`).
+
+### Resultado do mês × Saldo Geral, e o furo de transição
+
+O regime de caixa faz o **Resultado do mês** oscilar (salário num mês, fatura no mês do pagamento). O **Saldo Geral (acumulado)** suaviza isso mostrando o saldo corrido em conta até o fim do mês — o negativo de um mês aparece coberto pelo acumulado do anterior.
+
+No **mês de início do uso** há um "furo": o "Pagamento de fatura" do extrato entra `ignored=true` (para não duplicar com os itens da fatura), mas se a fatura daquele período nunca foi importada, aquela saída real não conta em lugar nenhum → Resultado/Saldo inflados. O tratamento é **enxuto** (sem status novo): o Dashboard **avisa** quando há `pagamentosFaturaIgnorados > 0`, e na tela de Transações o usuário **des-ignora** o pagamento ("Contabilizar neste mês"). Como `resultado`/`saldoAcumulado` contam **toda** despesa não-ignorada, des-ignorar já faz a saída entrar — sem precisar de grupo 50/30/20 (ela aparece em "Outras despesas (sem grupo)"). Ver [transacoes.md](./transacoes.md).
 
 Queries em `TransactionRepository` (`sumIncomeByUserIdAndDateBetween`, `sumInvestmentByDirectionAndDateBetween`, `sumExpenseByBudgetGroupAndDateBetween`, `findExpensesWithCategoryInPeriod`, `count*InPeriod`) — todas excluem `ignored`.
 
@@ -47,8 +56,10 @@ Usuário troca o mês na toolbar → `PeriodService.set()` → `effect()` do das
 - Nova métrica → `DashboardService.getMonthly` (+ query no repo se preciso), `DashboardResponse`, `dashboard.component`.
 - Mudar a base do 50/30/20 → lógica de `rendaBase` em `getMonthly`; meta em R$/folga são derivadas no `dashboard.component` (`meta`/`folga`).
 - Drill-down do 50/30/20 → `buildBudgetBreakdown`/`categoriesForGroup` (backend) + `DashboardResponse.Breakdown` + template (`toggle`/`bucketPct`).
+- Saldo Geral → `sumAccumulatedBalanceUntil` (query `CASE` com sinal) + `saldoAcumulado` + card `accumulated`.
+- Furo de transição → `sumIgnoredBillPaymentsInPeriod` + `pagamentosFaturaIgnorados` + aviso; `sumAllExpenseByUserIdAndDateBetween` alimenta `totalDespesas`/`resultado`/`despesasSemGrupo`.
 - Novo destaque → `buildDestaques` + `Destaques` + template.
 
 ## Testes relevantes
 
-`DashboardServiceTest` (entradas/totais/resultado, percentuais, aporte líquido = aporte − resgate, renda zero, precedência/fallback do salário líquido, **breakdown do 50/30/20 por categoria maior→menor com "Sem categoria"**).
+`DashboardServiceTest` (entradas/totais/resultado, percentuais, aporte líquido = aporte − resgate, renda zero, precedência/fallback do salário líquido, breakdown do 50/30/20 por categoria maior→menor com "Sem categoria", **saldoAcumulado + despesasSemGrupo + pagamentosFaturaIgnorados**).

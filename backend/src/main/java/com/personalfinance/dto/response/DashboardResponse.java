@@ -23,6 +23,8 @@ public class DashboardResponse {
   private BigDecimal despesasEssenciais;
   private BigDecimal despesasNaoEssenciais;
   private BigDecimal totalDespesas;
+  private BigDecimal
+      despesasSemGrupo; // despesas não-ignoradas fora do 50/30/20 (ex.: fatura de transição)
 
   private BigDecimal aportes; // aportes brutos do mês (CONTRIBUTION)
   private BigDecimal resgatado; // resgates brutos do mês (REDEMPTION)
@@ -30,6 +32,11 @@ public class DashboardResponse {
 
   // "Quanto sobrou": resultado do mês (entradas − despesas).
   private BigDecimal resultado;
+
+  // Saldo corrido "em conta" acumulado até o fim do mês (receitas − despesas − aportes líquidos).
+  private BigDecimal saldoAcumulado;
+  // Soma dos "Pagamento de fatura" ainda ignorados no mês (sinal do furo de transição).
+  private BigDecimal pagamentosFaturaIgnorados;
 
   private BigDecimal rendaBase;
   private BigDecimal percentualEssenciais;

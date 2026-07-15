@@ -243,6 +243,19 @@
         <div class="metric-value">{{ fmt(data.despesasNaoEssenciais) }}</div>
       </mat-card-content>
     </mat-card>
+    @if (data.despesasSemGrupo > 0) {
+      <mat-card
+        class="metric-card other-expense"
+        matTooltip="Despesas sem grupo 50/30/20 (ex.: pagamento de fatura contabilizado no mês de transição). Contam no Resultado, mas não nas metas"
+        matTooltipPosition="above"
+      >
+        <mat-card-content>
+          <mat-icon>receipt_long</mat-icon>
+          <div class="metric-label">Outras despesas (sem grupo)</div>
+          <div class="metric-value">{{ fmt(data.despesasSemGrupo) }}</div>
+        </mat-card-content>
+      </mat-card>
+    }
     <mat-card
       class="metric-card investment"
       matTooltip="Total bruto aplicado em investimentos no mês (aportes)"
@@ -284,7 +297,7 @@
     <mat-card
       class="metric-card balance"
       [class.negative]="data.resultado < 0"
-      matTooltip="Entradas do mês menos o total de despesas do período"
+      matTooltip="Entradas do mês menos o total de despesas do período (performance isolada do mês)"
       matTooltipPosition="above"
     >
       <mat-card-content>
@@ -293,7 +306,29 @@
         <div class="metric-value">{{ fmt(data.resultado) }}</div>
       </mat-card-content>
     </mat-card>
+    <mat-card
+      class="metric-card accumulated"
+      [class.negative]="data.saldoAcumulado < 0"
+      matTooltip="Saldo corrido em conta acumulado do início até o fim deste mês (receitas − despesas − aportes líquidos). Dá o contexto que o resultado isolado do mês não mostra"
+      matTooltipPosition="above"
+    >
+      <mat-card-content>
+        <mat-icon>savings</mat-icon>
+        <div class="metric-label">Saldo Geral (acumulado)</div>
+        <div class="metric-value">{{ fmt(data.saldoAcumulado) }}</div>
+      </mat-card-content>
+    </mat-card>
   </div>
+  @if (data.pagamentosFaturaIgnorados > 0) {
+    <p class="ignored-bill-notice">
+      <mat-icon>info_outline</mat-icon>
+      <span>
+        {{ fmt(data.pagamentosFaturaIgnorados) }} em pagamento(s) de fatura estão ignorados neste mês (sem fatura
+        importada). Se este é o mês de início do uso, <a routerLink="/transactions">abra as Transações</a> (ative
+        "Mostrar ignoradas") e clique em "Contabilizar" para o resultado refletir a saída real.
+      </span>
+    </p>
+  }
 
   <!-- Destaques -->
   @if (data.destaques) {

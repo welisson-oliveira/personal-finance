@@ -240,6 +240,26 @@
             <button mat-icon-button (click)="openEditDialog(tx)" title="Editar transação">
               <mat-icon>edit_note</mat-icon>
             </button>
+            @if (isBillPayment(tx)) {
+              @if (tx.ignored) {
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="countBillPayment(tx)"
+                  title="Contabilizar como despesa neste mês (mês de transição, sem fatura correspondente)"
+                >
+                  <mat-icon>playlist_add_check</mat-icon>
+                </button>
+              } @else {
+                <button
+                  mat-icon-button
+                  (click)="ignoreBillPayment(tx)"
+                  title="Voltar a ignorar este pagamento de fatura"
+                >
+                  <mat-icon>visibility_off</mat-icon>
+                </button>
+              }
+            }
             @if (tx.source === 'MANUAL') {
               <button mat-icon-button color="warn" (click)="confirmDelete(tx)" title="Excluir">
                 <mat-icon>delete</mat-icon>

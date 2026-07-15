@@ -337,6 +337,21 @@ export class TransactionListComponent implements OnInit {
     else if (tx.type === 'INVESTMENT') this.quickUpdate(tx, { investmentDirection: value });
   }
 
+  /** A "Pagamento de fatura" row (extrato), which is ignored by default to avoid double-counting. */
+  isBillPayment(tx: Transaction): boolean {
+    return (tx.description || '').toLowerCase().startsWith('pagamento de fatura');
+  }
+
+  /** Setup/transition month: count this bill payment as a real expense (un-ignore). */
+  countBillPayment(tx: Transaction): void {
+    this.quickUpdate(tx, { ignored: false });
+  }
+
+  /** Back to the default (ignored) so it doesn't double-count once the fatura is imported. */
+  ignoreBillPayment(tx: Transaction): void {
+    this.quickUpdate(tx, { ignored: true });
+  }
+
   /** Applies a single-field change, normalizing the fields that don't apply to the (new) type. */
   private quickUpdate(
     tx: Transaction,
