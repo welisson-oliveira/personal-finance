@@ -43,6 +43,27 @@ app-category-select {
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+.propagate-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.propagate-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+}
+
+.propagate-group {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 520px) {
   .form-fields {
     min-width: 0;

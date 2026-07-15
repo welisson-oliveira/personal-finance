@@ -38,4 +38,7 @@ public class CreateTransactionRequest {
   private boolean shared;
   private BigDecimal totalAmount;
   private BigDecimal userShare;
+
+  /** Propagation scope when updating: ALL | FUTURE | CURRENT. Null defaults to ALL. */
+  private String propagate;
 }

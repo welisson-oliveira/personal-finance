@@ -47,6 +47,10 @@ class TransactionServiceTest {
   }
 
   private CreateTransactionRequest expenseRequest(UUID categoryId) {
+    return expenseRequest(categoryId, "ALL");
+  }
+
+  private CreateTransactionRequest expenseRequest(UUID categoryId, String propagate) {
     CreateTransactionRequest req = new CreateTransactionRequest();
     req.setDescription("Nagumo");
     req.setAmount(new BigDecimal("120.00"));
@@ -54,6 +58,7 @@ class TransactionServiceTest {
     req.setDate(LocalDate.of(2026, 5, 10));
     req.setCategoryId(categoryId);
     req.setBudgetGroup("ESSENTIAL");
+    req.setPropagate(propagate);
     return req;
   }
 
@@ -102,10 +107,143 @@ class TransactionServiceTest {
 
     service.update(id, expenseRequest(categoryId), user);
 
-    // The sibling transaction inherits the new classification
+    // The sibling transaction (same type) inherits the new classification
     assertThat(other.getCategory()).isEqualTo(category);
     assertThat(other.getBudgetGroup()).isEqualTo("ESSENTIAL");
-    verify(transactionRepository).saveAll(List.of(edited, other));
+    // Only same-type siblings are saved; the source transaction is excluded
+    verify(transactionRepository).saveAll(List.of(other));
+  }
+
+  @Test
+  void update_with_CURRENT_scope_does_not_touch_siblings() {
+    UUID id = UUID.randomUUID();
+    UUID categoryId = UUID.randomUUID();
+    Category category = Category.builder().id(categoryId).name("Alimentação").build();
+
+    Transaction edited =
+        Transaction.builder()
+            .id(id)
+            .user(user)
+            .description("Nagumo")
+            .normalizedDescription("Nagumo")
+            .type(TransactionType.EXPENSE)
+            .build();
+    Transaction other =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .description("Nagumo")
+            .normalizedDescription("Nagumo")
+            .type(TransactionType.EXPENSE)
+            .build();
+
+    when(transactionRepository.findById(id)).thenReturn(Optional.of(edited));
+    when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+    when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    when(merchantRuleRepository.findUserRuleByNormalizedName("Nagumo", userId))
+        .thenReturn(Optional.empty());
+
+    service.update(id, expenseRequest(categoryId, "CURRENT"), user);
+
+    assertThat(other.getCategory()).isNull();
+    verify(transactionRepository, never()).findByUserIdAndEffectiveName(any(), any());
+    verify(transactionRepository, never()).saveAll(any());
+  }
+
+  @Test
+  void update_with_FUTURE_scope_propagates_only_to_later_transactions() {
+    UUID id = UUID.randomUUID();
+    UUID categoryId = UUID.randomUUID();
+    Category category = Category.builder().id(categoryId).name("Alimentação").build();
+
+    // source: competenceDate 2026-05-10 (set via date on expenseRequest)
+    Transaction edited =
+        Transaction.builder()
+            .id(id)
+            .user(user)
+            .description("Nagumo")
+            .normalizedDescription("Nagumo")
+            .type(TransactionType.EXPENSE)
+            .date(LocalDate.of(2026, 5, 10))
+            .build();
+    // past: date 2026-04-01 → should NOT be touched
+    Transaction past =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .description("Nagumo")
+            .normalizedDescription("Nagumo")
+            .type(TransactionType.EXPENSE)
+            .date(LocalDate.of(2026, 4, 1))
+            .build();
+    // future: date 2026-06-01 → should be touched
+    Transaction future =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .description("Nagumo")
+            .normalizedDescription("Nagumo")
+            .type(TransactionType.EXPENSE)
+            .date(LocalDate.of(2026, 6, 1))
+            .build();
+
+    when(transactionRepository.findById(id)).thenReturn(Optional.of(edited));
+    when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+    when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    when(transactionRepository.findByUserIdAndEffectiveName(userId, "Nagumo"))
+        .thenReturn(List.of(edited, past, future));
+    when(merchantRuleRepository.findUserRuleByNormalizedName("Nagumo", userId))
+        .thenReturn(Optional.empty());
+
+    service.update(id, expenseRequest(categoryId, "FUTURE"), user);
+
+    assertThat(past.getCategory()).isNull();
+    assertThat(future.getCategory()).isEqualTo(category);
+    verify(transactionRepository).saveAll(List.of(future));
+  }
+
+  @Test
+  void update_does_not_propagate_type_change_to_different_type_siblings() {
+    UUID id = UUID.randomUUID();
+    UUID categoryId = UUID.randomUUID();
+    Category category = Category.builder().id(categoryId).name("Pedágio").build();
+
+    Transaction edited =
+        Transaction.builder()
+            .id(id)
+            .user(user)
+            .description("NuTag")
+            .normalizedDescription("nutag")
+            .type(TransactionType.INCOME)
+            .build();
+    Transaction charge =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .description("NuTag")
+            .normalizedDescription("nutag")
+            .type(TransactionType.EXPENSE)
+            .build();
+
+    when(transactionRepository.findById(id)).thenReturn(Optional.of(edited));
+    when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+    when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    when(transactionRepository.findByUserIdAndEffectiveName(userId, "nutag"))
+        .thenReturn(List.of(edited, charge));
+
+    CreateTransactionRequest req = new CreateTransactionRequest();
+    req.setDescription("NuTag");
+    req.setAmount(new BigDecimal("8.10"));
+    req.setType("INCOME");
+    req.setDate(LocalDate.of(2026, 5, 14));
+    req.setCategoryId(categoryId);
+    req.setPropagate("ALL");
+    service.update(id, req, user);
+
+    // EXPENSE sibling must NOT be touched — different type
+    assertThat(charge.getType()).isEqualTo(TransactionType.EXPENSE);
+    assertThat(charge.getCategory()).isNull();
+    verify(transactionRepository).saveAll(List.of());
   }
 
   @Test
@@ -225,8 +363,6 @@ class TransactionServiceTest {
 
     when(transactionRepository.findById(id)).thenReturn(Optional.of(edited));
     when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-    when(transactionRepository.findByUserIdAndEffectiveName(userId, "Salário"))
-        .thenReturn(List.of(edited));
 
     service.update(id, req, user);
 

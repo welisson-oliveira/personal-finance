@@ -120,7 +120,8 @@ public class TransactionService {
     // so classifying a field (e.g. budget group) keeps the "needs review" flag and the row
     // stays put under the "pending only" filter.
     Transaction saved = transactionRepository.save(tx);
-    propagateClassification(saved, user);
+    String scope = request.getPropagate() != null ? request.getPropagate() : "CURRENT";
+    propagateClassification(saved, user, scope);
     return toResponse(saved);
   }
 
@@ -141,27 +142,34 @@ public class TransactionService {
    * and learns a merchant rule so future imports are classified the same way. The pending-review
    * flag is left untouched — each row is resolved explicitly via {@link #confirmReview}.
    */
-  private void propagateClassification(Transaction source, User user) {
+  private void propagateClassification(Transaction source, User user, String scope) {
     String effectiveName =
         source.getNormalizedDescription() != null
             ? source.getNormalizedDescription()
             : source.getDescription();
     if (effectiveName == null || effectiveName.isBlank()) return;
 
-    List<Transaction> matching =
-        transactionRepository.findByUserIdAndEffectiveName(user.getId(), effectiveName);
-    for (Transaction t : matching) {
-      if (t.getId().equals(source.getId())) continue;
-      t.setType(source.getType());
-      t.setCategory(source.getCategory());
-      t.setBudgetGroup(source.getBudgetGroup());
-      t.setInvestmentDirection(source.getInvestmentDirection());
-      t.setIgnored(source.isIgnored());
-      // Classification propagates, but the review must still be confirmed per row.
+    if (!"CURRENT".equals(scope)) {
+      LocalDate sourceAnchor = effectiveDate(source);
+      List<Transaction> matching =
+          transactionRepository.findByUserIdAndEffectiveName(user.getId(), effectiveName);
+      List<Transaction> targets =
+          matching.stream()
+              .filter(t -> !t.getId().equals(source.getId()))
+              .filter(t -> t.getType() == source.getType())
+              .filter(t -> !"FUTURE".equals(scope) || !effectiveDate(t).isBefore(sourceAnchor))
+              .toList();
+      for (Transaction t : targets) {
+        t.setCategory(source.getCategory());
+        t.setBudgetGroup(source.getBudgetGroup());
+        t.setInvestmentDirection(source.getInvestmentDirection());
+        t.setIgnored(source.isIgnored());
+        // Classification propagates, but the review must still be confirmed per row.
+      }
+      transactionRepository.saveAll(targets);
     }
-    transactionRepository.saveAll(matching);
 
-    // Learn for future imports (merchant rules classify expenses by budget group + category)
+    // Always learn for future imports (merchant rules classify expenses by budget group + category)
     if (source.getType() == TransactionType.EXPENSE && source.getBudgetGroup() != null) {
       MerchantRule rule =
           merchantRuleRepository
@@ -238,6 +246,10 @@ public class TransactionService {
   private Category resolveCategory(UUID categoryId) {
     if (categoryId == null) return null;
     return categoryRepository.findById(categoryId).orElse(null);
+  }
+
+  private LocalDate effectiveDate(Transaction t) {
+    return t.getCompetenceDate() != null ? t.getCompetenceDate() : t.getDate();
   }
 
   public TransactionResponse toResponse(Transaction tx) {

@@ -1,0 +1,23 @@
+<h2 mat-dialog-title>Aplicar alteração para...</h2>
+
+<mat-dialog-content>
+  <mat-radio-group [(ngModel)]="scope" class="scope-group">
+    <mat-radio-button value="CURRENT" class="scope-option">
+      <span class="scope-label">Somente esta transação</span>
+      <span class="scope-desc">Altera apenas este registro.</span>
+    </mat-radio-button>
+    <mat-radio-button value="FUTURE" class="scope-option">
+      <span class="scope-label">Esta e as futuras</span>
+      <span class="scope-desc">Aplica a partir da data desta transação.</span>
+    </mat-radio-button>
+    <mat-radio-button value="ALL" class="scope-option">
+      <span class="scope-label">Todas</span>
+      <span class="scope-desc">Atualiza todos os registros deste estabelecimento.</span>
+    </mat-radio-button>
+  </mat-radio-group>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="confirm()">Aplicar</button>
+</mat-dialog-actions>
