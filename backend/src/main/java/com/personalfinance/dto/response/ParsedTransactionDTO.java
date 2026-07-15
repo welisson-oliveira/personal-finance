@@ -12,6 +12,7 @@ import lombok.*;
 public class ParsedTransactionDTO {
 
   private LocalDate date;
+  private LocalDate competenceDate; // payment month for faturas; = date otherwise
   private String description;
   private BigDecimal amount;
   private String type;

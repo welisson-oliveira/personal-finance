@@ -45,6 +45,14 @@ class NubankFaturaParserTest {
     NubankFaturaParser.ParseResult r = new NubankFaturaParser().parse(text);
     assertThat(r.periodStart()).isEqualTo(LocalDate.of(2025, 11, 3));
     assertThat(r.periodEnd()).isEqualTo(LocalDate.of(2025, 12, 2));
+    // The due (payment) date is the competence anchor for the fatura's purchases.
+    assertThat(r.dueDate()).isEqualTo(LocalDate.of(2026, 1, 9));
+  }
+
+  @Test
+  void due_date_is_parsed_from_fixture() {
+    assertThat(result.dueDate()).isNotNull();
+    assertThat(result.dueDate()).isAfterOrEqualTo(result.periodEnd());
   }
 
   @Test

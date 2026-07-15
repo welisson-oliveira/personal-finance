@@ -30,6 +30,14 @@
 
     <div class="field-row">
       <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
+        <mat-label>Competência (mês de pagamento)</mat-label>
+        <input matInput type="date" [(ngModel)]="competenceDate" />
+        <mat-hint>Mês em que conta no Dashboard/Relatórios. Padrão: a própria data.</mat-hint>
+      </mat-form-field>
+    </div>
+
+    <div class="field-row">
+      <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
         <mat-label>Tipo</mat-label>
         <mat-select [(ngModel)]="type" (ngModelChange)="onTypeChange()">
           @for (t of types; track t.value) {

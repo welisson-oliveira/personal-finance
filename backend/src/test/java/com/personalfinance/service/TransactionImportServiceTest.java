@@ -118,6 +118,36 @@ class TransactionImportServiceTest {
   }
 
   @Test
+  void confirm_persists_competence_date_falling_back_to_purchase_date() {
+    ParsedTransactionDTO withCompetence =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 5, 20))
+            .competenceDate(LocalDate.of(2026, 6, 7))
+            .description("Compra no crédito")
+            .amount(BigDecimal.valueOf(100))
+            .type("EXPENSE")
+            .included(true)
+            .build();
+    ParsedTransactionDTO withoutCompetence =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 5, 21))
+            .description("Pix")
+            .amount(BigDecimal.valueOf(50))
+            .type("EXPENSE")
+            .included(true)
+            .build();
+
+    service.confirm(session.getId(), List.of(withCompetence, withoutCompetence), null, user);
+
+    ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
+    verify(transactionRepository, times(2)).save(captor.capture());
+    assertThat(captor.getAllValues())
+        .anySatisfy(t -> assertThat(t.getCompetenceDate()).isEqualTo(LocalDate.of(2026, 6, 7)))
+        // no competence on the DTO → falls back to the purchase date
+        .anySatisfy(t -> assertThat(t.getCompetenceDate()).isEqualTo(LocalDate.of(2026, 5, 21)));
+  }
+
+  @Test
   void confirm_persists_investment_direction_and_ignored_flag() {
     ParsedTransactionDTO aporte =
         ParsedTransactionDTO.builder()

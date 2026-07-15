@@ -52,6 +52,8 @@ export class PreviewComponent implements OnInit {
   preview: ImportPreviewResponse | null = null;
   categories: Category[] = [];
   loading = false;
+  /** Competence month applied to the whole fatura (payment month), as an <input type="month"> value. */
+  faturaCompetence = '';
   /** True once the import was confirmed/cancelled — stops autosave from rewriting a cleared preview. */
   private finalized = false;
   /** Debounces free-text (notes) edits so we don't PUT on every keystroke. */
@@ -110,10 +112,25 @@ export class PreviewComponent implements OnInit {
     if (state?.preview) {
       this.preview = state.preview;
       this.reconcileSelection = (state.preview.reconciliation ?? []).map((s) => s.suggestedId);
+      // Seed the batch competence control from the parsed default (= fatura due month).
+      const seed = state.preview.transactions.find((t) => t.competenceDate)?.competenceDate;
+      if (seed) this.faturaCompetence = seed.slice(0, 7); // yyyy-MM for <input type="month">
     }
     this.notesEdited$
       .pipe(debounceTime(600), takeUntilDestroyed())
       .subscribe(() => this.persistEdits());
+  }
+
+  get isFatura(): boolean {
+    return this.preview?.documentType === 'FATURA';
+  }
+
+  /** Applies the chosen competence month to every transaction in the fatura and persists it. */
+  onCompetenceChange(): void {
+    if (!this.preview || !this.faturaCompetence) return;
+    const competence = `${this.faturaCompetence}-01`; // first day of the chosen month
+    this.preview.transactions.forEach((t) => (t.competenceDate = competence));
+    this.persistEdits();
   }
 
   ngOnInit(): void {

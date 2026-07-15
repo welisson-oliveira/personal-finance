@@ -23,8 +23,9 @@ public class DashboardResponse {
   private BigDecimal despesasNaoEssenciais;
   private BigDecimal totalDespesas;
 
+  private BigDecimal aportes; // aportes brutos do mês (CONTRIBUTION)
+  private BigDecimal resgatado; // resgates brutos do mês (REDEMPTION)
   private BigDecimal aplicado; // aporte líquido no mês (aportes − resgates)
-  private BigDecimal resgatado; // resgates brutos do mês
 
   // "Quanto sobrou": resultado do mês (entradas − despesas).
   private BigDecimal resultado;

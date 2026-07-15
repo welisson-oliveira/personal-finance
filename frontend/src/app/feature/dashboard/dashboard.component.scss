@@ -119,6 +119,14 @@
   &.investment .metric-value {
     color: #1b5e20;
   }
+
+  &.aplicado mat-icon,
+  &.aplicado .metric-value {
+    color: #1b5e20;
+  }
+  &.aplicado .metric-value.negative {
+    color: #c62828;
+  }
 }
 
 .budget-card {

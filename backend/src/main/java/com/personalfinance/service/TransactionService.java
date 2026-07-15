@@ -84,6 +84,10 @@ public class TransactionService {
             .investmentDirection(request.getInvestmentDirection())
             .ignored(request.isIgnored())
             .date(request.getDate())
+            .competenceDate(
+                request.getCompetenceDate() != null
+                    ? request.getCompetenceDate()
+                    : request.getDate())
             .notes(request.getNotes())
             .category(category)
             .source("MANUAL")
@@ -105,6 +109,8 @@ public class TransactionService {
     tx.setInvestmentDirection(request.getInvestmentDirection());
     tx.setIgnored(request.isIgnored());
     tx.setDate(request.getDate());
+    tx.setCompetenceDate(
+        request.getCompetenceDate() != null ? request.getCompetenceDate() : request.getDate());
     tx.setNotes(request.getNotes());
     tx.setCategory(category);
     tx.setShared(request.isShared());
@@ -246,6 +252,7 @@ public class TransactionService {
         .ignored(tx.isIgnored())
         .needsReview(tx.isNeedsReview())
         .date(tx.getDate())
+        .competenceDate(tx.getCompetenceDate())
         .notes(tx.getNotes())
         .categoryId(tx.getCategory() != null ? tx.getCategory().getId() : null)
         .categoryName(tx.getCategory() != null ? tx.getCategory().getName() : null)

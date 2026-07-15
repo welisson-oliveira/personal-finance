@@ -17,7 +17,9 @@ public class TransactionSpecifications {
   public static Specification<Transaction> inDateRange(LocalDate start, LocalDate end) {
     return (root, query, cb) -> {
       if (start == null || end == null) return cb.conjunction();
-      return cb.between(root.get("date"), start, end);
+      // Filter the list by competence (payment month for faturas), falling back to the purchase
+      // date. The table still displays the purchase date.
+      return cb.between(cb.coalesce(root.get("competenceDate"), root.get("date")), start, end);
     };
   }
 

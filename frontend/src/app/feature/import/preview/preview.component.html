@@ -70,6 +70,23 @@
     </mat-card>
   }
 
+  @if (isFatura) {
+    <mat-card class="competence-card">
+      <mat-icon>event_available</mat-icon>
+      <div class="competence-text">
+        <strong>Competência (mês de pagamento)</strong>
+        <span
+          >As compras desta fatura contam no Dashboard/Relatórios neste mês (regime de caixa), não no mês da
+          compra.</span
+        >
+      </div>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="competence-field">
+        <mat-label>Mês</mat-label>
+        <input matInput type="month" [(ngModel)]="faturaCompetence" (ngModelChange)="onCompetenceChange()" />
+      </mat-form-field>
+    </mat-card>
+  }
+
   <mat-card class="table-card">
     <div class="table-wrapper">
       <table mat-table [dataSource]="preview.transactions" class="preview-table">

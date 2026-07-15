@@ -38,7 +38,7 @@ public interface TransactionRepository
   @Query(
       "SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t "
           + "WHERE t.user.id = :userId AND t.type = 'INCOME' AND t.ignored = false "
-          + "AND t.date BETWEEN :start AND :end")
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   BigDecimal sumIncomeByUserIdAndDateBetween(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 
@@ -46,7 +46,7 @@ public interface TransactionRepository
       "SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t "
           + "WHERE t.user.id = :userId AND t.type = 'INVESTMENT' AND t.ignored = false "
           + "AND t.investmentDirection = :direction "
-          + "AND t.date BETWEEN :start AND :end")
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   BigDecimal sumInvestmentByDirectionAndDateBetween(
       @Param("userId") UUID userId,
       @Param("direction") String direction,
@@ -58,7 +58,7 @@ public interface TransactionRepository
           + "FROM Transaction t "
           + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
           + "AND t.budgetGroup = :budgetGroup "
-          + "AND t.date BETWEEN :start AND :end")
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   BigDecimal sumExpenseByBudgetGroupAndDateBetween(
       @Param("userId") UUID userId,
       @Param("budgetGroup") String budgetGroup,
@@ -70,7 +70,7 @@ public interface TransactionRepository
           + "FROM Transaction t "
           + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
           + "AND t.category.id = :categoryId "
-          + "AND t.date BETWEEN :start AND :end")
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   BigDecimal sumExpenseByCategoryAndDateBetween(
       @Param("userId") UUID userId,
       @Param("categoryId") UUID categoryId,
@@ -80,14 +80,14 @@ public interface TransactionRepository
   @Query(
       "SELECT t FROM Transaction t LEFT JOIN FETCH t.category "
           + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
-          + "AND t.date BETWEEN :start AND :end")
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   List<Transaction> findExpensesWithCategoryInPeriod(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 
   @Query(
       "SELECT COUNT(t) FROM Transaction t "
           + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
-          + "AND t.date BETWEEN :start AND :end")
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   long countExpensesInPeriod(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 
@@ -95,7 +95,7 @@ public interface TransactionRepository
       "SELECT COUNT(t) FROM Transaction t "
           + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
           + "AND LOWER(t.description) LIKE '%pix%' "
-          + "AND t.date BETWEEN :start AND :end")
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   long countPixEnviadosInPeriod(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 
@@ -103,7 +103,7 @@ public interface TransactionRepository
       "SELECT COUNT(t) FROM Transaction t "
           + "WHERE t.user.id = :userId AND t.type = 'INCOME' AND t.ignored = false "
           + "AND LOWER(t.description) LIKE '%pix%' "
-          + "AND t.date BETWEEN :start AND :end")
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   long countPixRecebidosInPeriod(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 

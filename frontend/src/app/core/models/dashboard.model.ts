@@ -16,8 +16,9 @@ export interface DashboardResponse {
   despesasEssenciais: number;
   despesasNaoEssenciais: number;
   totalDespesas: number;
-  aplicado: number;
+  aportes: number;
   resgatado: number;
+  aplicado: number;
   resultado: number;
   rendaBase: number;
   percentualEssenciais: number;

@@ -58,6 +58,20 @@ class TransactionServiceTest {
   }
 
   @Test
+  void create_defaults_competence_to_purchase_date_when_absent() {
+    UUID categoryId = UUID.randomUUID();
+    when(categoryRepository.findById(categoryId))
+        .thenReturn(Optional.of(Category.builder().id(categoryId).name("Alimentação").build()));
+    when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    service.create(expenseRequest(categoryId), user);
+
+    ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
+    verify(transactionRepository).save(captor.capture());
+    assertThat(captor.getValue().getCompetenceDate()).isEqualTo(LocalDate.of(2026, 5, 10));
+  }
+
+  @Test
   void update_propagates_classification_to_matching_transactions() {
     UUID id = UUID.randomUUID();
     UUID categoryId = UUID.randomUUID();
