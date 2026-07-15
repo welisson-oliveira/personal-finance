@@ -157,8 +157,7 @@ public class TransactionService {
           matching.stream()
               .filter(t -> !t.getId().equals(source.getId()))
               .filter(t -> t.getType() == source.getType())
-              .filter(
-                  t -> !"FUTURE".equals(scope) || !effectiveDate(t).isBefore(sourceAnchor))
+              .filter(t -> !"FUTURE".equals(scope) || !effectiveDate(t).isBefore(sourceAnchor))
               .toList();
       for (Transaction t : targets) {
         t.setCategory(source.getCategory());
