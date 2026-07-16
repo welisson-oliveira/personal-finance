@@ -106,6 +106,12 @@ export class PreviewComponent implements OnInit {
     },
   ];
 
+  types = [
+    { value: 'INCOME', label: 'Receita' },
+    { value: 'EXPENSE', label: 'Despesa' },
+    { value: 'INVESTMENT', label: 'Investimento' },
+  ];
+
   constructor(
     private router: Router,
     private importService: ImportService,
@@ -177,6 +183,30 @@ export class PreviewComponent implements OnInit {
 
   /** Fires immediately when a discrete control (checkbox/select/category) changes. */
   onEdit(): void {
+    this.persistEdits();
+  }
+
+  /**
+   * Inline type change on a parsed row (parity with the transactions list). Normalizes the fields
+   * that don't apply to the new type — INCOME keeps a category but no group/direction; EXPENSE keeps
+   * category + group; INVESTMENT keeps a direction only — then persists.
+   */
+  onTypeChange(tx: ParsedTransaction): void {
+    if (tx.type === 'INCOME') {
+      tx.budgetGroup = undefined;
+      tx.investmentDirection = undefined;
+    } else if (tx.type === 'EXPENSE') {
+      tx.investmentDirection = undefined;
+    } else if (tx.type === 'INVESTMENT') {
+      tx.budgetGroup = undefined;
+      tx.categoryId = undefined;
+    }
+    this.persistEdits();
+  }
+
+  /** Resolves the "needs review" flag right in the preview (parity with the list's confirm-review). */
+  confirmReviewRow(tx: ParsedTransaction): void {
+    tx.needsReview = false;
     this.persistEdits();
   }
 

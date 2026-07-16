@@ -237,6 +237,46 @@ describe('PreviewComponent', () => {
     expect(importServiceSpy.savePreview).toHaveBeenCalled();
   });
 
+  it('onTypeChange to INCOME clears group and direction and persists', () => {
+    const tx = mockPreview.transactions[0];
+    tx.type = 'INCOME';
+    tx.budgetGroup = 'ESSENTIAL';
+    tx.investmentDirection = 'CONTRIBUTION';
+
+    component.onTypeChange(tx);
+
+    expect(tx.budgetGroup).toBeUndefined();
+    expect(tx.investmentDirection).toBeUndefined();
+    expect(importServiceSpy.savePreview).toHaveBeenCalled();
+    tx.type = 'EXPENSE';
+    tx.budgetGroup = 'ESSENTIAL';
+  });
+
+  it('onTypeChange to INVESTMENT clears category and group', () => {
+    const tx = mockPreview.transactions[0];
+    tx.type = 'INVESTMENT';
+    tx.categoryId = 'cat-1';
+    tx.budgetGroup = 'ESSENTIAL';
+
+    component.onTypeChange(tx);
+
+    expect(tx.categoryId).toBeUndefined();
+    expect(tx.budgetGroup).toBeUndefined();
+    tx.type = 'EXPENSE';
+    tx.categoryId = undefined;
+    tx.budgetGroup = 'ESSENTIAL';
+  });
+
+  it('confirmReviewRow clears the review flag and persists', () => {
+    const tx = mockPreview.transactions[0];
+    tx.needsReview = true;
+
+    component.confirmReviewRow(tx);
+
+    expect(tx.needsReview).toBeFalse();
+    expect(importServiceSpy.savePreview).toHaveBeenCalled();
+  });
+
   it('autoClassificationLabel returns Portuguese label for OWN_TRANSFER', () => {
     expect(component.autoClassificationLabel('OWN_TRANSFER')).toBe('Transferência própria');
   });
