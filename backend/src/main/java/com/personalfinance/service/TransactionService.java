@@ -1,5 +1,6 @@
 package com.personalfinance.service;
 
+import com.personalfinance.dto.request.BulkUpdateRequest;
 import com.personalfinance.dto.request.CreateTransactionRequest;
 import com.personalfinance.dto.response.TransactionResponse;
 import com.personalfinance.model.entity.Category;
@@ -236,6 +237,45 @@ public class TransactionService {
     transactionRepository.saveAll(matching);
 
     return toResponse(matching.stream().filter(t -> t.getId().equals(id)).findFirst().orElse(tx));
+  }
+
+  /**
+   * Applies a bulk edit to the selected transactions (the toolbar in the list). Only the non-null
+   * fields of the request are applied, and each is scoped to the types it makes sense for: budget
+   * group to EXPENSE, category to EXPENSE/INCOME, competence month and ignored to all. Rows not
+   * owned by the user are silently skipped. Unlike {@link #update}, this does NOT propagate to
+   * same-name siblings nor learn merchant rules — the user picked exactly these rows.
+   */
+  @Transactional
+  public List<TransactionResponse> bulkUpdate(BulkUpdateRequest request, User user) {
+    List<Transaction> owned =
+        transactionRepository.findAllById(request.getIds()).stream()
+            .filter(t -> t.getUser().getId().equals(user.getId()))
+            .toList();
+
+    LocalDate competence =
+        (request.getCompetenceMonth() != null && !request.getCompetenceMonth().isBlank())
+            ? YearMonth.parse(request.getCompetenceMonth()).atDay(1)
+            : null;
+    Category category =
+        request.getCategoryId() != null ? resolveCategory(request.getCategoryId()) : null;
+
+    for (Transaction tx : owned) {
+      if (request.getBudgetGroup() != null && tx.getType() == TransactionType.EXPENSE) {
+        tx.setBudgetGroup(request.getBudgetGroup());
+      }
+      if (request.getCategoryId() != null
+          && (tx.getType() == TransactionType.EXPENSE || tx.getType() == TransactionType.INCOME)) {
+        tx.setCategory(category);
+      }
+      if (competence != null) {
+        tx.setCompetenceDate(competence);
+      }
+      if (request.getIgnored() != null) {
+        tx.setIgnored(request.getIgnored());
+      }
+    }
+    return transactionRepository.saveAll(owned).stream().map(this::toResponse).toList();
   }
 
   @Transactional

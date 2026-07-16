@@ -306,3 +306,32 @@
 .ignored-row {
   opacity: 0.55;
 }
+
+.selected-row {
+  background: rgba(63, 81, 181, 0.08);
+}
+
+.select-cell {
+  width: 48px;
+  padding-right: 0;
+}
+
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 10px 16px !important;
+  background: rgba(63, 81, 181, 0.06);
+
+  .bulk-count {
+    font-weight: 600;
+    font-size: 0.88rem;
+    margin-right: 4px;
+  }
+
+  .bulk-field {
+    width: 150px;
+  }
+}

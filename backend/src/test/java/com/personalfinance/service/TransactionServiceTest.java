@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.personalfinance.dto.request.BulkUpdateRequest;
 import com.personalfinance.dto.request.CreateTransactionRequest;
 import com.personalfinance.model.entity.Category;
 import com.personalfinance.model.entity.MerchantRule;
@@ -376,6 +377,101 @@ class TransactionServiceTest {
     assertThat(rule.getType()).isEqualTo("INCOME");
     assertThat(rule.isIgnored()).isFalse();
     assertThat(rule.getCreatedBy()).isEqualTo("USER");
+  }
+
+  @Test
+  void bulkUpdate_applies_only_provided_fields_respecting_type_and_ownership() {
+    UUID catId = UUID.randomUUID();
+    Category category = Category.builder().id(catId).name("Alimentação").build();
+
+    Transaction expense =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .type(TransactionType.EXPENSE)
+            .date(LocalDate.of(2026, 5, 10))
+            .build();
+    Transaction income =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .type(TransactionType.INCOME)
+            .date(LocalDate.of(2026, 5, 11))
+            .build();
+    Transaction investment =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .type(TransactionType.INVESTMENT)
+            .date(LocalDate.of(2026, 5, 12))
+            .build();
+    User other = User.builder().id(UUID.randomUUID()).build();
+    Transaction foreign =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .user(other)
+            .type(TransactionType.EXPENSE)
+            .date(LocalDate.of(2026, 5, 13))
+            .build();
+
+    List<UUID> ids = List.of(expense.getId(), income.getId(), investment.getId(), foreign.getId());
+    when(transactionRepository.findAllById(ids))
+        .thenReturn(List.of(expense, income, investment, foreign));
+    when(categoryRepository.findById(catId)).thenReturn(Optional.of(category));
+    when(transactionRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+
+    BulkUpdateRequest req = new BulkUpdateRequest();
+    req.setIds(ids);
+    req.setBudgetGroup("ESSENTIAL");
+    req.setCategoryId(catId);
+    req.setCompetenceMonth("2026-07");
+    req.setIgnored(true);
+
+    var result = service.bulkUpdate(req, user);
+
+    // The other user's row is excluded from the result and left untouched.
+    assertThat(result).hasSize(3);
+    assertThat(foreign.getBudgetGroup()).isNull();
+    assertThat(foreign.getCompetenceDate()).isNull();
+    // Budget group only lands on the expense.
+    assertThat(expense.getBudgetGroup()).isEqualTo("ESSENTIAL");
+    assertThat(income.getBudgetGroup()).isNull();
+    assertThat(investment.getBudgetGroup()).isNull();
+    // Category lands on expense + income, not investment.
+    assertThat(expense.getCategory()).isEqualTo(category);
+    assertThat(income.getCategory()).isEqualTo(category);
+    assertThat(investment.getCategory()).isNull();
+    // Competence + ignored land on every owned row.
+    assertThat(income.getCompetenceDate()).isEqualTo(LocalDate.of(2026, 7, 1));
+    assertThat(investment.getCompetenceDate()).isEqualTo(LocalDate.of(2026, 7, 1));
+    assertThat(expense.isIgnored()).isTrue();
+    assertThat(investment.isIgnored()).isTrue();
+  }
+
+  @Test
+  void bulkUpdate_leaves_null_fields_untouched() {
+    Transaction expense =
+        Transaction.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .type(TransactionType.EXPENSE)
+            .budgetGroup("ESSENTIAL")
+            .date(LocalDate.of(2026, 5, 10))
+            .competenceDate(LocalDate.of(2026, 5, 10))
+            .build();
+    List<UUID> ids = List.of(expense.getId());
+    when(transactionRepository.findAllById(ids)).thenReturn(List.of(expense));
+    when(transactionRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+
+    BulkUpdateRequest req = new BulkUpdateRequest();
+    req.setIds(ids);
+    req.setIgnored(true); // only un/ignore
+
+    service.bulkUpdate(req, user);
+
+    assertThat(expense.isIgnored()).isTrue();
+    assertThat(expense.getBudgetGroup()).isEqualTo("ESSENTIAL"); // untouched
+    assertThat(expense.getCompetenceDate()).isEqualTo(LocalDate.of(2026, 5, 10)); // untouched
   }
 
   @Test

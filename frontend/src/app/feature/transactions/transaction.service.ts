@@ -46,6 +46,20 @@ export class TransactionService {
     return this.http.patch<Transaction>(`/api/transactions/${id}/review`, {});
   }
 
+  /**
+   * Bulk edit of the selected rows. Only the provided fields are applied (each is an independent
+   * toolbar action); the backend scopes budgetGroup to expenses and category to expense/income.
+   */
+  bulkUpdate(payload: {
+    ids: string[];
+    budgetGroup?: string;
+    categoryId?: string;
+    competenceMonth?: string;
+    ignored?: boolean;
+  }): Observable<Transaction[]> {
+    return this.http.patch<Transaction[]>('/api/transactions/bulk', payload);
+  }
+
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`/api/transactions/${id}`);
   }
