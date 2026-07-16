@@ -49,6 +49,24 @@ type QuickPatch = Partial<{
   ignored: boolean;
 }>;
 
+/** View preferences kept across sessions (localStorage). */
+interface TxPrefs {
+  pageSize?: number;
+  sortActive?: string;
+  sortDirection?: 'asc' | 'desc';
+}
+
+/** Filters + page kept only until the tab closes (sessionStorage) — survive a refresh, not forever. */
+interface TxFilters {
+  filterType?: string;
+  filterCategoryId?: string;
+  filterSearch?: string;
+  filterBudgetGroup?: string;
+  pendingOnly?: boolean;
+  showIgnored?: boolean;
+  pageIndex?: number;
+}
+
 @Component({
   selector: 'app-transaction-list',
   standalone: true,
@@ -93,6 +111,12 @@ export class TransactionListComponent implements OnInit {
 
   sortActive = 'date';
   sortDirection: 'asc' | 'desc' = 'desc';
+
+  /** Guards the first effect run so a restored page isn't reset before the initial load. */
+  private initialized = false;
+  // Persistence keys: prefs (definitive) vs filters+page (only until the tab closes).
+  private readonly PREFS_KEY = 'tx_view_prefs';
+  private readonly FILTERS_KEY = 'tx_view_filters';
 
   private searchInput$ = new Subject<void>();
 
@@ -151,7 +175,9 @@ export class TransactionListComponent implements OnInit {
   ) {
     effect(() => {
       this.period.period();
-      this.pageIndex = 0;
+      // Month change → back to the first page. The very first run keeps the restored page.
+      if (this.initialized) this.pageIndex = 0;
+      this.initialized = true;
       this.load();
     });
     this.searchInput$.pipe(debounceTime(350), takeUntilDestroyed()).subscribe(() => {
@@ -160,18 +186,22 @@ export class TransactionListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Restore first so a refresh keeps filters/sort/page; query params (deep-links) win over it.
+    this.restoreState();
     const params = this.route.snapshot.queryParams;
     if (params['month']) {
       this.period.setFromMonthString(params['month']);
     }
-    // Deep-link from the Reports "onde vai seu dinheiro" chart: pre-filter by category.
+    // Deep-link from the Reports "onde vai seu dinheiro" chart: focus this category, fresh page.
     if (params['categoryId']) {
       this.filterCategoryId = params['categoryId'];
+      this.pageIndex = 0;
     }
     this.categoryService.getAll().subscribe((cats) => (this.categories = cats));
   }
 
   load(): void {
+    this.saveState();
     this.loading = true;
     this.txService
       .findAll({
@@ -228,6 +258,62 @@ export class TransactionListComponent implements OnInit {
     this.pendingOnly = false;
     this.showIgnored = false;
     this.applyFilters();
+  }
+
+  /**
+   * Restores the saved view: page size + sort are kept across sessions (localStorage); the active
+   * filters and current page only survive a refresh (sessionStorage), so they don't stick forever.
+   */
+  private restoreState(): void {
+    const prefs = this.readJson<TxPrefs>(localStorage, this.PREFS_KEY);
+    if (prefs) {
+      this.pageSize = prefs.pageSize ?? this.pageSize;
+      this.sortActive = prefs.sortActive ?? this.sortActive;
+      this.sortDirection = prefs.sortDirection ?? this.sortDirection;
+    }
+    const f = this.readJson<TxFilters>(sessionStorage, this.FILTERS_KEY);
+    if (f) {
+      this.filterType = f.filterType ?? '';
+      this.filterCategoryId = f.filterCategoryId ?? '';
+      this.filterSearch = f.filterSearch ?? '';
+      this.filterBudgetGroup = f.filterBudgetGroup ?? '';
+      this.pendingOnly = f.pendingOnly ?? false;
+      this.showIgnored = f.showIgnored ?? false;
+      this.pageIndex = f.pageIndex ?? 0;
+    }
+  }
+
+  /** Persists the current view on every load. Best-effort — storage may be unavailable. */
+  private saveState(): void {
+    try {
+      const prefs: TxPrefs = {
+        pageSize: this.pageSize,
+        sortActive: this.sortActive,
+        sortDirection: this.sortDirection,
+      };
+      localStorage.setItem(this.PREFS_KEY, JSON.stringify(prefs));
+      const filters: TxFilters = {
+        filterType: this.filterType,
+        filterCategoryId: this.filterCategoryId,
+        filterSearch: this.filterSearch,
+        filterBudgetGroup: this.filterBudgetGroup,
+        pendingOnly: this.pendingOnly,
+        showIgnored: this.showIgnored,
+        pageIndex: this.pageIndex,
+      };
+      sessionStorage.setItem(this.FILTERS_KEY, JSON.stringify(filters));
+    } catch {
+      // storage full/unavailable (e.g. private mode) — persistence is optional
+    }
+  }
+
+  private readJson<T>(store: Storage, key: string): T | null {
+    try {
+      const raw = store.getItem(key);
+      return raw ? (JSON.parse(raw) as T) : null;
+    } catch {
+      return null;
+    }
   }
 
   /** Replaces a single row in place (new array ref so mat-table re-renders) — no full reload. */
