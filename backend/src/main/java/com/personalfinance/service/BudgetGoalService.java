@@ -89,9 +89,13 @@ public class BudgetGoalService {
   private BudgetGoalResponse toResponse(
       BudgetGoal goal, UUID userId, LocalDate start, LocalDate end) {
     Category category = goal.getCategory();
+    // A goal on a top-level category also counts spending in its subcategories (roll-up).
+    List<UUID> categoryIds = new java.util.ArrayList<>();
+    categoryIds.add(category.getId());
+    categoryRepository.findByParentId(category.getId()).forEach(c -> categoryIds.add(c.getId()));
     BigDecimal spent =
-        transactionRepository.sumExpenseByCategoryAndDateBetween(
-            userId, category.getId(), start, end);
+        transactionRepository.sumExpenseByCategoryIdsAndDateBetween(
+            userId, categoryIds, start, end);
     BigDecimal amount = goal.getAmount();
     BigDecimal remaining = amount.subtract(spent);
     BigDecimal percentage =

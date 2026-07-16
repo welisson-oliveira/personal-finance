@@ -1,17 +1,23 @@
 # Categorias
 
-CRUD de categorias do usuário (as globais do sistema são visíveis mas somente leitura), com preview visual na criação e um seletor com busca reutilizável.
+Categorias **hierárquicas (categoria → subcategoria) e 100% do usuário** (Opção 2): todo mundo começa com uma cópia editável da árvore inicial, e pode renomear/excluir/criar à vontade. Nada é global travado. Preview visual na criação e um seletor com busca reutilizável (agrupado por pai).
 
 ## Backend
 
 ### `CategoryService` / `CategoryController` (`/api/categories`)
 
-- `GET /` — lista categorias globais + do usuário (`findByUserIdOrUserIsNull`).
-- `POST /` — cria (`CreateCategoryRequest {name, icon, color}`), 201.
-- `PUT /{id}` — atualiza categoria do usuário.
-- `DELETE /{id}` — exclui categoria do usuário (204).
+- `GET /` — lista **só as categorias do usuário** (`findByUserId`, com `LEFT JOIN FETCH` do pai). As globais (semente) existem só internamente como alvo das regras globais de classificação e **não** aparecem aqui.
+- `POST /` — cria (`CreateCategoryRequest {name, icon, color, parentId?}`), 201. `parentId` opcional torna a categoria uma **subcategoria**.
+- `PUT /{id}` — atualiza categoria do usuário (inclui `parentId`).
+- `DELETE /{id}` — exclui categoria do usuário (204); subcategorias caem junto (`ON DELETE CASCADE`).
 
-**`Category`** (`categories`): name, icon, color; `@ManyToOne User` nullable — **`user=null` = global/seed**. Categorias globais não podem ser editadas/excluídas. `CategoryResponse` expõe `global` (= `user==null`). Seeds em `V2` (13 categorias). `user_id` foi adicionado em `V4`.
+**`Category`** (`categories`): name, icon, color; `@ManyToOne User`; **`@ManyToOne parent` (auto-referência, `parent_id` — V16)**: `null` = principal, não-nulo = subcategoria. `CategoryResponse` expõe `global` (= `user==null`), `parentId`, `parentName`. `CategoryService` valida o pai (posse do usuário, sem ciclo, **só um nível** — subcategoria não tem subcategoria).
+
+**Provisionamento (Opção 2).** A árvore inicial vive em `DefaultCategories.TREE` (Java, não é seed SQL). `CategoryProvisioningService.provisionDefaults(user)` copia a árvore como categorias **do usuário** (idempotente — no-op se já tiver categorias); chamado em `UserService.register`. `CategoryBootstrapRunner` (`ApplicationRunner`) provisiona os usuários **já existentes** no startup e **remapeia** as transações que apontavam pras categorias globais antigas (V2) pras novas por nome (`DefaultCategories.legacyTopLevel`).
+
+**Inteligência com categorias dinâmicas.** A classificação nunca casa por nome de categoria hardcoded — ela carrega só um FK. Na importação, quando uma **regra global** classifica, `TransactionImportService.resolveUserCategoryId` traduz a categoria global pra categoria **do usuário** de mesmo nome (ou null se ele apagou); regras aprendidas do usuário já apontam pra categoria dele. Aprender uma correção grava a categoria escolhida (principal ou subcategoria) — funciona em qualquer categoria criada na hora. Ver [classificacao-e-aprendizado.md](./classificacao-e-aprendizado.md).
+
+**Metas + roll-up.** Uma meta numa categoria **principal** soma também os gastos das suas subcategorias (`TransactionRepository.sumExpenseByCategoryIdsAndDateBetween` com `[pai] + filhos`). Ver [metas-de-orcamento.md](./metas-de-orcamento.md).
 
 ### Merchant rules (leitura)
 
@@ -19,16 +25,17 @@ CRUD de categorias do usuário (as globais do sistema são visíveis mas somente
 
 ## Frontend
 
-- **`feature/categories/category-list`** (`app-category-list`) — lista; `openCreate()`/`openEdit()` abrem o form dialog; `confirmDelete()` via `ConfirmDialogComponent`. **Categorias globais são read-only** — `openEdit`/`confirmDelete` retornam cedo quando `cat.global`. O ícone é exibido na cor da categoria.
-- **`feature/categories/category-form-dialog`** (`app-category-form-dialog`) — **template e estilos inline** (sem `.html`/`.scss`). Form reativo (name obrigatório, icon, color). Tem **preview ao vivo** do chip, grade de **ícones sugeridos** (`suggestedIcons`) e **paleta de cores** (`palette`, 16 cores, toggle). Usa `CategoryService`.
-- **`shared/category-select`** (`app-category-select`) — reutilizável: `mat-select` de categoria com **busca no painel** e ícone/cor nas opções; two-way `[(value)]` (`''` = "Nenhuma"). No rodapé do painel há **"➕ Nova categoria…"**: abre o `category-form-dialog`, persiste via `CategoryService.create` e **já seleciona** a criada, emitindo `@Output() categoryCreated` **antes** do `valueChange` para o pai sincronizar sua lista (`(categoryCreated)="categories = categories.concat($event)"`). Usado no **editar transação**, **metas** e no **preview de importação** (seletor de categoria por linha). A **lista de transações** oferece o mesmo "➕ Nova categoria…" no menu de categoria da célula (`createCategoryFor`).
+- **`feature/categories/category-list`** (`app-category-list`) — **árvore** (`tree` getter agrupa cada principal com suas subcategorias, ordenadas). Cada principal tem um **"+"** (`addSubcategory`, abre o form já com o pai pré-selecionado) + editar/excluir; subcategorias aparecem indentadas (`.sub-item`) com editar/excluir. Como tudo agora é do usuário, não há mais item read-only.
+- **`feature/categories/category-form-dialog`** (`app-category-form-dialog`) — **template e estilos inline**. Form reativo (name obrigatório, icon, color, **`parentId`**). Select **"Categoria pai (opcional)"** listando as principais (escondido quando se edita uma categoria que **já tem** subcategorias — não pode virar filha). Preview ao vivo, ícones sugeridos e paleta. Injeta `CategoryService` (carrega as principais).
+- **`shared/category-select`** (`app-category-select`) — reutilizável: `mat-select` com **busca no painel**; as opções são **ordenadas como árvore** (`ordered` getter: cada principal seguida das suas subcategorias, indentadas). Two-way `[(value)]` (`''` = "Nenhuma"). "➕ Nova categoria…" no rodapé cria e seleciona (emite `categoryCreated` antes do `valueChange`). Usado no **editar transação**, **metas** e no **preview de importação**. A **lista de transações** oferece o mesmo no menu de categoria da célula (`createCategoryFor`).
 
 ## Onde mexer
 
 - Novo atributo de categoria → `Category` (+ migration), `CreateCategoryRequest`, `CategoryResponse`, `CategoryService`, `category-form-dialog`.
-- Mudar seletor de categoria (aparência/busca) → `shared/category-select` (afeta editar transação e resolver revisão de uma vez).
-- Nova categoria global → seed em `V2` (ou nova migration).
+- Mudar a árvore inicial → `DefaultCategories.TREE` (e `legacyTopLevel` se renomear/mover principais).
+- Mudar seletor de categoria (aparência/busca/árvore) → `shared/category-select`.
+- Tradução de categoria global→usuário na importação → `TransactionImportService.resolveUserCategoryId`.
 
 ## Testes relevantes
 
-Sem testes unitários dedicados de categoria no momento; cobertura indireta via os testes de classificação/dashboard que dependem das categorias seedadas.
+`CategoryProvisioningServiceTest` (provisiona a árvore inteira como categorias do usuário; no-op quando já tem categorias), `UserServiceTest` (register provisiona), `BudgetGoalServiceTest` (roll-up: meta no pai soma as subcategorias). Cobertura indireta pelos testes de classificação/importação.
