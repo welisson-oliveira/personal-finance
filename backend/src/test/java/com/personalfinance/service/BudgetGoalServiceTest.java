@@ -20,6 +20,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -54,8 +55,8 @@ class BudgetGoalServiceTest {
             .amount(new BigDecimal("800.00"))
             .build();
     when(budgetGoalRepository.findByUserId(userId)).thenReturn(List.of(goal));
-    when(transactionRepository.sumExpenseByCategoryAndDateBetween(
-            eq(userId), eq(category.getId()), any(LocalDate.class), any(LocalDate.class)))
+    when(transactionRepository.sumExpenseByCategoryIdsAndDateBetween(
+            eq(userId), anyList(), any(LocalDate.class), any(LocalDate.class)))
         .thenReturn(new BigDecimal("600.00"));
 
     List<BudgetGoalResponse> result = service.findAll(userId, 2026, 5);
@@ -77,13 +78,38 @@ class BudgetGoalServiceTest {
             .amount(new BigDecimal("100.00"))
             .build();
     when(budgetGoalRepository.findByUserId(userId)).thenReturn(List.of(goal));
-    when(transactionRepository.sumExpenseByCategoryAndDateBetween(any(), any(), any(), any()))
+    when(transactionRepository.sumExpenseByCategoryIdsAndDateBetween(
+            any(), anyList(), any(), any()))
         .thenReturn(new BigDecimal("150.00"));
 
     BudgetGoalResponse r = service.findAll(userId, 2026, 5).get(0);
 
     assertThat(r.remaining()).isEqualByComparingTo("-50.00");
     assertThat(r.percentage()).isEqualByComparingTo("150.00");
+  }
+
+  @Test
+  void findAll_rolls_up_subcategories_into_the_parent_goal() {
+    Category mercado = Category.builder().id(UUID.randomUUID()).name("Mercado").build();
+    BudgetGoal goal =
+        BudgetGoal.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .category(category) // Alimentação (parent)
+            .amount(new BigDecimal("1000.00"))
+            .build();
+    when(budgetGoalRepository.findByUserId(userId)).thenReturn(List.of(goal));
+    when(categoryRepository.findByParentId(category.getId())).thenReturn(List.of(mercado));
+    ArgumentCaptor<List<UUID>> idsCaptor = ArgumentCaptor.forClass(List.class);
+    when(transactionRepository.sumExpenseByCategoryIdsAndDateBetween(
+            eq(userId), idsCaptor.capture(), any(LocalDate.class), any(LocalDate.class)))
+        .thenReturn(new BigDecimal("400.00"));
+
+    BudgetGoalResponse r = service.findAll(userId, 2026, 5).get(0);
+
+    // The parent and its subcategory are both summed.
+    assertThat(idsCaptor.getValue()).containsExactlyInAnyOrder(category.getId(), mercado.getId());
+    assertThat(r.spent()).isEqualByComparingTo("400.00");
   }
 
   @Test

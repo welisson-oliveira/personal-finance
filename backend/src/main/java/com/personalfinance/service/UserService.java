@@ -18,6 +18,7 @@ public class UserService implements UserDetailsService {
 
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
+  private final CategoryProvisioningService categoryProvisioningService;
 
   @Override
   public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -36,7 +37,10 @@ public class UserService implements UserDetailsService {
             .email(request.email())
             .password(passwordEncoder.encode(request.password()))
             .build();
-    return userRepository.save(user);
+    User saved = userRepository.save(user);
+    // Give the new user their own editable copy of the starter category tree.
+    categoryProvisioningService.provisionDefaults(saved);
+    return saved;
   }
 
   public User updateProfile(UUID userId, UpdateProfileRequest request) {

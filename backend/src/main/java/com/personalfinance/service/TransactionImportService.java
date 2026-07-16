@@ -82,7 +82,7 @@ public class TransactionImportService {
       var override =
           classificationService.findUserOverride(tx.getNormalizedDescription(), user.getId());
       if (override.isPresent()) {
-        applyUserOverride(tx, override.get());
+        applyUserOverride(tx, override.get(), user.getId());
         continue;
       }
 
@@ -99,8 +99,11 @@ public class TransactionImportService {
       ClassificationResult cr =
           classificationService.classify(tx.getNormalizedDescription(), user.getId());
       if (cr.isKnown()) {
-        tx.setCategoryId(cr.getCategoryId());
-        tx.setCategoryName(cr.getCategoryName());
+        // A global (seed) rule points at a global category; map it to the user's own category with
+        // the same name so the transaction never references a category the user can't see/edit.
+        UUID catId = resolveUserCategoryId(user.getId(), cr.getCategoryId(), cr.getCategoryName());
+        tx.setCategoryId(catId);
+        tx.setCategoryName(catId != null ? cr.getCategoryName() : null);
         tx.setBudgetGroup(cr.getExpenseType());
         tx.setNeedsReview(!cr.isAutoClassifiable());
       } else {
@@ -134,11 +137,31 @@ public class TransactionImportService {
   }
 
   /**
+   * Resolves the category id to use for the user. If the classification already points at one of
+   * the user's own categories (a learned user rule), it is kept; otherwise (a global seed rule) we
+   * map by name to the user's own top-level category with the same name — or null if they deleted
+   * it.
+   */
+  private UUID resolveUserCategoryId(UUID userId, UUID categoryId, String categoryName) {
+    if (categoryId != null) {
+      var byId = categoryRepository.findById(categoryId).orElse(null);
+      if (byId != null && byId.getUser() != null && byId.getUser().getId().equals(userId)) {
+        return categoryId;
+      }
+    }
+    if (categoryName == null) return null;
+    return categoryRepository
+        .findFirstByUserIdAndName(userId, categoryName)
+        .map(com.personalfinance.model.entity.Category::getId)
+        .orElse(null);
+  }
+
+  /**
    * Applies a user's learned override to a parsed transaction, taking precedence over the parser
    * and the auto-classification heuristics. Clears the review flag (it is an explicit user
    * decision).
    */
-  private void applyUserOverride(ParsedTransactionDTO tx, ClassificationResult cr) {
+  private void applyUserOverride(ParsedTransactionDTO tx, ClassificationResult cr, UUID userId) {
     if (cr.getType() != null) {
       tx.setType(cr.getType());
     }
@@ -147,8 +170,9 @@ public class TransactionImportService {
     tx.setNeedsReview(false);
     tx.setAutoClassification(null);
     if ("EXPENSE".equals(tx.getType())) {
-      tx.setCategoryId(cr.getCategoryId());
-      tx.setCategoryName(cr.getCategoryName());
+      UUID catId = resolveUserCategoryId(userId, cr.getCategoryId(), cr.getCategoryName());
+      tx.setCategoryId(catId);
+      tx.setCategoryName(catId != null ? cr.getCategoryName() : null);
       tx.setBudgetGroup(cr.getExpenseType());
       tx.setInvestmentDirection(null);
     } else if ("INVESTMENT".equals(tx.getType())) {

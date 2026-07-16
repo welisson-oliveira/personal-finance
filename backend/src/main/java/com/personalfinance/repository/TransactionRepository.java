@@ -27,6 +27,13 @@ public interface TransactionRepository
 
   List<Transaction> findByImportSessionIdAndUserId(UUID importSessionId, UUID userId);
 
+  /**
+   * User's transactions still pointing at a global (seed) category — used by the one-time remap.
+   */
+  @Query(
+      "SELECT t FROM Transaction t JOIN t.category c WHERE t.user.id = :userId AND c.user IS NULL")
+  List<Transaction> findByUserIdWithGlobalCategory(@Param("userId") UUID userId);
+
   void deleteByImportSessionId(UUID importSessionId);
 
   @Query(
@@ -74,6 +81,19 @@ public interface TransactionRepository
   BigDecimal sumExpenseByCategoryAndDateBetween(
       @Param("userId") UUID userId,
       @Param("categoryId") UUID categoryId,
+      @Param("start") LocalDate start,
+      @Param("end") LocalDate end);
+
+  /** Expenses across a set of categories (a budget goal on a parent sums its subcategories too). */
+  @Query(
+      "SELECT COALESCE(SUM(CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END), 0) "
+          + "FROM Transaction t "
+          + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
+          + "AND t.category.id IN :categoryIds "
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
+  BigDecimal sumExpenseByCategoryIdsAndDateBetween(
+      @Param("userId") UUID userId,
+      @Param("categoryIds") List<UUID> categoryIds,
       @Param("start") LocalDate start,
       @Param("end") LocalDate end);
 
