@@ -53,9 +53,18 @@ Mês selecionado na toolbar → lista recarrega → usuário edita categoria/gru
 - Rateio: quando `shared`, o dashboard soma `userShare` (ver [dashboard.md](./dashboard.md)).
 - **Pagamento de fatura / mês de transição:** o "Pagamento de fatura" do extrato entra `ignored=true` (não duplica com os itens da fatura). No **mês de início do uso** (sem a fatura daquele período importada) isso infla o Resultado/Saldo. Nas linhas de "Pagamento de fatura" há ações inline: **"Contabilizar neste mês"** (des-ignora via `quickUpdate({ignored:false})`) e **"Voltar a ignorar"**. Como o Dashboard passou a contar toda despesa não-ignorada, des-ignorar já reflete no Resultado (em "Outras despesas (sem grupo)") e no Saldo Geral. O Dashboard avisa quando há pagamentos ignorados no mês (`pagamentosFaturaIgnorados`).
 
+## Estado da tela (persistência)
+
+`transaction-list` lembra a visão em **dois níveis** (`restoreState`/`saveState`, salvos a cada `load()`):
+
+- **Definitivo (`localStorage`, `tx_view_prefs`):** `pageSize` + ordenação (`sortActive`/`sortDirection`) — preferências de visualização, valem entre sessões.
+- **Só até fechar a aba (`sessionStorage`, `tx_view_filters`):** filtros (texto, categoria, tipo, grupo, só-pendentes, mostrar-ignoradas) + `pageIndex` — sobrevivem a um **F5**, mas não voltam numa nova sessão.
+
+O mês vem do `PeriodService` (global, já persistido). Deep-links por query param (`?categoryId=`/`?month=` — ex.: vindo do gráfico dos Relatórios) **sobrepõem** o estado restaurado e abrem numa página nova. O `effect` do mês reseta a página a cada troca, mas a **primeira** carga preserva a página restaurada (flag `initialized`). Best-effort: se o storage estiver indisponível (aba anônima/quota), a tela funciona normalmente sem persistir.
+
 ## Onde mexer
 
-- Novo filtro na lista → `TransactionSpecifications` + `findAll` + filtros do `transaction-list`.
+- Novo filtro na lista → `TransactionSpecifications` + `findAll` + filtros do `transaction-list` (adicionar ao `TxFilters`/`saveState`/`restoreState` se quiser que persista).
 - Novo campo editável → `CreateTransactionRequest`/`UpdateTransactionRequest`, `TransactionService.update`, `transaction-edit-dialog`.
 - Mudar regra de propagação → `TransactionService.propagateClassification`.
 
