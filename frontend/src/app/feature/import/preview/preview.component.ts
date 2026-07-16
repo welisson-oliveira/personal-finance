@@ -18,11 +18,14 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ImportPreviewResponse, ParsedTransaction } from '../../../core/models/import.model';
 import { Category } from '../../../core/models/category.model';
+import { Transaction, UpdateTransactionRequest } from '../../../core/models/transaction.model';
 import { ImportService } from '../import.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { CategorySelectComponent } from '../../../shared/category-select/category-select.component';
+import { TransactionEditDialogComponent } from '../../transactions/transaction-edit-dialog/transaction-edit-dialog.component';
 
 @Component({
   selector: 'app-preview',
@@ -43,6 +46,7 @@ import { CategorySelectComponent } from '../../../shared/category-select/categor
     MatBadgeModule,
     MatCheckboxModule,
     MatTooltipModule,
+    MatDialogModule,
     CategorySelectComponent,
   ],
   templateUrl: './preview.component.html',
@@ -71,6 +75,7 @@ export class PreviewComponent implements OnInit {
     'direction',
     'category',
     'notes',
+    'actions',
   ];
 
   typeLabels: Record<string, string> = {
@@ -105,7 +110,8 @@ export class PreviewComponent implements OnInit {
     private router: Router,
     private importService: ImportService,
     private categoryService: CategoryService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
   ) {
     const nav = this.router.getCurrentNavigation();
     const state = nav?.extras?.state as { preview: ImportPreviewResponse } | undefined;
@@ -172,6 +178,59 @@ export class PreviewComponent implements OnInit {
   /** Fires immediately when a discrete control (checkbox/select/category) changes. */
   onEdit(): void {
     this.persistEdits();
+  }
+
+  /**
+   * Opens the full transaction editor on a parsed row (fields the inline controls don't cover:
+   * type, amount, date, description, per-row competence). Reuses {@link TransactionEditDialogComponent}
+   * with the propagate section hidden — nothing is persisted yet, so there are no siblings to
+   * propagate to. The returned patch is written back onto the in-memory row and autosaved.
+   */
+  openRowEditor(tx: ParsedTransaction): void {
+    const asTransaction: Transaction = {
+      id: '',
+      description: tx.description,
+      normalizedDescription: tx.normalizedDescription,
+      amount: tx.amount,
+      type: tx.type,
+      budgetGroup: tx.budgetGroup,
+      investmentDirection: tx.investmentDirection,
+      ignored: tx.ignored ?? false,
+      needsReview: tx.needsReview,
+      date: tx.date,
+      competenceDate: tx.competenceDate,
+      notes: tx.notes,
+      categoryId: tx.categoryId,
+      categoryName: tx.categoryName,
+      source: this.preview?.documentType ?? '',
+      cardHolder: tx.cardHolder,
+      installmentInfo: tx.installmentInfo,
+      shared: false,
+    };
+    this.dialog
+      .open(TransactionEditDialogComponent, {
+        data: {
+          tx: asTransaction,
+          categories: this.categories,
+          hidePropagate: true,
+          title: 'Editar linha da importação',
+        },
+        width: '520px',
+      })
+      .afterClosed()
+      .subscribe((req: UpdateTransactionRequest | undefined) => {
+        if (!req) return;
+        tx.description = req.description;
+        tx.amount = req.amount;
+        tx.type = req.type;
+        tx.date = req.date;
+        tx.competenceDate = req.competenceDate;
+        tx.categoryId = req.categoryId;
+        tx.budgetGroup = req.budgetGroup;
+        tx.investmentDirection = req.investmentDirection;
+        tx.ignored = req.ignored;
+        this.persistEdits();
+      });
   }
 
   /** Fires on notes typing; debounced so we don't PUT on every keystroke. */

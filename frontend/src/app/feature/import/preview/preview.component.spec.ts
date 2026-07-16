@@ -201,6 +201,42 @@ describe('PreviewComponent', () => {
     expect(importServiceSpy.savePreview).not.toHaveBeenCalled();
   });
 
+  it('openRowEditor writes the dialog result back onto the parsed row and autosaves', () => {
+    component.preview = {
+      ...mockPreview,
+      transactions: mockPreview.transactions.map((t) => ({ ...t })),
+    };
+    const tx = component.preview.transactions[0];
+    const req = {
+      description: 'Mercado editado',
+      amount: 123.45,
+      type: 'INVESTMENT',
+      date: '2026-05-09',
+      competenceDate: '2026-06-01',
+      categoryId: undefined,
+      budgetGroup: undefined,
+      investmentDirection: 'CONTRIBUTION',
+      ignored: true,
+      shared: false,
+    };
+    const openSpy = spyOn(
+      (component as unknown as { dialog: { open: () => unknown } }).dialog,
+      'open'
+    ).and.returnValue({ afterClosed: () => of(req) });
+
+    component.openRowEditor(tx);
+
+    expect(openSpy).toHaveBeenCalled();
+    expect(tx.description).toBe('Mercado editado');
+    expect(tx.amount).toBe(123.45);
+    expect(tx.type).toBe('INVESTMENT');
+    expect(tx.date).toBe('2026-05-09');
+    expect(tx.competenceDate).toBe('2026-06-01');
+    expect(tx.investmentDirection).toBe('CONTRIBUTION');
+    expect(tx.ignored).toBeTrue();
+    expect(importServiceSpy.savePreview).toHaveBeenCalled();
+  });
+
   it('autoClassificationLabel returns Portuguese label for OWN_TRANSFER', () => {
     expect(component.autoClassificationLabel('OWN_TRANSFER')).toBe('Transferência própria');
   });
