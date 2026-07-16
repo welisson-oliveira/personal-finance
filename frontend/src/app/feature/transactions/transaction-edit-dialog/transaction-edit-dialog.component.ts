@@ -17,6 +17,10 @@ import { CategorySelectComponent } from '../../../shared/category-select/categor
 interface DialogData {
   tx: Transaction;
   categories: Category[];
+  /** Hides the "apply classification to…" propagate section (import preview: nothing persisted yet). */
+  hidePropagate?: boolean;
+  /** Optional dialog title override (e.g. "Editar linha da importação"). */
+  title?: string;
 }
 
 @Component({

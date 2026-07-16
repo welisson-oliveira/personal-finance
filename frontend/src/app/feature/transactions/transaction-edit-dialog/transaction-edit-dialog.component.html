@@ -1,4 +1,4 @@
-<h2 mat-dialog-title>Editar Transação</h2>
+<h2 mat-dialog-title>{{ data.title || 'Editar Transação' }}</h2>
 
 <mat-dialog-content>
   @if (data.tx.source !== 'MANUAL') {
@@ -87,14 +87,16 @@
       <mat-checkbox [(ngModel)]="ignored">Ignorar nos cálculos (ex.: transferência entre contas próprias)</mat-checkbox>
     </div>
 
-    <div class="propagate-section">
-      <p class="propagate-label">Aplicar classificação para...</p>
-      <mat-radio-group [(ngModel)]="propagate" class="propagate-group">
-        <mat-radio-button value="CURRENT">Somente esta transação</mat-radio-button>
-        <mat-radio-button value="FUTURE">Esta e as futuras</mat-radio-button>
-        <mat-radio-button value="ALL">Todas</mat-radio-button>
-      </mat-radio-group>
-    </div>
+    @if (!data.hidePropagate) {
+      <div class="propagate-section">
+        <p class="propagate-label">Aplicar classificação para...</p>
+        <mat-radio-group [(ngModel)]="propagate" class="propagate-group">
+          <mat-radio-button value="CURRENT">Somente esta transação</mat-radio-button>
+          <mat-radio-button value="FUTURE">Esta e as futuras</mat-radio-button>
+          <mat-radio-button value="ALL">Todas</mat-radio-button>
+        </mat-radio-group>
+      </div>
+    }
   </div>
 </mat-dialog-content>
 
