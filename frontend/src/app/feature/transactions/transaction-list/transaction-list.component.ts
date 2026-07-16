@@ -120,7 +120,23 @@ export class TransactionListComponent implements OnInit {
 
   private searchInput$ = new Subject<void>();
 
-  displayedColumns = ['date', 'description', 'type', 'category', 'group', 'amount', 'actions'];
+  displayedColumns = [
+    'select',
+    'date',
+    'description',
+    'type',
+    'category',
+    'group',
+    'amount',
+    'actions',
+  ];
+
+  /** Ids of the rows ticked for a bulk action (kept only within the current page/filter view). */
+  selectedIds = new Set<string>();
+  /** Transient bulk-bar controls (reset when the selection is cleared). */
+  bulkGroup = '';
+  bulkCategoryId = '';
+  bulkCompetenceMonth = '';
 
   typeLabels: Record<string, string> = {
     INCOME: 'Receita',
@@ -202,6 +218,8 @@ export class TransactionListComponent implements OnInit {
 
   load(): void {
     this.saveState();
+    // A fresh page/filter/month invalidates the current selection (ids may not be on this page).
+    this.clearSelection();
     this.loading = true;
     this.txService
       .findAll({
@@ -258,6 +276,84 @@ export class TransactionListComponent implements OnInit {
     this.pendingOnly = false;
     this.showIgnored = false;
     this.applyFilters();
+  }
+
+  // --- Bulk selection + edit ---
+  private get pageIds(): string[] {
+    return this.page?.content.map((t) => t.id) ?? [];
+  }
+
+  isSelected(tx: Transaction): boolean {
+    return this.selectedIds.has(tx.id);
+  }
+
+  toggleRow(tx: Transaction): void {
+    if (this.selectedIds.has(tx.id)) this.selectedIds.delete(tx.id);
+    else this.selectedIds.add(tx.id);
+  }
+
+  isAllSelected(): boolean {
+    const ids = this.pageIds;
+    return ids.length > 0 && ids.every((id) => this.selectedIds.has(id));
+  }
+
+  isSomeSelected(): boolean {
+    return this.selectedIds.size > 0 && !this.isAllSelected();
+  }
+
+  toggleAll(): void {
+    if (this.isAllSelected()) this.pageIds.forEach((id) => this.selectedIds.delete(id));
+    else this.pageIds.forEach((id) => this.selectedIds.add(id));
+  }
+
+  clearSelection(): void {
+    this.selectedIds.clear();
+    this.bulkGroup = '';
+    this.bulkCategoryId = '';
+    this.bulkCompetenceMonth = '';
+  }
+
+  private runBulk(patch: {
+    budgetGroup?: string;
+    categoryId?: string;
+    competenceMonth?: string;
+    ignored?: boolean;
+  }): void {
+    const ids = [...this.selectedIds];
+    if (!ids.length) return;
+    this.txService.bulkUpdate({ ids, ...patch }).subscribe({
+      next: (updated) => {
+        const n = updated.length;
+        this.snackBar.open(
+          `${n} ${n === 1 ? 'transação atualizada' : 'transações atualizadas'}.`,
+          'Fechar',
+          { duration: 2500 }
+        );
+        // load() clears the selection and refreshes the page with the new values.
+        this.load();
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.message || 'Erro na edição em lote.', 'Fechar', {
+          duration: 4000,
+        });
+      },
+    });
+  }
+
+  bulkSetGroup(): void {
+    if (this.bulkGroup) this.runBulk({ budgetGroup: this.bulkGroup });
+  }
+
+  bulkSetCategory(): void {
+    if (this.bulkCategoryId) this.runBulk({ categoryId: this.bulkCategoryId });
+  }
+
+  bulkSetCompetence(): void {
+    if (this.bulkCompetenceMonth) this.runBulk({ competenceMonth: this.bulkCompetenceMonth });
+  }
+
+  bulkIgnore(ignored: boolean): void {
+    this.runBulk({ ignored });
   }
 
   /**

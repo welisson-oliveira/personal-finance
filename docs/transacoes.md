@@ -20,6 +20,7 @@ Listar, filtrar, ordenar, editar, renomear (apelido), confirmar revisão e exclu
 - `PUT /{id}` — atualiza (dispara propagação + aprendizado; não resolve revisão).
 - `PATCH /{id}/notes` — `UpdateNotesRequest {notes}` (apelido, propaga).
 - `PATCH /{id}/review` — confirma a revisão (`needs_review=false`); devolve a `TransactionResponse` atualizada.
+- `PATCH /bulk` — **edição em lote** (`BulkUpdateRequest {ids, budgetGroup?, categoryId?, competenceMonth?, ignored?}`). Aplica só os campos não-nulos às linhas do usuário (grupo só em EXPENSE, categoria em EXPENSE/INCOME, competência/ignored em todas). **Não** propaga para as de mesmo nome nem aprende `merchant_rule` — mexe exatamente nas selecionadas. Devolve a lista atualizada.
 - `DELETE /{id}` (204).
 
 ### Entidade — `Transaction` (`transactions`)
@@ -28,7 +29,7 @@ description, `normalizedDescription`, amount, `type` (enum INCOME/EXPENSE/INVEST
 
 ## Frontend (`feature/transactions/`, `transaction.service`)
 
-`transaction.service`: `findAll({month,type,categoryId,needsReview,search,budgetGroup,includeIgnored,sort,page,size})` → `GET /api/transactions`; `update(id, req)` → `PUT`; `updateNotes(id, notes)` → `PATCH /{id}/notes`; `confirmReview(id)` → `PATCH /{id}/review`; `delete(id)` → `DELETE`.
+`transaction.service`: `findAll({month,type,categoryId,needsReview,search,budgetGroup,includeIgnored,sort,page,size})` → `GET /api/transactions`; `update(id, req)` → `PUT`; `updateNotes(id, notes)` → `PATCH /{id}/notes`; `confirmReview(id)` → `PATCH /{id}/review`; `bulkUpdate({ids,budgetGroup?,categoryId?,competenceMonth?,ignored?})` → `PATCH /bulk`; `delete(id)` → `DELETE`.
 
 - **`transaction-list`** (`app-transaction-list`) — injeta `PeriodService`.
   - **Reage ao mês global:** `effect(() => { period.period(); pageIndex = 0; load(); })`. `ngOnInit` também honra `?month=` via `period.setFromMonthString()`.
@@ -38,6 +39,7 @@ description, `normalizedDescription`, amount, `type` (enum INCOME/EXPENSE/INVEST
   - **Apelido inline:** clicar na descrição entra em edição (`editingId`, input com `appAutofocus`); Enter/salvar → `updateNotes()` + `patchRow`.
   - **Colunas separadas + edição por campo:** Tipo/Categoria/Grupo-Direção com menus (`onTypePick`/`onCategoryPick`/`onGroupPick` → `quickUpdate`). Selo **"Revisar"** quando `needsReview` (linha destacada) com um botão **check "Confirmar revisão"** ao lado → `confirmReview(tx)` (sob "só pendentes" a linha sai da lista; senão só perde o selo). Como o edit não limpa mais `needs_review`, classificar campos **mantém** o "Revisar" até confirmar.
   - `openEditDialog(tx)` → `TransactionEditDialogComponent` para edição completa (Descrição com `cdkFocusInitial`); resultado → `update()` + `patchRow`. `confirmDelete()` via `ConfirmDialogComponent`.
+  - **Edição em lote:** coluna de **checkbox** por linha + "selecionar todas nesta página" (`selectedIds: Set`, `toggleRow`/`toggleAll`/`isAllSelected`/`isSomeSelected`). Com ≥1 selecionada, uma **barra de ações** (`.bulk-bar`) aplica **grupo / categoria / competência / ignorar / contabilizar** a todas de uma vez (`bulkSetGroup`/`bulkSetCategory`/`bulkSetCompetence`/`bulkIgnore` → `runBulk` → `txService.bulkUpdate` → `load()`). A seleção é **por página** — trocar página/mês/filtro (qualquer `load()`) a limpa (`clearSelection`).
 - **`transaction-edit-dialog`** (`app-transaction-edit-dialog`) — usa `CurrencyMaskDirective` (valor) e `CategorySelectComponent` (categoria). **Form dinâmico por tipo:** `onTypeChange()` — EXPENSE mostra categoria+grupo, INVESTMENT mostra direção, INCOME nenhum; checkbox **"ignorar nos cálculos"**. `confirm()` devolve `UpdateTransactionRequest` preservando `notes/shared/totalAmount/userShare` do original. **Reutilizado no preview de importação** (`DialogData.hidePropagate` esconde a seção "aplicar classificação para…", e `DialogData.title` troca o título) — lá o patch é escrito de volta na `ParsedTransaction` em vez de virar um `PUT` (ver [importacao-de-pdfs.md](./importacao-de-pdfs.md)).
 
 ## Fluxo ponta-a-ponta
@@ -66,8 +68,9 @@ O mês vem do `PeriodService` (global, já persistido). Deep-links por query par
 
 - Novo filtro na lista → `TransactionSpecifications` + `findAll` + filtros do `transaction-list` (adicionar ao `TxFilters`/`saveState`/`restoreState` se quiser que persista).
 - Novo campo editável → `CreateTransactionRequest`/`UpdateTransactionRequest`, `TransactionService.update`, `transaction-edit-dialog`.
+- Nova ação em lote → `BulkUpdateRequest` + `TransactionService.bulkUpdate` + `runBulk`/barra em `transaction-list`.
 - Mudar regra de propagação → `TransactionService.propagateClassification`.
 
 ## Testes relevantes
 
-`TransactionServiceTest` (propaga classificação, aprende merchant rule, não aprende para receita, **update preserva `needs_review`**, **`confirmReview` limpa sem propagar**), `TransactionControllerTest` (auth 401, create MANUAL 201, update, delete posse 204/403, filtro de mês exclui `ignored`, rateio).
+`TransactionServiceTest` (propaga classificação, aprende merchant rule, não aprende para receita, **update preserva `needs_review`**, **`confirmReview` limpa sem propagar**, **`bulkUpdate` aplica só os campos enviados respeitando tipo e posse, e ignora campos nulos**), `TransactionControllerTest` (auth 401, create MANUAL 201, update, delete posse 204/403, filtro de mês exclui `ignored`, rateio).

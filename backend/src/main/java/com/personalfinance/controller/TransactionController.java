@@ -1,11 +1,13 @@
 package com.personalfinance.controller;
 
+import com.personalfinance.dto.request.BulkUpdateRequest;
 import com.personalfinance.dto.request.CreateTransactionRequest;
 import com.personalfinance.dto.request.UpdateNotesRequest;
 import com.personalfinance.dto.response.TransactionResponse;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.service.TransactionService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -73,6 +75,12 @@ public class TransactionController {
   public ResponseEntity<TransactionResponse> confirmReview(
       @PathVariable UUID id, @AuthenticationPrincipal User user) {
     return ResponseEntity.ok(transactionService.confirmReview(id, user));
+  }
+
+  @PatchMapping("/bulk")
+  public ResponseEntity<List<TransactionResponse>> bulkUpdate(
+      @Valid @RequestBody BulkUpdateRequest request, @AuthenticationPrincipal User user) {
+    return ResponseEntity.ok(transactionService.bulkUpdate(request, user));
   }
 
   @DeleteMapping("/{id}")
