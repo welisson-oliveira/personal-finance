@@ -32,12 +32,8 @@ class ReportServiceTest {
   void monthly_evolution_returns_one_point_per_month_with_balance() {
     when(transactionRepository.sumIncomeByUserIdAndDateBetween(eq(userId), any(), any()))
         .thenReturn(new BigDecimal("5000.00"));
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            eq(userId), eq("ESSENTIAL"), any(), any()))
-        .thenReturn(new BigDecimal("2000.00"));
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-            eq(userId), eq("NON_ESSENTIAL"), any(), any()))
-        .thenReturn(new BigDecimal("1000.00"));
+    when(transactionRepository.sumAllExpenseByUserIdAndDateBetween(eq(userId), any(), any()))
+        .thenReturn(new BigDecimal("3000.00"));
 
     List<MonthlyPointResponse> points = service.monthlyEvolution(userId, 3);
 
@@ -51,7 +47,7 @@ class ReportServiceTest {
   void monthly_evolution_clamps_span_to_at_most_24_months() {
     when(transactionRepository.sumIncomeByUserIdAndDateBetween(any(), any(), any()))
         .thenReturn(BigDecimal.ZERO);
-    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(any(), any(), any(), any()))
+    when(transactionRepository.sumAllExpenseByUserIdAndDateBetween(any(), any(), any()))
         .thenReturn(BigDecimal.ZERO);
 
     assertThat(service.monthlyEvolution(userId, 100)).hasSize(24);

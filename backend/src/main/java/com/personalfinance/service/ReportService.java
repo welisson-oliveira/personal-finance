@@ -40,11 +40,7 @@ public class ReportService {
       BigDecimal receita =
           transactionRepository.sumIncomeByUserIdAndDateBetween(userId, start, end);
       BigDecimal despesa =
-          transactionRepository
-              .sumExpenseByBudgetGroupAndDateBetween(userId, "ESSENTIAL", start, end)
-              .add(
-                  transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
-                      userId, "NON_ESSENTIAL", start, end));
+          transactionRepository.sumAllExpenseByUserIdAndDateBetween(userId, start, end);
       points.add(
           new MonthlyPointResponse(
               ym.getYear(), ym.getMonthValue(), receita, despesa, receita.subtract(despesa)));
