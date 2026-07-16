@@ -62,6 +62,33 @@ export class CategorySelectComponent {
     return this.categories.filter((c) => c.name.toLowerCase().includes(q));
   }
 
+  /**
+   * Categories ordered as a tree for the dropdown: each top-level followed by its subcategories
+   * (indented in the template). While searching, the flat filtered list is used instead.
+   */
+  get ordered(): Category[] {
+    const list = this.filtered;
+    if (this.search.trim()) return list;
+    const byName = (a: Category, b: Category) => a.name.localeCompare(b.name);
+    const tops = list.filter((c) => !c.parentId).sort(byName);
+    const children = new Map<string, Category[]>();
+    for (const c of list) {
+      if (!c.parentId) continue;
+      const arr = children.get(c.parentId) ?? [];
+      arr.push(c);
+      children.set(c.parentId, arr);
+    }
+    const result: Category[] = [];
+    for (const top of tops) {
+      result.push(top);
+      (children.get(top.id) ?? []).sort(byName).forEach((ch) => result.push(ch));
+      children.delete(top.id);
+    }
+    // Subcategories whose parent isn't in the list (shouldn't happen normally) — append at the end.
+    children.forEach((arr) => arr.sort(byName).forEach((ch) => result.push(ch)));
+    return result;
+  }
+
   onSelectionChange(value: string): void {
     this.value = value;
     this.valueChange.emit(value);

@@ -6,7 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
 import { Category } from '../../../core/models/category.model';
+import { CategoryService } from '../../../core/services/category.service';
 
 @Component({
   selector: 'app-category-form-dialog',
@@ -19,9 +21,10 @@ import { Category } from '../../../core/models/category.model';
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
+    MatSelectModule,
   ],
   template: `
-    <h2 mat-dialog-title>{{ data ? 'Editar' : 'Nova' }} Categoria</h2>
+    <h2 mat-dialog-title>{{ data?.id ? 'Editar' : 'Nova' }} Categoria</h2>
     <mat-dialog-content>
       <!-- Live preview -->
       <div class="preview">
@@ -40,6 +43,19 @@ import { Category } from '../../../core/models/category.model';
           <input matInput formControlName="name" cdkFocusInitial />
           <mat-error *ngIf="form.get('name')?.hasError('required')">Nome é obrigatório</mat-error>
         </mat-form-field>
+
+        @if (!hasChildren) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Categoria pai (opcional)</mat-label>
+            <mat-select formControlName="parentId">
+              <mat-option [value]="null">Nenhuma (categoria principal)</mat-option>
+              @for (p of parents; track p.id) {
+                <mat-option [value]="p.id">{{ p.name }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>Escolha um pai para criar uma subcategoria</mat-hint>
+          </mat-form-field>
+        }
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Ícone (Material Icon)</mat-label>
@@ -200,15 +216,26 @@ export class CategoryFormDialogComponent {
     '#757575',
   ];
 
+  /** Top-level categories that can be a parent (excludes self and any subcategory). */
+  parents: Category[] = [];
+  /** True when editing a category that already has subcategories — it can't become a subcategory. */
+  hasChildren = false;
+
   constructor(
     public dialogRef: MatDialogRef<CategoryFormDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: Category | null,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private categoryService: CategoryService
   ) {
     this.form = this.fb.group({
       name: [data?.name ?? '', Validators.required],
       icon: [data?.icon ?? ''],
       color: [data?.color ?? ''],
+      parentId: [data?.parentId ?? null],
+    });
+    this.categoryService.getAll().subscribe((cats) => {
+      this.hasChildren = !!data && cats.some((c) => c.parentId === data.id);
+      this.parents = cats.filter((c) => !c.parentId && c.id !== data?.id);
     });
   }
 

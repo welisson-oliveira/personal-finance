@@ -33,3 +33,11 @@
   display: flex;
   gap: 4px;
 }
+
+.sub-item {
+  padding-left: 24px;
+
+  mat-icon[matListItemIcon] {
+    color: #9e9e9e;
+  }
+}

@@ -20,8 +20,8 @@
     </div>
 
     <mat-option value="">Nenhuma</mat-option>
-    @for (cat of filtered; track cat.id) {
-      <mat-option [value]="cat.id">
+    @for (cat of ordered; track cat.id) {
+      <mat-option [value]="cat.id" [style.padding-left.px]="cat.parentId ? 28 : null">
         <mat-icon class="option-icon" [style.color]="cat.color || null">{{ cat.icon || 'label' }}</mat-icon>
         {{ cat.name }}
       </mat-option>
@@ -57,8 +57,8 @@
       </div>
 
       <mat-option value="">Nenhuma</mat-option>
-      @for (cat of filtered; track cat.id) {
-        <mat-option [value]="cat.id">
+      @for (cat of ordered; track cat.id) {
+        <mat-option [value]="cat.id" [style.padding-left.px]="cat.parentId ? 28 : null">
           <mat-icon class="option-icon" [style.color]="cat.color || null">{{ cat.icon || 'label' }}</mat-icon>
           {{ cat.name }}
         </mat-option>

@@ -38,6 +38,42 @@ export class CategoryListComponent implements OnInit {
   categories: Category[] = [];
   loading = true;
 
+  /** Categories grouped as a tree: each top-level with its (alphabetical) subcategories. */
+  get tree(): { parent: Category; children: Category[] }[] {
+    const byName = (a: Category, b: Category) => a.name.localeCompare(b.name);
+    return this.categories
+      .filter((c) => !c.parentId)
+      .sort(byName)
+      .map((parent) => ({
+        parent,
+        children: this.categories.filter((c) => c.parentId === parent.id).sort(byName),
+      }));
+  }
+
+  /** Opens the create dialog with the parent pre-selected (add a subcategory under it). */
+  addSubcategory(parent: Category): void {
+    this.dialog
+      .open(CategoryFormDialogComponent, {
+        width: '420px',
+        data: { id: '', name: '', global: false, parentId: parent.id } as Category,
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (result) {
+          this.categoryService.create({ ...result, parentId: parent.id }).subscribe({
+            next: () => {
+              this.snackBar.open('Subcategoria criada!', 'Fechar', { duration: 3000 });
+              this.load();
+            },
+            error: (err) =>
+              this.snackBar.open(err.error?.message || 'Erro ao criar.', 'Fechar', {
+                duration: 4000,
+              }),
+          });
+        }
+      });
+  }
+
   constructor(
     private categoryService: CategoryService,
     private dialog: MatDialog,

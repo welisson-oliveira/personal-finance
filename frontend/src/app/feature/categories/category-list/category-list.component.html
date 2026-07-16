@@ -13,20 +13,38 @@
 } @else {
   <mat-card>
     <mat-list>
-      @for (cat of categories; track cat.id) {
+      @for (group of tree; track group.parent.id) {
         <mat-list-item class="cat-item">
-          <mat-icon matListItemIcon [style.color]="cat.color || null">{{ cat.icon || 'label' }}</mat-icon>
-          <span matListItemTitle>{{ cat.name }}</span>
-          <span matListItemLine *ngIf="cat.global" class="global-badge">Global</span>
+          <mat-icon matListItemIcon [style.color]="group.parent.color || null">{{
+            group.parent.icon || 'label'
+          }}</mat-icon>
+          <span matListItemTitle>{{ group.parent.name }}</span>
           <div matListItemMeta class="item-actions">
-            <button mat-icon-button [disabled]="cat.global" (click)="openEdit(cat)" title="Editar">
+            <button mat-icon-button (click)="addSubcategory(group.parent)" title="Adicionar subcategoria">
+              <mat-icon>add</mat-icon>
+            </button>
+            <button mat-icon-button (click)="openEdit(group.parent)" title="Editar">
               <mat-icon>edit</mat-icon>
             </button>
-            <button mat-icon-button color="warn" [disabled]="cat.global" (click)="confirmDelete(cat)" title="Excluir">
+            <button mat-icon-button color="warn" (click)="confirmDelete(group.parent)" title="Excluir">
               <mat-icon>delete</mat-icon>
             </button>
           </div>
         </mat-list-item>
+        @for (child of group.children; track child.id) {
+          <mat-list-item class="cat-item sub-item">
+            <mat-icon matListItemIcon [style.color]="child.color || null">subdirectory_arrow_right</mat-icon>
+            <span matListItemTitle>{{ child.name }}</span>
+            <div matListItemMeta class="item-actions">
+              <button mat-icon-button (click)="openEdit(child)" title="Editar">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="confirmDelete(child)" title="Excluir">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </mat-list-item>
+        }
         <mat-divider></mat-divider>
       }
       @if (categories.length === 0) {
