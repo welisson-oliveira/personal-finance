@@ -320,14 +320,30 @@
   <div class="cards-row">
     <mat-card
       class="metric-card balance"
-      [class.negative]="data.resultado < 0"
-      matTooltip="Entradas do mês menos o total de despesas do período (performance isolada do mês)"
+      [class.negative]="(data.usandoSalarioPrevisto ? data.resultadoPrevisto : data.resultado) < 0"
+      matTooltip="Entradas do mês menos o total de despesas do período (performance isolada do mês). No mês corrente, se o salário ainda não foi importado, projeta com o salário configurado como piso"
       matTooltipPosition="above"
     >
       <mat-card-content>
         <mat-icon>account_balance_wallet</mat-icon>
-        <div class="metric-label">Resultado do mês</div>
-        <div class="metric-value">{{ fmt(data.resultado) }}</div>
+        <div class="metric-label">
+          Resultado do mês
+          @if (data.usandoSalarioPrevisto) {
+            <span
+              class="previsto-badge"
+              matTooltip="Projeção usando seu salário configurado ({{
+                fmt(data.salarioEsperado)
+              }}) como piso — a renda real deste mês ainda não foi toda importada"
+              >previsto</span
+            >
+          }
+        </div>
+        <div class="metric-value">
+          {{ fmt(data.usandoSalarioPrevisto ? data.resultadoPrevisto : data.resultado) }}
+        </div>
+        @if (data.usandoSalarioPrevisto) {
+          <div class="metric-sub">Real importado até agora: {{ fmt(data.resultado) }}</div>
+        }
       </mat-card-content>
     </mat-card>
     <mat-card
@@ -350,6 +366,16 @@
         {{ fmt(data.pagamentosFaturaIgnorados) }} em pagamento(s) de fatura estão ignorados neste mês (sem fatura
         importada). Se este é o mês de início do uso, <a routerLink="/transactions">abra as Transações</a> (ative
         "Mostrar ignoradas") e clique em "Contabilizar" para o resultado refletir a saída real.
+      </span>
+    </p>
+  }
+  @if (data.resultado < 0 && data.saldoAcumulado >= 0) {
+    <p class="coverage-notice">
+      <mat-icon>verified_user</mat-icon>
+      <span>
+        O resultado isolado deste mês está negativo, mas seu <strong>Saldo Geral</strong> segue positivo ({{
+          fmt(data.saldoAcumulado)
+        }}) — o déficit do mês está coberto pelo que você acumulou.
       </span>
     </p>
   }

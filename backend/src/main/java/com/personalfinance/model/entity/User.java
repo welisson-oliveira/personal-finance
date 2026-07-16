@@ -37,6 +37,14 @@ public class User implements UserDetails {
   @Column(name = "monthly_net_income")
   private BigDecimal monthlyNetIncome;
 
+  /** Real account balance at {@link #openingBalanceDate}; seeds the accumulated "Saldo Geral". */
+  @Column(name = "opening_balance")
+  private BigDecimal openingBalance;
+
+  /** Reference date from which movements are added to {@link #openingBalance}. */
+  @Column(name = "opening_balance_date")
+  private java.time.LocalDate openingBalanceDate;
+
   @CreationTimestamp
   @Column(updatable = false)
   private LocalDateTime createdAt;

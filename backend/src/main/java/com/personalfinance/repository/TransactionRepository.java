@@ -111,8 +111,9 @@ public interface TransactionRepository
           + "ELSE 0 END), 0) "
           + "FROM Transaction t "
           + "WHERE t.user.id = :userId "
-          + "AND COALESCE(t.competenceDate, t.date) <= :end")
-  BigDecimal sumAccumulatedBalanceUntil(@Param("userId") UUID userId, @Param("end") LocalDate end);
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
+  BigDecimal sumAccumulatedBalanceBetween(
+      @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 
   @Query(
       "SELECT t FROM Transaction t LEFT JOIN FETCH t.category "

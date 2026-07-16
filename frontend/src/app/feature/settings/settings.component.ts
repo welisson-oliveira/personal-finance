@@ -34,6 +34,8 @@ export class SettingsComponent implements OnInit {
   loading = true;
   saving = false;
   monthlyNetIncome: number | null = null;
+  openingBalance: number | null = null;
+  openingBalanceDate: string | null = null;
 
   constructor(
     private settingsService: SettingsService,
@@ -45,6 +47,8 @@ export class SettingsComponent implements OnInit {
     this.settingsService.getMe().subscribe({
       next: (user) => {
         this.monthlyNetIncome = user.monthlyNetIncome ?? null;
+        this.openingBalance = user.openingBalance ?? null;
+        this.openingBalanceDate = user.openingBalanceDate ?? null;
         this.loading = false;
       },
       error: () => {
@@ -59,17 +63,25 @@ export class SettingsComponent implements OnInit {
       this.snackBar.open('O salário líquido não pode ser negativo.', 'Fechar', { duration: 3000 });
       return;
     }
+    if (this.openingBalance != null && this.openingBalanceDate == null) {
+      this.snackBar.open('Informe a data de referência do saldo inicial.', 'Fechar', {
+        duration: 3000,
+      });
+      return;
+    }
     this.saving = true;
-    this.settingsService.updateProfile(this.monthlyNetIncome).subscribe({
-      next: (user) => {
-        this.auth.updateStoredUser(user);
-        this.saving = false;
-        this.snackBar.open('Configurações salvas.', 'Fechar', { duration: 2500 });
-      },
-      error: () => {
-        this.saving = false;
-        this.snackBar.open('Erro ao salvar configurações.', 'Fechar', { duration: 3000 });
-      },
-    });
+    this.settingsService
+      .updateProfile(this.monthlyNetIncome, this.openingBalance, this.openingBalanceDate)
+      .subscribe({
+        next: (user) => {
+          this.auth.updateStoredUser(user);
+          this.saving = false;
+          this.snackBar.open('Configurações salvas.', 'Fechar', { duration: 2500 });
+        },
+        error: () => {
+          this.saving = false;
+          this.snackBar.open('Erro ao salvar configurações.', 'Fechar', { duration: 3000 });
+        },
+      });
   }
 }

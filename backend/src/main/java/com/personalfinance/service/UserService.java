@@ -45,6 +45,8 @@ public class UserService implements UserDetailsService {
             .findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("User not found"));
     user.setMonthlyNetIncome(request.getMonthlyNetIncome());
+    user.setOpeningBalance(request.getOpeningBalance());
+    user.setOpeningBalanceDate(request.getOpeningBalanceDate());
     return userRepository.save(user);
   }
 }

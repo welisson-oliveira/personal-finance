@@ -12,7 +12,9 @@
     <mat-card-content>
       <p class="settings-hint">
         Usado como base do cálculo da distribuição 50/30/20 no dashboard enquanto o mês não tiver renda registrada nas
-        transações (ex: salário no extrato importado). Quando houver renda no mês, ela tem prioridade.
+        transações (ex: salário no extrato importado). Quando houver renda no mês, ela tem prioridade. No mês corrente,
+        também serve de <strong>salário previsto</strong>: se a fatura já caiu mas o salário ainda não foi importado, o
+        dashboard projeta o resultado com esse valor de piso para não parecer no vermelho antes da hora.
       </p>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Salário líquido mensal</mat-label>
@@ -26,6 +28,37 @@
           placeholder="0,00"
         />
         <mat-icon matSuffix>payments</mat-icon>
+      </mat-form-field>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="settings-card">
+    <mat-card-header>
+      <mat-card-title>Saldo inicial</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="settings-hint">
+        O <strong>Saldo Geral</strong> do dashboard soma suas receitas e desconta despesas e aportes a partir desta
+        data. Informe o saldo real da sua conta numa data de referência (ex.: o extrato de quando começou a usar o app)
+        para que o Saldo Geral bata com o valor real da conta, e não apenas com o líquido das transações importadas.
+      </p>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Saldo na conta (referência)</mat-label>
+        <span matTextPrefix>R$&nbsp;</span>
+        <input
+          matInput
+          type="text"
+          inputmode="numeric"
+          appCurrencyMask
+          [(ngModel)]="openingBalance"
+          placeholder="0,00"
+        />
+        <mat-icon matSuffix>account_balance</mat-icon>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Data de referência do saldo</mat-label>
+        <input matInput type="date" [(ngModel)]="openingBalanceDate" />
+        <mat-icon matSuffix>event</mat-icon>
       </mat-form-field>
     </mat-card-content>
     <mat-card-actions align="end">
