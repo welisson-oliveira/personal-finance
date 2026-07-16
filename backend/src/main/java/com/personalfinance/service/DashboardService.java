@@ -61,19 +61,37 @@ public class DashboardService {
 
     BigDecimal resultado = entradas.subtract(totalDespesas);
 
-    // Running "cash in account" up to the end of the selected month (income − expenses − net
-    // aportes).
-    BigDecimal saldoAcumulado = transactionRepository.sumAccumulatedBalanceUntil(userId, end);
+    // Running "cash in account" up to the end of the selected month. Seeded by the user's opening
+    // balance (from its reference date) so it can equal the real account balance, not just the net
+    // of transactions since sign-up.
+    BigDecimal openingBalance =
+        user.getOpeningBalance() != null ? user.getOpeningBalance() : BigDecimal.ZERO;
+    LocalDate accStart =
+        user.getOpeningBalanceDate() != null
+            ? user.getOpeningBalanceDate()
+            : LocalDate.of(1970, 1, 1);
+    BigDecimal movimentado =
+        transactionRepository.sumAccumulatedBalanceBetween(userId, accStart, end);
+    BigDecimal saldoAcumulado =
+        openingBalance.add(movimentado != null ? movimentado : BigDecimal.ZERO);
     // Bill payments still ignored this month = likely a transition-month "furo" (no matching
     // fatura).
     BigDecimal pagamentosFaturaIgnorados =
         transactionRepository.sumIgnoredBillPaymentsInPeriod(userId, start, end);
 
-    // 50/30/20 base: month's registered income, falling back to the configured net salary
+    // Expected salary (Option A): for the CURRENT calendar month, use the configured net salary as
+    // an income floor until the real salary is imported — so the fatura arriving on day 8 doesn't
+    // paint the month red before the day-31 statement (with the salary) is imported.
+    BigDecimal salarioEsperado =
+        user.getMonthlyNetIncome() != null ? user.getMonthlyNetIncome() : BigDecimal.ZERO;
+    boolean mesCorrente = ym.equals(YearMonth.now());
+    BigDecimal receitaProjetada = mesCorrente ? entradas.max(salarioEsperado) : entradas;
+    boolean usandoSalarioPrevisto = receitaProjetada.compareTo(entradas) > 0;
+    BigDecimal resultadoPrevisto = receitaProjetada.subtract(totalDespesas);
+
+    // 50/30/20 base: the (projected) month income, falling back to the configured net salary.
     BigDecimal rendaBase =
-        entradas.compareTo(BigDecimal.ZERO) > 0
-            ? entradas
-            : (user.getMonthlyNetIncome() != null ? user.getMonthlyNetIncome() : BigDecimal.ZERO);
+        receitaProjetada.compareTo(BigDecimal.ZERO) > 0 ? receitaProjetada : salarioEsperado;
 
     BigDecimal percentualEssenciais = percent(despesasEssenciais, rendaBase);
     BigDecimal percentualNaoEssenciais = percent(despesasNaoEssenciais, rendaBase);
@@ -108,6 +126,9 @@ public class DashboardService {
         .resultado(resultado)
         .saldoAcumulado(saldoAcumulado)
         .pagamentosFaturaIgnorados(pagamentosFaturaIgnorados)
+        .salarioEsperado(salarioEsperado)
+        .resultadoPrevisto(resultadoPrevisto)
+        .usandoSalarioPrevisto(usandoSalarioPrevisto)
         .rendaBase(rendaBase)
         .percentualEssenciais(percentualEssenciais)
         .percentualNaoEssenciais(percentualNaoEssenciais)

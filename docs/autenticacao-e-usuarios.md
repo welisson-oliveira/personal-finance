@@ -22,13 +22,13 @@ Registro/login com JWT, proteção das rotas, e o perfil do usuário (incluindo 
 
 `UserController` (`/api/users`):
 
-- `GET /me` — perfil atual (`UserResponse {id, name, email, monthlyNetIncome}`).
-- `PUT /me` — `UpdateProfileRequest {monthlyNetIncome}` → atualiza e retorna `UserResponse`.
+- `GET /me` — perfil atual (`UserResponse {id, name, email, monthlyNetIncome, openingBalance, openingBalanceDate}`).
+- `PUT /me` — `UpdateProfileRequest {monthlyNetIncome, openingBalance(@PositiveOrZero), openingBalanceDate}` → atualiza e retorna `UserResponse`.
 
 ### Service / entidade
 
-- **`UserService`** `implements UserDetailsService`: `loadUserByUsername` por email; `register` (guarda contra email duplicado, BCrypt); `updateProfile` (`monthlyNetIncome`).
-- **`User`** (`users`) `implements UserDetails`: email (único), password (BCrypt), name, `monthlyNetIncome` (NUMERIC 19,2 — V8), timestamps. Authorities vazias.
+- **`UserService`** `implements UserDetailsService`: `loadUserByUsername` por email; `register` (guarda contra email duplicado, BCrypt); `updateProfile` (`monthlyNetIncome`, `openingBalance`, `openingBalanceDate`).
+- **`User`** (`users`) `implements UserDetails`: email (único), password (BCrypt), name, `monthlyNetIncome` (NUMERIC 19,2 — V8), `openingBalance` (NUMERIC 19,2) + `openingBalanceDate` (DATE) — saldo inicial de referência do Saldo Geral (V15), timestamps. Authorities vazias.
 
 ## Frontend
 
@@ -45,14 +45,14 @@ Registro/login com JWT, proteção das rotas, e o perfil do usuário (incluindo 
 
 - **`feature/auth/login`** (`app-login`) — form reativo (email + password), `submit()` → `auth.login()` → `/dashboard`.
 - **`feature/auth/register`** (`app-register`) — form reativo (name minLen 2, email, password minLen 6), `submit()` → `auth.register()` → `/dashboard`.
-- **`feature/settings`** (`app-settings`) — carrega `monthlyNetIncome` via `settings.service.getMe()`; `save()` valida ≥ 0, chama `updateProfile()` e faz `auth.updateStoredUser()`. Usa `CurrencyMaskDirective`. `settings.service`: `getMe()` → `GET /api/users/me`; `updateProfile(v)` → `PUT /api/users/me`.
+- **`feature/settings`** (`app-settings`) — carrega `monthlyNetIncome`, `openingBalance` e `openingBalanceDate` via `settings.service.getMe()`; card **"Orçamento"** (salário líquido, base do 50/30/20 e piso do salário previsto) + card **"Saldo inicial"** (saldo real da conta numa data de referência, para o Saldo Geral bater com a conta). `save()` valida salário ≥ 0 e exige a data quando há saldo informado, chama `updateProfile()` e faz `auth.updateStoredUser()`. Usa `CurrencyMaskDirective`. `settings.service`: `getMe()` → `GET /api/users/me`; `updateProfile(monthlyNetIncome, openingBalance, openingBalanceDate)` → `PUT /api/users/me`.
 
 ## Fluxo ponta-a-ponta
 
 1. Registro/login → backend gera JWT → frontend guarda token+user (signal + localStorage).
 2. Toda requisição autenticada leva `Authorization: Bearer` (interceptor). `JwtAuthFilter` valida e popula o `SecurityContext`.
 3. Acesso a rota protegida sem token → `authGuard` redireciona para login.
-4. Em Configurações, o salário líquido salvo alimenta o cálculo 50/30/20 (ver [dashboard.md](./dashboard.md)).
+4. Em Configurações, o salário líquido salvo alimenta o cálculo 50/30/20 e o salário previsto, e o saldo inicial semeia o Saldo Geral (ver [dashboard.md](./dashboard.md)).
 
 ## Onde mexer
 

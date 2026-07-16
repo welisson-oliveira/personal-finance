@@ -11,7 +11,15 @@ export class SettingsService {
     return this.http.get<UserResponse>('/api/users/me');
   }
 
-  updateProfile(monthlyNetIncome: number | null): Observable<UserResponse> {
-    return this.http.put<UserResponse>('/api/users/me', { monthlyNetIncome });
+  updateProfile(
+    monthlyNetIncome: number | null,
+    openingBalance: number | null = null,
+    openingBalanceDate: string | null = null
+  ): Observable<UserResponse> {
+    return this.http.put<UserResponse>('/api/users/me', {
+      monthlyNetIncome,
+      openingBalance,
+      openingBalanceDate,
+    });
   }
 }

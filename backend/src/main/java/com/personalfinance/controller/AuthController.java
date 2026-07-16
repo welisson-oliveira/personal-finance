@@ -44,6 +44,11 @@ public class AuthController {
     return new AuthResponse(
         token,
         new UserResponse(
-            user.getId(), user.getName(), user.getEmail(), user.getMonthlyNetIncome()));
+            user.getId(),
+            user.getName(),
+            user.getEmail(),
+            user.getMonthlyNetIncome(),
+            user.getOpeningBalance(),
+            user.getOpeningBalanceDate()));
   }
 }

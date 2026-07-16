@@ -102,6 +102,7 @@ export class DashboardComponent {
 
   baseLabel(): string {
     if (!this.data) return '';
+    if (this.data.usandoSalarioPrevisto) return 'salário previsto';
     return this.data.entradas > 0 ? 'renda do mês' : 'salário configurado';
   }
 }

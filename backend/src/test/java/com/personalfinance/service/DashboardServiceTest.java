@@ -13,6 +13,7 @@ import com.personalfinance.repository.MerchantRuleRepository;
 import com.personalfinance.repository.TransactionRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -95,7 +96,7 @@ class DashboardServiceTest {
     // bill).
     when(transactionRepository.sumAllExpenseByUserIdAndDateBetween(userId, START, END))
         .thenReturn(new BigDecimal("2000.00"));
-    when(transactionRepository.sumAccumulatedBalanceUntil(userId, END))
+    when(transactionRepository.sumAccumulatedBalanceBetween(userId, LocalDate.of(1970, 1, 1), END))
         .thenReturn(new BigDecimal("3200.00"));
     when(transactionRepository.sumIgnoredBillPaymentsInPeriod(userId, START, END))
         .thenReturn(new BigDecimal("750.00"));
@@ -270,5 +271,93 @@ class DashboardServiceTest {
     assertThat(result.getPercentualEssenciais()).isEqualByComparingTo("50.00");
     assertThat(result.getPercentualNaoEssenciais()).isEqualByComparingTo("30.00");
     assertThat(result.getPercentualInvestimentos()).isEqualByComparingTo("20.00");
+  }
+
+  @Test
+  void monthly_projects_configured_salary_as_income_floor_for_current_month() {
+    UUID userId = UUID.randomUUID();
+    YearMonth current = YearMonth.now();
+    LocalDate start = current.atDay(1);
+    LocalDate end = current.atEndOfMonth();
+
+    // Only R$90 imported so far this month (fatura already landed, salary statement not yet).
+    when(transactionRepository.sumIncomeByUserIdAndDateBetween(userId, start, end))
+        .thenReturn(new BigDecimal("90.00"));
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "ESSENTIAL", start, end))
+        .thenReturn(new BigDecimal("1200.00"));
+    when(transactionRepository.sumExpenseByBudgetGroupAndDateBetween(
+            userId, "NON_ESSENTIAL", start, end))
+        .thenReturn(new BigDecimal("800.00"));
+    when(transactionRepository.sumAllExpenseByUserIdAndDateBetween(userId, start, end))
+        .thenReturn(new BigDecimal("2000.00"));
+    when(transactionRepository.sumInvestmentByDirectionAndDateBetween(
+            userId, "CONTRIBUTION", start, end))
+        .thenReturn(BigDecimal.ZERO);
+    when(transactionRepository.sumInvestmentByDirectionAndDateBetween(
+            userId, "REDEMPTION", start, end))
+        .thenReturn(BigDecimal.ZERO);
+    when(transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end))
+        .thenReturn(List.of());
+    when(merchantRuleRepository.findAllVisibleToUser(userId)).thenReturn(List.of());
+    when(transactionRepository.countExpensesInPeriod(userId, start, end)).thenReturn(0L);
+    when(transactionRepository.countPixEnviadosInPeriod(userId, start, end)).thenReturn(0L);
+    when(transactionRepository.countPixRecebidosInPeriod(userId, start, end)).thenReturn(0L);
+
+    User user = User.builder().id(userId).monthlyNetIncome(new BigDecimal("5000.00")).build();
+    DashboardResponse result = service.getMonthly(user, current.getYear(), current.getMonthValue());
+
+    // Real figures stay untouched: entradas = 90, resultado = 90 − 2000.
+    assertThat(result.getEntradas()).isEqualByComparingTo("90.00");
+    assertThat(result.getResultado()).isEqualByComparingTo("-1910.00");
+    // Projection uses the configured salary as an income floor: 5000 − 2000.
+    assertThat(result.isUsandoSalarioPrevisto()).isTrue();
+    assertThat(result.getSalarioEsperado()).isEqualByComparingTo("5000.00");
+    assertThat(result.getResultadoPrevisto()).isEqualByComparingTo("3000.00");
+    // 50/30/20 base is the projected income: 1200/5000 = 24%.
+    assertThat(result.getRendaBase()).isEqualByComparingTo("5000.00");
+    assertThat(result.getPercentualEssenciais()).isEqualByComparingTo("24.00");
+  }
+
+  @Test
+  void monthly_does_not_project_salary_for_a_past_month() {
+    UUID userId = UUID.randomUUID();
+    // START/END = May 2026, a past month relative to "now" (2026-07).
+    stubIncome(userId, "90.00");
+    stubExpenses(userId, "1200.00", "800.00");
+    stubInvestments(userId, "0", "0");
+    stubDestaques(userId);
+
+    User user = User.builder().id(userId).monthlyNetIncome(new BigDecimal("5000.00")).build();
+    DashboardResponse result = service.getMonthly(user, 2026, 5);
+
+    // No projection for a closed month: resultado equals resultadoPrevisto (90 − 2000).
+    assertThat(result.isUsandoSalarioPrevisto()).isFalse();
+    assertThat(result.getResultado()).isEqualByComparingTo("-1910.00");
+    assertThat(result.getResultadoPrevisto()).isEqualByComparingTo("-1910.00");
+  }
+
+  @Test
+  void monthly_seeds_saldo_acumulado_with_opening_balance() {
+    UUID userId = UUID.randomUUID();
+    LocalDate openingDate = LocalDate.of(2026, 1, 1);
+    stubIncome(userId, "3000.00");
+    stubExpenses(userId, "1000.00", "500.00");
+    stubInvestments(userId, "0", "0");
+    stubDestaques(userId);
+    // Net cash movement since the opening date, up to the end of the selected month.
+    when(transactionRepository.sumAccumulatedBalanceBetween(userId, openingDate, END))
+        .thenReturn(new BigDecimal("500.00"));
+
+    User user =
+        User.builder()
+            .id(userId)
+            .openingBalance(new BigDecimal("2000.00"))
+            .openingBalanceDate(openingDate)
+            .build();
+    DashboardResponse result = service.getMonthly(user, 2026, 5);
+
+    // R$2000 opening balance + R$500 net movement since the opening date.
+    assertThat(result.getSaldoAcumulado()).isEqualByComparingTo("2500.00");
   }
 }

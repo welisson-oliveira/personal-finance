@@ -33,10 +33,17 @@ public class DashboardResponse {
   // "Quanto sobrou": resultado do mês (entradas − despesas).
   private BigDecimal resultado;
 
-  // Saldo corrido "em conta" acumulado até o fim do mês (receitas − despesas − aportes líquidos).
+  // Saldo corrido "em conta" acumulado até o fim do mês (saldo inicial + receitas − despesas −
+  // aportes líquidos, a partir da data do saldo inicial).
   private BigDecimal saldoAcumulado;
   // Soma dos "Pagamento de fatura" ainda ignorados no mês (sinal do furo de transição).
   private BigDecimal pagamentosFaturaIgnorados;
+
+  // Salário previsto (Opção A): no mês corrente, usa o salário configurado como piso da renda até o
+  // salário real ser importado — evita o "limbo de caixa" (fatura no dia 8, extrato no dia 31).
+  private BigDecimal salarioEsperado;
+  private BigDecimal resultadoPrevisto; // receita projetada − despesas (com o salário previsto)
+  private boolean usandoSalarioPrevisto; // true quando a projeção acrescenta renda além da real
 
   private BigDecimal rendaBase;
   private BigDecimal percentualEssenciais;

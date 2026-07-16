@@ -30,6 +30,9 @@ export interface DashboardResponse {
   resultado: number;
   saldoAcumulado: number;
   pagamentosFaturaIgnorados: number;
+  salarioEsperado: number;
+  resultadoPrevisto: number;
+  usandoSalarioPrevisto: boolean;
   rendaBase: number;
   percentualEssenciais: number;
   percentualNaoEssenciais: number;
