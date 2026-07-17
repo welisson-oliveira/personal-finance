@@ -74,9 +74,17 @@ export class PreviewComponent implements OnInit {
     'budgetGroup',
     'direction',
     'category',
-    'notes',
     'actions',
   ];
+
+  /** Rows currently shown in the table (preview.transactions after search/type filtering). */
+  displayedTransactions: ParsedTransaction[] = [];
+  filterSearch = '';
+  filterType = '';
+
+  /** Inline apelido (notes) editing — parity with the transactions list. */
+  editingApelidoFor: ParsedTransaction | null = null;
+  apelidoDraft = '';
 
   typeLabels: Record<string, string> = {
     INCOME: 'Receita',
@@ -150,7 +158,52 @@ export class PreviewComponent implements OnInit {
       this.router.navigate(['/import']);
       return;
     }
+    this.refreshDisplayed();
     this.categoryService.getAll().subscribe({ next: (cats) => (this.categories = cats) });
+  }
+
+  /** Recomputes the visible rows from the search + type filters (kept stable for the mat-table). */
+  refreshDisplayed(): void {
+    const txs = this.preview?.transactions ?? [];
+    const q = this.filterSearch.trim().toLowerCase();
+    this.displayedTransactions = txs.filter((t) => {
+      if (this.filterType && t.type !== this.filterType) return false;
+      if (!q) return true;
+      return (
+        (t.description || '').toLowerCase().includes(q) ||
+        (t.normalizedDescription || '').toLowerCase().includes(q) ||
+        (t.notes || '').toLowerCase().includes(q)
+      );
+    });
+  }
+
+  clearFilters(): void {
+    this.filterSearch = '';
+    this.filterType = '';
+    this.refreshDisplayed();
+  }
+
+  // --- Inline apelido (notes) ---
+  startApelido(tx: ParsedTransaction): void {
+    this.editingApelidoFor = tx;
+    this.apelidoDraft = tx.notes || '';
+  }
+
+  cancelApelido(): void {
+    this.editingApelidoFor = null;
+    this.apelidoDraft = '';
+  }
+
+  /** Saves the apelido on every row with the same effective name in this import, then persists. */
+  saveApelido(tx: ParsedTransaction): void {
+    const value = this.apelidoDraft.trim() || undefined;
+    const name = tx.normalizedDescription || tx.description;
+    (this.preview?.transactions ?? []).forEach((t) => {
+      if ((t.normalizedDescription || t.description) === name) t.notes = value;
+    });
+    this.editingApelidoFor = null;
+    this.apelidoDraft = '';
+    this.persistEdits();
   }
 
   includedCount(): number {
@@ -201,6 +254,7 @@ export class PreviewComponent implements OnInit {
       tx.budgetGroup = undefined;
       tx.categoryId = undefined;
     }
+    this.refreshDisplayed(); // a type change may move the row out of the active type filter
     this.persistEdits();
   }
 

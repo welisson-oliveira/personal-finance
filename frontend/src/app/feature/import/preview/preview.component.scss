@@ -285,3 +285,60 @@
     }
   }
 }
+
+.preview-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+
+  .filter-search {
+    width: 260px;
+  }
+  .filter-type {
+    width: 150px;
+  }
+  .filter-count {
+    font-size: 0.8rem;
+    color: #78909c;
+    margin-left: auto;
+  }
+}
+
+.desc-cell {
+  .desc-content {
+    cursor: pointer;
+  }
+  .desc-placeholder {
+    font-style: italic;
+    opacity: 0;
+  }
+  .desc-content:hover .desc-placeholder {
+    opacity: 0.5;
+  }
+
+  .apelido-edit {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .apelido-input {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      border-bottom: 2px solid #3f51b5;
+      outline: none;
+      font-size: 0.875rem;
+      padding: 2px 4px;
+      background: transparent;
+      color: inherit;
+    }
+
+    button.mat-mdc-icon-button {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+    }
+  }
+}

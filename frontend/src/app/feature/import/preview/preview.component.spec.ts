@@ -277,6 +277,85 @@ describe('PreviewComponent', () => {
     expect(importServiceSpy.savePreview).toHaveBeenCalled();
   });
 
+  it('saveApelido applies the note to every same-name row and persists', () => {
+    component.preview = {
+      ...mockPreview,
+      transactions: [
+        {
+          date: '2026-05-01',
+          description: 'iFood *ped',
+          normalizedDescription: 'ifood',
+          amount: 30,
+          type: 'EXPENSE',
+          needsReview: false,
+          included: true,
+        },
+        {
+          date: '2026-05-02',
+          description: 'iFood *out',
+          normalizedDescription: 'ifood',
+          amount: 40,
+          type: 'EXPENSE',
+          needsReview: false,
+          included: true,
+        },
+        {
+          date: '2026-05-03',
+          description: 'Uber',
+          normalizedDescription: 'uber',
+          amount: 20,
+          type: 'EXPENSE',
+          needsReview: false,
+          included: true,
+        },
+      ],
+    };
+    const tx = component.preview.transactions[0];
+    component.startApelido(tx);
+    component.apelidoDraft = 'Delivery casa';
+    component.saveApelido(tx);
+
+    expect(component.preview.transactions[0].notes).toBe('Delivery casa');
+    expect(component.preview.transactions[1].notes).toBe('Delivery casa'); // same effective name
+    expect(component.preview.transactions[2].notes).toBeUndefined(); // different merchant
+    expect(importServiceSpy.savePreview).toHaveBeenCalled();
+  });
+
+  it('refreshDisplayed filters by search text and type', () => {
+    component.preview = {
+      ...mockPreview,
+      transactions: [
+        {
+          date: '2026-05-01',
+          description: 'iFood',
+          normalizedDescription: 'ifood',
+          amount: 30,
+          type: 'EXPENSE',
+          needsReview: false,
+          included: true,
+        },
+        {
+          date: '2026-05-02',
+          description: 'Salário',
+          normalizedDescription: 'salario',
+          amount: 5000,
+          type: 'INCOME',
+          needsReview: false,
+          included: true,
+        },
+      ],
+    };
+    component.filterType = 'INCOME';
+    component.filterSearch = '';
+    component.refreshDisplayed();
+    expect(component.displayedTransactions.map((t) => t.description)).toEqual(['Salário']);
+
+    component.filterType = '';
+    component.filterSearch = 'ifo';
+    component.refreshDisplayed();
+    expect(component.displayedTransactions.map((t) => t.description)).toEqual(['iFood']);
+  });
+
   it('autoClassificationLabel returns Portuguese label for OWN_TRANSFER', () => {
     expect(component.autoClassificationLabel('OWN_TRANSFER')).toBe('Transferência própria');
   });
