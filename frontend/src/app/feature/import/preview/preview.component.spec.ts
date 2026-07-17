@@ -356,6 +356,76 @@ describe('PreviewComponent', () => {
     expect(component.displayedTransactions.map((t) => t.description)).toEqual(['iFood']);
   });
 
+  it('classification change propagates to same-name rows on BATCH and flags learn', () => {
+    component.preview = {
+      ...mockPreview,
+      transactions: [
+        {
+          date: '2026-05-01',
+          description: 'iFood a',
+          normalizedDescription: 'ifood',
+          amount: 30,
+          type: 'EXPENSE',
+          needsReview: false,
+          included: true,
+        },
+        {
+          date: '2026-05-02',
+          description: 'iFood b',
+          normalizedDescription: 'ifood',
+          amount: 40,
+          type: 'EXPENSE',
+          needsReview: false,
+          included: true,
+        },
+      ],
+    };
+    const tx = component.preview.transactions[0];
+    tx.budgetGroup = 'NON_ESSENTIAL';
+    spyOn(
+      (component as unknown as { dialog: { open: () => unknown } }).dialog,
+      'open'
+    ).and.returnValue({
+      afterClosed: () => of('BATCH'),
+    });
+
+    component.onGroupChange(tx);
+
+    expect(component.preview.transactions[1].budgetGroup).toBe('NON_ESSENTIAL');
+    expect(tx.learn).toBeTrue();
+    expect(component.preview.transactions[1].learn).toBeTrue();
+    expect(importServiceSpy.savePreview).toHaveBeenCalled();
+  });
+
+  it('classification on a unique merchant flags learn and persists without a dialog', () => {
+    component.preview = {
+      ...mockPreview,
+      transactions: [
+        {
+          date: '2026-05-01',
+          description: 'Uber',
+          normalizedDescription: 'uber',
+          amount: 20,
+          type: 'EXPENSE',
+          needsReview: false,
+          included: true,
+          categoryId: 'cat-x',
+        },
+      ],
+    };
+    const tx = component.preview.transactions[0];
+    const openSpy = spyOn(
+      (component as unknown as { dialog: { open: () => unknown } }).dialog,
+      'open'
+    );
+
+    component.onCategoryChange(tx);
+
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(tx.learn).toBeTrue();
+    expect(importServiceSpy.savePreview).toHaveBeenCalled();
+  });
+
   it('autoClassificationLabel returns Portuguese label for OWN_TRANSFER', () => {
     expect(component.autoClassificationLabel('OWN_TRANSFER')).toBe('Transferência própria');
   });

@@ -19,6 +19,8 @@ export interface ParsedTransaction {
   autoClassification?: string;
   /** EXTRATO only: set when the user reconciled this "Pagamento de fatura" to a fatura. */
   reconciled?: boolean;
+  /** Set when the user classified this row in the preview → confirm learns a merchant rule. */
+  learn?: boolean;
 }
 
 export interface ReconciliationCandidate {

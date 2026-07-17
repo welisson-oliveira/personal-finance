@@ -26,6 +26,10 @@ import { ImportService } from '../import.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { CategorySelectComponent } from '../../../shared/category-select/category-select.component';
 import { TransactionEditDialogComponent } from '../../transactions/transaction-edit-dialog/transaction-edit-dialog.component';
+import {
+  PreviewPropagateDialogComponent,
+  PreviewPropagateScope,
+} from './preview-propagate-dialog.component';
 
 @Component({
   selector: 'app-preview',
@@ -245,6 +249,29 @@ export class PreviewComponent implements OnInit {
    * category + group; INVESTMENT keeps a direction only — then persists.
    */
   onTypeChange(tx: ParsedTransaction): void {
+    this.normalizeForType(tx);
+    this.classifyWithScope(tx, (sib) => {
+      sib.type = tx.type;
+      this.normalizeForType(sib);
+      sib.budgetGroup = tx.budgetGroup;
+      sib.investmentDirection = tx.investmentDirection;
+      sib.categoryId = tx.categoryId;
+    });
+  }
+
+  onGroupChange(tx: ParsedTransaction): void {
+    this.classifyWithScope(tx, (sib) => (sib.budgetGroup = tx.budgetGroup));
+  }
+
+  onDirectionChange(tx: ParsedTransaction): void {
+    this.classifyWithScope(tx, (sib) => (sib.investmentDirection = tx.investmentDirection));
+  }
+
+  onCategoryChange(tx: ParsedTransaction): void {
+    this.classifyWithScope(tx, (sib) => (sib.categoryId = tx.categoryId));
+  }
+
+  private normalizeForType(tx: ParsedTransaction): void {
     if (tx.type === 'INCOME') {
       tx.budgetGroup = undefined;
       tx.investmentDirection = undefined;
@@ -254,8 +281,47 @@ export class PreviewComponent implements OnInit {
       tx.budgetGroup = undefined;
       tx.categoryId = undefined;
     }
-    this.refreshDisplayed(); // a type change may move the row out of the active type filter
-    this.persistEdits();
+  }
+
+  private effectiveName(tx: ParsedTransaction): string {
+    return tx.normalizedDescription || tx.description;
+  }
+
+  /**
+   * Applies a classification to the row (already set via ngModel) and flags it to teach a rule on
+   * confirm. When the same merchant appears on other rows in this import, asks whether to apply to
+   * all of them too (parity with the transactions list's propagation dialog).
+   */
+  private classifyWithScope(
+    tx: ParsedTransaction,
+    copyToSibling: (sib: ParsedTransaction) => void
+  ): void {
+    tx.learn = true;
+    const name = this.effectiveName(tx);
+    const siblings = (this.preview?.transactions ?? []).filter(
+      (t) => t !== tx && this.effectiveName(t) === name
+    );
+    if (siblings.length === 0) {
+      this.refreshDisplayed();
+      this.persistEdits();
+      return;
+    }
+    this.dialog
+      .open(PreviewPropagateDialogComponent, {
+        data: { merchant: tx.notes || name, count: siblings.length + 1 },
+        width: '420px',
+      })
+      .afterClosed()
+      .subscribe((scope: PreviewPropagateScope | undefined) => {
+        if (scope === 'BATCH') {
+          siblings.forEach((sib) => {
+            copyToSibling(sib);
+            sib.learn = true;
+          });
+        }
+        this.refreshDisplayed();
+        this.persistEdits();
+      });
   }
 
   /** Resolves the "needs review" flag right in the preview (parity with the list's confirm-review). */
