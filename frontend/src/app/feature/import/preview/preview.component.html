@@ -87,9 +87,36 @@
     </mat-card>
   }
 
+  <div class="preview-filters">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-search">
+      <mat-label>Buscar</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input
+        matInput
+        [(ngModel)]="filterSearch"
+        (ngModelChange)="refreshDisplayed()"
+        placeholder="Descrição ou apelido"
+      />
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-type">
+      <mat-label>Tipo</mat-label>
+      <mat-select [(ngModel)]="filterType" (selectionChange)="refreshDisplayed()">
+        <mat-option value="">Todos</mat-option>
+        @for (t of types; track t.value) {
+          <mat-option [value]="t.value">{{ t.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <button mat-stroked-button (click)="clearFilters()">
+      <mat-icon>clear</mat-icon>
+      Limpar
+    </button>
+    <span class="filter-count">{{ displayedTransactions.length }} de {{ preview.transactions.length }}</span>
+  </div>
+
   <mat-card class="table-card">
     <div class="table-wrapper">
-      <table mat-table [dataSource]="preview.transactions" class="preview-table">
+      <table mat-table [dataSource]="displayedTransactions" class="preview-table">
         <ng-container matColumnDef="included">
           <th mat-header-cell *matHeaderCellDef>Incluir</th>
           <td mat-cell *matCellDef="let tx">
@@ -103,26 +130,51 @@
         </ng-container>
 
         <ng-container matColumnDef="description">
-          <th mat-header-cell *matHeaderCellDef>Description</th>
+          <th mat-header-cell *matHeaderCellDef>Descrição / Apelido</th>
           <td mat-cell *matCellDef="let tx" class="desc-cell">
-            <div class="desc-main" [matTooltip]="tx.description" matTooltipPosition="above">
-              {{ tx.normalizedDescription || tx.description }}
-            </div>
-            @if (tx.cardHolder) {
-              <div class="desc-sub">{{ tx.cardHolder }}</div>
-            }
-            @if (tx.installmentInfo) {
-              <div class="desc-sub installment">Parcel {{ tx.installmentInfo }}</div>
-            }
-            @if (tx.autoClassification) {
-              <span class="auto-class-badge" [matTooltip]="autoClassificationTooltip(tx.autoClassification)">{{
-                autoClassificationLabel(tx.autoClassification)
-              }}</span>
-            }
-            @if (tx.needsReview) {
-              <mat-icon class="review-icon" matTooltip="Precisa de revisão — classifique e confirme na coluna Tipo"
-                >warning</mat-icon
-              >
+            @if (editingApelidoFor === tx) {
+              <div class="apelido-edit">
+                <input
+                  class="apelido-input"
+                  [(ngModel)]="apelidoDraft"
+                  placeholder="Apelido..."
+                  (keyup.enter)="saveApelido(tx)"
+                  (keyup.escape)="cancelApelido()"
+                />
+                <button mat-icon-button color="primary" (click)="saveApelido(tx)" title="Salvar">
+                  <mat-icon>check</mat-icon>
+                </button>
+                <button mat-icon-button (click)="cancelApelido()" title="Cancelar">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            } @else {
+              <div class="desc-content" (click)="startApelido(tx)">
+                <div class="desc-main" [matTooltip]="tx.description" matTooltipPosition="above">
+                  {{ tx.notes || tx.normalizedDescription || tx.description }}
+                </div>
+                @if (tx.notes) {
+                  <div class="desc-sub">{{ tx.normalizedDescription || tx.description }}</div>
+                } @else {
+                  <div class="desc-sub desc-placeholder">Adicionar apelido…</div>
+                }
+                @if (tx.cardHolder) {
+                  <div class="desc-sub">{{ tx.cardHolder }}</div>
+                }
+                @if (tx.installmentInfo) {
+                  <div class="desc-sub installment">Parcel {{ tx.installmentInfo }}</div>
+                }
+                @if (tx.autoClassification) {
+                  <span class="auto-class-badge" [matTooltip]="autoClassificationTooltip(tx.autoClassification)">{{
+                    autoClassificationLabel(tx.autoClassification)
+                  }}</span>
+                }
+                @if (tx.needsReview) {
+                  <mat-icon class="review-icon" matTooltip="Precisa de revisão — classifique e confirme na coluna Tipo"
+                    >warning</mat-icon
+                  >
+                }
+              </div>
             }
           </td>
         </ng-container>
@@ -213,20 +265,6 @@
               [(value)]="tx.categoryId"
               (valueChange)="onEdit()"
               (categoryCreated)="categories = categories.concat($event)"
-            />
-          </td>
-        </ng-container>
-
-        <ng-container matColumnDef="notes">
-          <th mat-header-cell *matHeaderCellDef>Notes</th>
-          <td mat-cell *matCellDef="let tx">
-            <input
-              matInput
-              [(ngModel)]="tx.notes"
-              (ngModelChange)="onNotesInput()"
-              (blur)="onEdit()"
-              class="notes-input"
-              placeholder="Add note..."
             />
           </td>
         </ng-container>
