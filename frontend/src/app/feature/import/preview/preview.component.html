@@ -224,7 +224,7 @@
           <th mat-header-cell *matHeaderCellDef>Grupo</th>
           <td mat-cell *matCellDef="let tx">
             @if (tx.type === 'EXPENSE') {
-              <mat-select [(ngModel)]="tx.budgetGroup" (selectionChange)="onEdit()" class="inline-select">
+              <mat-select [(ngModel)]="tx.budgetGroup" (selectionChange)="onGroupChange(tx)" class="inline-select">
                 @for (opt of budgetGroups; track opt.value) {
                   <mat-option [value]="opt.value" [matTooltip]="opt.tooltip" matTooltipPosition="right">
                     {{ opt.label }}
@@ -241,7 +241,11 @@
           <th mat-header-cell *matHeaderCellDef>Direção</th>
           <td mat-cell *matCellDef="let tx">
             @if (tx.type === 'INVESTMENT') {
-              <mat-select [(ngModel)]="tx.investmentDirection" (selectionChange)="onEdit()" class="inline-select">
+              <mat-select
+                [(ngModel)]="tx.investmentDirection"
+                (selectionChange)="onDirectionChange(tx)"
+                class="inline-select"
+              >
                 @for (opt of directions; track opt.value) {
                   <mat-option [value]="opt.value" [matTooltip]="opt.tooltip" matTooltipPosition="right">
                     {{ opt.label }}
@@ -263,7 +267,7 @@
               [categories]="categories"
               label="Categoria"
               [(value)]="tx.categoryId"
-              (valueChange)="onEdit()"
+              (valueChange)="onCategoryChange(tx)"
               (categoryCreated)="categories = categories.concat($event)"
             />
           </td>

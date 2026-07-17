@@ -34,4 +34,8 @@ public class ParsedTransactionDTO {
   // EXTRATO import only: when true, this "Pagamento de fatura" was reconciled to a fatura and must
   // not be persisted (the fatura's items already represent it).
   @Builder.Default private boolean reconciled = false;
+
+  // Set when the user classified this row in the preview: on confirm we learn a MerchantRule so
+  // future imports of the same merchant are classified automatically (parity with the list's edit).
+  @Builder.Default private boolean learn = false;
 }

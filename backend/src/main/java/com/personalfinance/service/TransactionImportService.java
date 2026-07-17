@@ -41,6 +41,7 @@ public class TransactionImportService {
   private final TransactionRepository transactionRepository;
   private final CategoryRepository categoryRepository;
   private final MerchantDisplayNameRepository merchantDisplayNameRepository;
+  private final MerchantRuleRepository merchantRuleRepository;
 
   private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -324,11 +325,51 @@ public class TransactionImportService {
               .installmentInfo(dto.getInstallmentInfo())
               .build();
       transactionRepository.save(tx);
+      // The user classified this row in the preview → teach a rule for future imports.
+      if (dto.isLearn()) {
+        learnRule(tx, user);
+      }
     }
 
     session.setStatus("CONFIRMED");
     session.setPreviewJson(null);
     importSessionRepository.save(session);
+  }
+
+  /**
+   * Upserts a USER merchant rule from a confirmed transaction so future imports of the same
+   * merchant are auto-classified — same learning the transactions list does on edit. Skips
+   * "Pagamento de fatura" (its ignore is a structural anti-duplication rule, not a per-merchant
+   * classification).
+   */
+  private void learnRule(Transaction tx, User user) {
+    String effectiveName =
+        tx.getNormalizedDescription() != null ? tx.getNormalizedDescription() : tx.getDescription();
+    if (effectiveName == null || effectiveName.isBlank()) return;
+    String descLower = tx.getDescription() != null ? tx.getDescription().toLowerCase() : "";
+    if (descLower.startsWith("pagamento de fatura")) return;
+
+    MerchantRule rule =
+        merchantRuleRepository
+            .findUserRuleByNormalizedName(effectiveName, user.getId())
+            .orElseGet(
+                () ->
+                    MerchantRule.builder()
+                        .user(user)
+                        .merchantName(tx.getDescription())
+                        .normalizedName(effectiveName)
+                        .createdBy("USER")
+                        .build());
+    rule.setType(tx.getType().name());
+    rule.setIgnored(tx.isIgnored());
+    rule.setCategory(tx.getCategory());
+    if (tx.getBudgetGroup() != null) {
+      rule.setExpenseType(tx.getBudgetGroup());
+    }
+    rule.setInvestmentDirection(tx.getInvestmentDirection());
+    rule.setConfidence(100);
+    rule.setCreatedBy("USER");
+    merchantRuleRepository.save(rule);
   }
 
   @Transactional

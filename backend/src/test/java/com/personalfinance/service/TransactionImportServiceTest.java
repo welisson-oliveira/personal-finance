@@ -11,6 +11,7 @@ import com.personalfinance.dto.response.ParsedTransactionDTO;
 import com.personalfinance.dto.response.ReconciliationCandidateDTO;
 import com.personalfinance.dto.response.ReconciliationSlotDTO;
 import com.personalfinance.model.entity.ImportSession;
+import com.personalfinance.model.entity.MerchantRule;
 import com.personalfinance.model.entity.Transaction;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.repository.*;
@@ -43,6 +44,7 @@ class TransactionImportServiceTest {
   @Mock private TransactionRepository transactionRepository;
   @Mock private CategoryRepository categoryRepository;
   @Mock private MerchantDisplayNameRepository merchantDisplayNameRepository;
+  @Mock private MerchantRuleRepository merchantRuleRepository;
 
   @InjectMocks private TransactionImportService service;
 
@@ -95,6 +97,72 @@ class TransactionImportServiceTest {
     ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
     verify(transactionRepository, times(1)).save(txCaptor.capture());
     assertThat(txCaptor.getValue().getDescription()).isEqualTo("Supermercado");
+  }
+
+  @Test
+  void confirm_learns_a_merchant_rule_for_classified_rows() {
+    ParsedTransactionDTO row =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 5, 1))
+            .description("iFood *pedido")
+            .normalizedDescription("ifood")
+            .amount(BigDecimal.valueOf(40))
+            .type("EXPENSE")
+            .budgetGroup("NON_ESSENTIAL")
+            .included(true)
+            .needsReview(false)
+            .learn(true)
+            .build();
+    when(merchantRuleRepository.findUserRuleByNormalizedName("ifood", user.getId()))
+        .thenReturn(Optional.empty());
+
+    service.confirm(session.getId(), List.of(row), null, user);
+
+    ArgumentCaptor<MerchantRule> ruleCaptor = ArgumentCaptor.forClass(MerchantRule.class);
+    verify(merchantRuleRepository).save(ruleCaptor.capture());
+    MerchantRule rule = ruleCaptor.getValue();
+    assertThat(rule.getNormalizedName()).isEqualTo("ifood");
+    assertThat(rule.getType()).isEqualTo("EXPENSE");
+    assertThat(rule.getExpenseType()).isEqualTo("NON_ESSENTIAL");
+    assertThat(rule.getCreatedBy()).isEqualTo("USER");
+  }
+
+  @Test
+  void confirm_does_not_learn_when_learn_flag_is_false() {
+    ParsedTransactionDTO row =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 5, 1))
+            .description("Uber")
+            .normalizedDescription("uber")
+            .amount(BigDecimal.valueOf(20))
+            .type("EXPENSE")
+            .included(true)
+            .needsReview(false)
+            .learn(false)
+            .build();
+
+    service.confirm(session.getId(), List.of(row), null, user);
+
+    verify(merchantRuleRepository, never()).save(any());
+  }
+
+  @Test
+  void confirm_does_not_learn_a_rule_for_bill_payments() {
+    ParsedTransactionDTO row =
+        ParsedTransactionDTO.builder()
+            .date(LocalDate.of(2026, 5, 1))
+            .description("Pagamento de fatura")
+            .normalizedDescription("pagamento de fatura")
+            .amount(BigDecimal.valueOf(800))
+            .type("EXPENSE")
+            .included(true)
+            .needsReview(false)
+            .learn(true)
+            .build();
+
+    service.confirm(session.getId(), List.of(row), null, user);
+
+    verify(merchantRuleRepository, never()).save(any());
   }
 
   @Test
