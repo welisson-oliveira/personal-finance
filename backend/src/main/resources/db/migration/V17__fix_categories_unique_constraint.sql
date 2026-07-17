@@ -1,5 +1,6 @@
--- The original uk_categories_name constraint was UNIQUE(name) globally.
--- After adding user_id to categories (V4), each user owns their own tree,
--- so the uniqueness scope should be per-user: UNIQUE(name, user_id).
+-- The original uk_categories_name constraint (UNIQUE on name alone) was designed for the
+-- old global category seed (V2), before categories became user-owned (V4). It incorrectly
+-- prevents a user from having the same subcategory name under different parent groups
+-- (e.g. "Outros" under Receitas AND "Outros" under Moradia). Drop it entirely; uniqueness
+-- is enforced at the application level where necessary.
 ALTER TABLE categories DROP CONSTRAINT uk_categories_name;
-ALTER TABLE categories ADD CONSTRAINT uk_categories_user_name UNIQUE (name, user_id);
