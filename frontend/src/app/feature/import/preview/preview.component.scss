@@ -270,12 +270,19 @@
     color: #e65100;
     vertical-align: middle;
   }
+}
+
+/* Review flag lives in the (wide) description cell: warning + confirm-review check inline. */
+.review-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  vertical-align: middle;
 
   .confirm-review-btn {
     width: 28px;
     height: 28px;
     line-height: 28px;
-    margin-left: 2px;
     color: #2e7d32;
 
     mat-icon {
