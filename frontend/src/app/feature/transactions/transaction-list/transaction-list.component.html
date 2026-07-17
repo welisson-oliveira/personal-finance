@@ -206,15 +206,15 @@
               <mat-icon class="chip-caret">arrow_drop_down</mat-icon>
             </button>
             @if (tx.needsReview) {
-              <span class="review-badge" matTooltip="Precisa de revisão — classifique os campos">Revisar</span>
               <button
-                class="confirm-review-btn"
-                mat-icon-button
+                type="button"
+                class="review-chip"
                 (click)="confirmReview(tx)"
-                matTooltip="Confirmar revisão"
+                matTooltip="Precisa de revisão — clique para marcar como revisado"
                 aria-label="Confirmar revisão"
               >
-                <mat-icon>check_circle</mat-icon>
+                <mat-icon>done</mat-icon>
+                <span>Revisar</span>
               </button>
             }
             @if (tx.ignored) {

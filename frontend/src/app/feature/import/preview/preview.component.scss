@@ -259,37 +259,36 @@
 
 .type-cell {
   white-space: nowrap;
-
-  .review-badge {
-    margin-left: 6px;
-    padding: 1px 8px;
-    border-radius: 10px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    background: rgba(255, 152, 0, 0.18);
-    color: #e65100;
-    vertical-align: middle;
-  }
 }
 
-/* Review flag lives in the (wide) description cell: warning + confirm-review check inline. */
-.review-flag {
+/* Amber pill in the description cell that flags "needs review" and confirms it on click
+   (hover turns green = confirm). Replaces the old separate check button. */
+.review-chip {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  vertical-align: middle;
+  gap: 3px;
+  margin-top: 2px;
+  padding: 2px 9px 2px 6px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 152, 0, 0.18);
+  color: #e65100;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
 
-  .confirm-review-btn {
-    width: 28px;
-    height: 28px;
-    line-height: 28px;
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover {
+    background: rgba(46, 125, 50, 0.2);
     color: #2e7d32;
-
-    mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
   }
 }
 
