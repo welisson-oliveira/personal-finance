@@ -170,9 +170,20 @@
                   }}</span>
                 }
                 @if (tx.needsReview) {
-                  <mat-icon class="review-icon" matTooltip="Precisa de revisão — classifique e confirme na coluna Tipo"
-                    >warning</mat-icon
-                  >
+                  <span class="review-flag">
+                    <mat-icon class="review-icon" matTooltip="Precisa de revisão — classifique o tipo/categoria"
+                      >warning</mat-icon
+                    >
+                    <button
+                      mat-icon-button
+                      class="confirm-review-btn"
+                      (click)="$event.stopPropagation(); confirmReviewRow(tx)"
+                      matTooltip="Confirmar revisão"
+                      aria-label="Confirmar revisão"
+                    >
+                      <mat-icon>check_circle</mat-icon>
+                    </button>
+                  </span>
                 }
               </div>
             }
@@ -206,16 +217,7 @@
               }
             </mat-select>
             @if (tx.needsReview) {
-              <span class="review-badge" matTooltip="Precisa de revisão — classifique e confirme">Revisar</span>
-              <button
-                mat-icon-button
-                class="confirm-review-btn"
-                (click)="confirmReviewRow(tx)"
-                matTooltip="Confirmar revisão"
-                aria-label="Confirmar revisão"
-              >
-                <mat-icon>check_circle</mat-icon>
-              </button>
+              <span class="review-badge" matTooltip="Precisa de revisão — classifique o tipo/categoria">Revisar</span>
             }
           </td>
         </ng-container>
