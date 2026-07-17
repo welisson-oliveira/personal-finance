@@ -170,20 +170,16 @@
                   }}</span>
                 }
                 @if (tx.needsReview) {
-                  <span class="review-flag">
-                    <mat-icon class="review-icon" matTooltip="Precisa de revisão — classifique o tipo/categoria"
-                      >warning</mat-icon
-                    >
-                    <button
-                      mat-icon-button
-                      class="confirm-review-btn"
-                      (click)="$event.stopPropagation(); confirmReviewRow(tx)"
-                      matTooltip="Confirmar revisão"
-                      aria-label="Confirmar revisão"
-                    >
-                      <mat-icon>check_circle</mat-icon>
-                    </button>
-                  </span>
+                  <button
+                    type="button"
+                    class="review-chip"
+                    (click)="$event.stopPropagation(); confirmReviewRow(tx)"
+                    matTooltip="Precisa de revisão — clique para marcar como revisado"
+                    aria-label="Confirmar revisão"
+                  >
+                    <mat-icon>done</mat-icon>
+                    <span>Revisar</span>
+                  </button>
                 }
               </div>
             }
@@ -216,9 +212,6 @@
                 <mat-option [value]="t.value">{{ t.label }}</mat-option>
               }
             </mat-select>
-            @if (tx.needsReview) {
-              <span class="review-badge" matTooltip="Precisa de revisão — classifique o tipo/categoria">Revisar</span>
-            }
           </td>
         </ng-container>
 

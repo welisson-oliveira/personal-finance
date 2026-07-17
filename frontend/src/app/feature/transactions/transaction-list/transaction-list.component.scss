@@ -275,27 +275,34 @@
   color: #616161;
 }
 
-.review-badge {
+/* Amber pill that flags "needs review" and confirms it on click (hover turns green = confirm). */
+.review-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   margin-left: 6px;
-  padding: 1px 8px;
-  border-radius: 10px;
-  font-size: 0.68rem;
-  font-weight: 700;
+  padding: 2px 9px 2px 6px;
+  border: none;
+  border-radius: 12px;
   background: rgba(255, 152, 0, 0.18);
   color: #e65100;
-}
-
-.confirm-review-btn {
-  width: 28px;
-  height: 28px;
-  line-height: 28px;
-  margin-left: 2px;
-  color: #2e7d32;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  vertical-align: middle;
+  transition:
+    background 0.15s,
+    color 0.15s;
 
   mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover {
+    background: rgba(46, 125, 50, 0.2);
+    color: #2e7d32;
   }
 }
 
