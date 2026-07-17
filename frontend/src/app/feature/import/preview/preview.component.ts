@@ -26,6 +26,10 @@ import { ImportService } from '../import.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { CategorySelectComponent } from '../../../shared/category-select/category-select.component';
 import { TransactionEditDialogComponent } from '../../transactions/transaction-edit-dialog/transaction-edit-dialog.component';
+import {
+  PreviewPropagateDialogComponent,
+  PreviewPropagateScope,
+} from './preview-propagate-dialog.component';
 
 @Component({
   selector: 'app-preview',
@@ -74,9 +78,17 @@ export class PreviewComponent implements OnInit {
     'budgetGroup',
     'direction',
     'category',
-    'notes',
     'actions',
   ];
+
+  /** Rows currently shown in the table (preview.transactions after search/type filtering). */
+  displayedTransactions: ParsedTransaction[] = [];
+  filterSearch = '';
+  filterType = '';
+
+  /** Inline apelido (notes) editing — parity with the transactions list. */
+  editingApelidoFor: ParsedTransaction | null = null;
+  apelidoDraft = '';
 
   typeLabels: Record<string, string> = {
     INCOME: 'Receita',
@@ -150,7 +162,52 @@ export class PreviewComponent implements OnInit {
       this.router.navigate(['/import']);
       return;
     }
+    this.refreshDisplayed();
     this.categoryService.getAll().subscribe({ next: (cats) => (this.categories = cats) });
+  }
+
+  /** Recomputes the visible rows from the search + type filters (kept stable for the mat-table). */
+  refreshDisplayed(): void {
+    const txs = this.preview?.transactions ?? [];
+    const q = this.filterSearch.trim().toLowerCase();
+    this.displayedTransactions = txs.filter((t) => {
+      if (this.filterType && t.type !== this.filterType) return false;
+      if (!q) return true;
+      return (
+        (t.description || '').toLowerCase().includes(q) ||
+        (t.normalizedDescription || '').toLowerCase().includes(q) ||
+        (t.notes || '').toLowerCase().includes(q)
+      );
+    });
+  }
+
+  clearFilters(): void {
+    this.filterSearch = '';
+    this.filterType = '';
+    this.refreshDisplayed();
+  }
+
+  // --- Inline apelido (notes) ---
+  startApelido(tx: ParsedTransaction): void {
+    this.editingApelidoFor = tx;
+    this.apelidoDraft = tx.notes || '';
+  }
+
+  cancelApelido(): void {
+    this.editingApelidoFor = null;
+    this.apelidoDraft = '';
+  }
+
+  /** Saves the apelido on every row with the same effective name in this import, then persists. */
+  saveApelido(tx: ParsedTransaction): void {
+    const value = this.apelidoDraft.trim() || undefined;
+    const name = tx.normalizedDescription || tx.description;
+    (this.preview?.transactions ?? []).forEach((t) => {
+      if ((t.normalizedDescription || t.description) === name) t.notes = value;
+    });
+    this.editingApelidoFor = null;
+    this.apelidoDraft = '';
+    this.persistEdits();
   }
 
   includedCount(): number {
@@ -192,6 +249,29 @@ export class PreviewComponent implements OnInit {
    * category + group; INVESTMENT keeps a direction only — then persists.
    */
   onTypeChange(tx: ParsedTransaction): void {
+    this.normalizeForType(tx);
+    this.classifyWithScope(tx, (sib) => {
+      sib.type = tx.type;
+      this.normalizeForType(sib);
+      sib.budgetGroup = tx.budgetGroup;
+      sib.investmentDirection = tx.investmentDirection;
+      sib.categoryId = tx.categoryId;
+    });
+  }
+
+  onGroupChange(tx: ParsedTransaction): void {
+    this.classifyWithScope(tx, (sib) => (sib.budgetGroup = tx.budgetGroup));
+  }
+
+  onDirectionChange(tx: ParsedTransaction): void {
+    this.classifyWithScope(tx, (sib) => (sib.investmentDirection = tx.investmentDirection));
+  }
+
+  onCategoryChange(tx: ParsedTransaction): void {
+    this.classifyWithScope(tx, (sib) => (sib.categoryId = tx.categoryId));
+  }
+
+  private normalizeForType(tx: ParsedTransaction): void {
     if (tx.type === 'INCOME') {
       tx.budgetGroup = undefined;
       tx.investmentDirection = undefined;
@@ -201,7 +281,47 @@ export class PreviewComponent implements OnInit {
       tx.budgetGroup = undefined;
       tx.categoryId = undefined;
     }
-    this.persistEdits();
+  }
+
+  private effectiveName(tx: ParsedTransaction): string {
+    return tx.normalizedDescription || tx.description;
+  }
+
+  /**
+   * Applies a classification to the row (already set via ngModel) and flags it to teach a rule on
+   * confirm. When the same merchant appears on other rows in this import, asks whether to apply to
+   * all of them too (parity with the transactions list's propagation dialog).
+   */
+  private classifyWithScope(
+    tx: ParsedTransaction,
+    copyToSibling: (sib: ParsedTransaction) => void
+  ): void {
+    tx.learn = true;
+    const name = this.effectiveName(tx);
+    const siblings = (this.preview?.transactions ?? []).filter(
+      (t) => t !== tx && this.effectiveName(t) === name
+    );
+    if (siblings.length === 0) {
+      this.refreshDisplayed();
+      this.persistEdits();
+      return;
+    }
+    this.dialog
+      .open(PreviewPropagateDialogComponent, {
+        data: { merchant: tx.notes || name, count: siblings.length + 1 },
+        width: '420px',
+      })
+      .afterClosed()
+      .subscribe((scope: PreviewPropagateScope | undefined) => {
+        if (scope === 'BATCH') {
+          siblings.forEach((sib) => {
+            copyToSibling(sib);
+            sib.learn = true;
+          });
+        }
+        this.refreshDisplayed();
+        this.persistEdits();
+      });
   }
 
   /** Resolves the "needs review" flag right in the preview (parity with the list's confirm-review). */
