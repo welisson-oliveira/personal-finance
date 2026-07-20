@@ -257,8 +257,9 @@ class DashboardServiceTest {
   }
 
   @Test
-  void monthly_prefers_registered_income_over_configured_net_income() {
+  void monthly_floors_the_5030_20_base_with_the_configured_salary_every_month() {
     UUID userId = UUID.randomUUID();
+    // Past month (May) with only R$4000 of income imported, but a configured salary of R$5000.
     stubIncome(userId, "4000.00");
     stubExpenses(userId, "2000.00", "1200.00");
     stubInvestments(userId, "800.00", "0");
@@ -267,10 +268,27 @@ class DashboardServiceTest {
     User user = User.builder().id(userId).monthlyNetIncome(new BigDecimal("5000.00")).build();
     DashboardResponse result = service.getMonthly(user, 2026, 5);
 
-    assertThat(result.getRendaBase()).isEqualByComparingTo("4000.00");
+    // The salary floors the base (max(4000, 5000) = 5000), so the percentages stay sane even when
+    // the month's real income wasn't fully imported.
+    assertThat(result.getRendaBase()).isEqualByComparingTo("5000.00");
+    assertThat(result.getPercentualEssenciais()).isEqualByComparingTo("40.00"); // 2000/5000
+    assertThat(result.getPercentualNaoEssenciais()).isEqualByComparingTo("24.00"); // 1200/5000
+    assertThat(result.getPercentualInvestimentos()).isEqualByComparingTo("16.00"); // 800/5000
+  }
+
+  @Test
+  void monthly_keeps_the_month_income_as_base_when_it_exceeds_the_salary() {
+    UUID userId = UUID.randomUUID();
+    stubIncome(userId, "6000.00"); // earned more than the configured salary this month
+    stubExpenses(userId, "3000.00", "1800.00");
+    stubInvestments(userId, "1200.00", "0");
+    stubDestaques(userId);
+
+    User user = User.builder().id(userId).monthlyNetIncome(new BigDecimal("5000.00")).build();
+    DashboardResponse result = service.getMonthly(user, 2026, 5);
+
+    assertThat(result.getRendaBase()).isEqualByComparingTo("6000.00"); // max(6000, 5000)
     assertThat(result.getPercentualEssenciais()).isEqualByComparingTo("50.00");
-    assertThat(result.getPercentualNaoEssenciais()).isEqualByComparingTo("30.00");
-    assertThat(result.getPercentualInvestimentos()).isEqualByComparingTo("20.00");
   }
 
   @Test
