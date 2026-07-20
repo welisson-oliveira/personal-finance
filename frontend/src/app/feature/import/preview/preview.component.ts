@@ -25,6 +25,7 @@ import { Transaction, UpdateTransactionRequest } from '../../../core/models/tran
 import { ImportService } from '../import.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { CategorySelectComponent } from '../../../shared/category-select/category-select.component';
+import { AutofocusDirective } from '../../../shared/autofocus/autofocus.directive';
 import { TransactionEditDialogComponent } from '../../transactions/transaction-edit-dialog/transaction-edit-dialog.component';
 import {
   PreviewPropagateDialogComponent,
@@ -52,6 +53,7 @@ import {
     MatTooltipModule,
     MatDialogModule,
     CategorySelectComponent,
+    AutofocusDirective,
   ],
   templateUrl: './preview.component.html',
   styleUrl: './preview.component.scss',
