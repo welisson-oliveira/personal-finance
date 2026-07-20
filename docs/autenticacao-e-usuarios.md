@@ -38,7 +38,7 @@ Registro/login com JWT, proteção das rotas, e o perfil do usuário (incluindo 
   - `login(req)` → `POST /api/auth/login` (armazena via `tap`); `register(req)` → `POST /api/auth/register`.
   - `logout()` limpa storage, zera o signal, navega `/auth/login`.
   - `getToken()`, `isAuthenticated()`, `getUser()`, `updateStoredUser(user)` (persiste + atualiza o signal — usado ao salvar Configurações).
-- **`authInterceptor`** (functional `HttpInterceptorFn`) — injeta `AuthService` e adiciona `Authorization: Bearer <token>` quando há token. Registrado em `app.config.ts` via `provideHttpClient(withInterceptors([authInterceptor]))`.
+- **`authInterceptor`** (functional `HttpInterceptorFn`) — injeta `AuthService` e adiciona `Authorization: Bearer <token>` quando há token. **Trata sessão expirada:** se uma requisição autenticada volta **401**, chama `auth.logout()` (limpa storage + navega para `/auth/login`); as rotas `/api/auth/*` são excluídas para um 401 de senha errada não disparar o redirecionamento (o form trata). Registrado em `app.config.ts` via `provideHttpClient(withInterceptors([authInterceptor]))`. Coberto por `auth.interceptor.spec`.
 - **`authGuard`** (functional `CanActivateFn`) — libera se autenticado, senão navega `/auth/login`. Aplicado ao shell (`LayoutComponent`), protegendo todas as rotas filhas.
 
 ### Telas
