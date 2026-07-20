@@ -57,7 +57,7 @@ export class DashboardComponent {
     });
   }
 
-  fmt(val: number | undefined): string {
+  fmt(val: number | null | undefined): string {
     if (val == null) return 'R$ 0,00';
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
@@ -98,6 +98,24 @@ export class DashboardComponent {
   /** Share (%) of a category within its bucket total, for the drill-down bars. */
   bucketPct(total: number, bucketTotal: number): number {
     return bucketTotal > 0 ? (total / bucketTotal) * 100 : 0;
+  }
+
+  abs(val: number | null | undefined): number {
+    return Math.abs(val ?? 0);
+  }
+
+  /** True when at least one insight block has content worth rendering. */
+  hasAnyInsight(): boolean {
+    const i = this.data?.insights;
+    if (!i) return false;
+    return !!(
+      i.maioresGastos?.length ||
+      i.recorrentes?.length ||
+      i.metasEstouradas?.length ||
+      i.pequenosGastos?.length ||
+      i.totalMesAnterior > 0 ||
+      (i.mesCorrente && i.projecaoFechamento != null)
+    );
   }
 
   baseLabel(): string {
