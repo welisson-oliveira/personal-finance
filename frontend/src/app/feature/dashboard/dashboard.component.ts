@@ -102,7 +102,10 @@ export class DashboardComponent {
 
   baseLabel(): string {
     if (!this.data) return '';
-    if (this.data.usandoSalarioPrevisto) return 'salário previsto';
+    // The salary floors the base every month; label it accordingly when it's the one being used.
+    if (this.data.salarioEsperado > this.data.entradas) {
+      return this.data.usandoSalarioPrevisto ? 'salário previsto' : 'salário configurado';
+    }
     return this.data.entradas > 0 ? 'renda do mês' : 'salário configurado';
   }
 }

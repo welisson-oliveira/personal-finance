@@ -11,10 +11,11 @@
     </mat-card-header>
     <mat-card-content>
       <p class="settings-hint">
-        Usado como base do cálculo da distribuição 50/30/20 no dashboard enquanto o mês não tiver renda registrada nas
-        transações (ex: salário no extrato importado). Quando houver renda no mês, ela tem prioridade. No mês corrente,
-        também serve de <strong>salário previsto</strong>: se a fatura já caiu mas o salário ainda não foi importado, o
-        dashboard projeta o resultado com esse valor de piso para não parecer no vermelho antes da hora.
+        Serve de <strong>piso da renda</strong> para a distribuição 50/30/20 no dashboard: a base é o maior valor entre
+        a renda registrada no mês e este salário — assim, num mês em que a renda não foi (totalmente) importada, os
+        percentuais não distorcem. No <strong>mês corrente</strong> também é o <strong>salário previsto</strong>: se a
+        fatura já caiu mas o salário ainda não foi importado, o dashboard projeta o resultado com esse valor de piso
+        para não parecer no vermelho antes da hora.
       </p>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Salário líquido mensal</mat-label>

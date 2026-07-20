@@ -89,9 +89,11 @@ public class DashboardService {
     boolean usandoSalarioPrevisto = receitaProjetada.compareTo(entradas) > 0;
     BigDecimal resultadoPrevisto = receitaProjetada.subtract(totalDespesas);
 
-    // 50/30/20 base: the (projected) month income, falling back to the configured net salary.
-    BigDecimal rendaBase =
-        receitaProjetada.compareTo(BigDecimal.ZERO) > 0 ? receitaProjetada : salarioEsperado;
+    // 50/30/20 base: the month's income floored by the configured monthly salary, EVERY month — so
+    // a month whose real income wasn't (fully) imported doesn't collapse the base and blow the
+    // percentages up (e.g. a fatura-heavy month with only R$281 of income imported). If neither is
+    // set the base is 0 and the percentages show "—".
+    BigDecimal rendaBase = entradas.max(salarioEsperado);
 
     BigDecimal percentualEssenciais = percent(despesasEssenciais, rendaBase);
     BigDecimal percentualNaoEssenciais = percent(despesasNaoEssenciais, rendaBase);
