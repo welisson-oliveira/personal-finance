@@ -639,4 +639,47 @@ class TransactionImportServiceTest {
         .isInstanceOf(IllegalArgumentException.class);
     verify(importSessionRepository, never()).save(any());
   }
+
+  // --- Direction gate: a learned rule must not flip the money direction the statement sign read
+  // ---
+
+  @Test
+  void directionGate_blocks_an_expense_rule_from_flipping_incoming_money() {
+    ParsedTransactionDTO incoming = ParsedTransactionDTO.builder().type("INCOME").build();
+    ClassificationResult expenseRule =
+        ClassificationResult.from(MerchantRule.builder().type("EXPENSE").build());
+
+    // A rule learned on an outgoing Pix must NOT turn an incoming Pix into an expense.
+    assertThat(service.flipsMoneyDirection(incoming, expenseRule)).isTrue();
+  }
+
+  @Test
+  void directionGate_allows_a_same_direction_refinement() {
+    ParsedTransactionDTO outgoing = ParsedTransactionDTO.builder().type("EXPENSE").build();
+    // A debit refined into an investment contribution — both money-out, so it is not a flip.
+    ClassificationResult contributionRule =
+        ClassificationResult.from(
+            MerchantRule.builder().type("INVESTMENT").investmentDirection("CONTRIBUTION").build());
+
+    assertThat(service.flipsMoneyDirection(outgoing, contributionRule)).isFalse();
+  }
+
+  @Test
+  void directionGate_treats_investment_redemption_as_money_in() {
+    ParsedTransactionDTO incoming = ParsedTransactionDTO.builder().type("INCOME").build();
+    ClassificationResult redemptionRule =
+        ClassificationResult.from(
+            MerchantRule.builder().type("INVESTMENT").investmentDirection("REDEMPTION").build());
+
+    // Both are money-in → refining an income into a redemption is allowed.
+    assertThat(service.flipsMoneyDirection(incoming, redemptionRule)).isFalse();
+  }
+
+  @Test
+  void directionGate_ignores_rules_without_a_type() {
+    ParsedTransactionDTO incoming = ParsedTransactionDTO.builder().type("INCOME").build();
+    ClassificationResult noType = ClassificationResult.from(MerchantRule.builder().build());
+
+    assertThat(service.flipsMoneyDirection(incoming, noType)).isFalse();
+  }
 }

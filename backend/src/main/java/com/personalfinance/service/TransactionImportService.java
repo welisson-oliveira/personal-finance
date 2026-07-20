@@ -80,9 +80,13 @@ public class TransactionImportService {
 
       // A user override (learned from a past correction) wins over every heuristic below —
       // e.g. "this Open Banking transfer is my salary, not an own-transfer, don't ignore it".
+      // BUT the statement sign (credit/debit) is the ground truth for money-in vs money-out: a rule
+      // learned on an outgoing Pix ("pix joão" = despesa) must NOT flip an *incoming* Pix from the
+      // same person into an expense. When the rule's direction conflicts with the parsed one, skip
+      // it and fall back to the normal heuristics for the parsed (correct) direction.
       var override =
           classificationService.findUserOverride(tx.getNormalizedDescription(), user.getId());
-      if (override.isPresent()) {
+      if (override.isPresent() && !flipsMoneyDirection(tx, override.get())) {
         applyUserOverride(tx, override.get(), user.getId());
         continue;
       }
@@ -162,6 +166,25 @@ public class TransactionImportService {
    * and the auto-classification heuristics. Clears the review flag (it is an explicit user
    * decision).
    */
+  /**
+   * True when applying the rule's type would flip the money direction the parser already read from
+   * the statement sign (credit → in, debit → out). A learned merchant rule may refine the type
+   * within the same direction (e.g. a debit that is really an investment contribution), but it must
+   * never turn incoming money into an expense, or outgoing money into income.
+   */
+  boolean flipsMoneyDirection(ParsedTransactionDTO tx, ClassificationResult cr) {
+    if (cr.getType() == null) return false;
+    return moneyIn(tx.getType(), tx.getInvestmentDirection())
+        != moneyIn(cr.getType(), cr.getInvestmentDirection());
+  }
+
+  /** Money-in (credit) = INCOME or an investment REDEMPTION; everything else is money-out. */
+  private boolean moneyIn(String type, String investmentDirection) {
+    if ("INCOME".equals(type)) return true;
+    if ("INVESTMENT".equals(type)) return "REDEMPTION".equals(investmentDirection);
+    return false;
+  }
+
   private void applyUserOverride(ParsedTransactionDTO tx, ClassificationResult cr, UUID userId) {
     if (cr.getType() != null) {
       tx.setType(cr.getType());
