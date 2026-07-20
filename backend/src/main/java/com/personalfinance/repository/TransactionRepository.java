@@ -150,29 +150,6 @@ public interface TransactionRepository
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 
   @Query(
-      "SELECT COUNT(t) FROM Transaction t "
-          + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
-          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
-  long countExpensesInPeriod(
-      @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
-
-  @Query(
-      "SELECT COUNT(t) FROM Transaction t "
-          + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
-          + "AND LOWER(t.description) LIKE '%pix%' "
-          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
-  long countPixEnviadosInPeriod(
-      @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
-
-  @Query(
-      "SELECT COUNT(t) FROM Transaction t "
-          + "WHERE t.user.id = :userId AND t.type = 'INCOME' AND t.ignored = false "
-          + "AND LOWER(t.description) LIKE '%pix%' "
-          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
-  long countPixRecebidosInPeriod(
-      @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
-
-  @Query(
       "SELECT t FROM Transaction t "
           + "WHERE t.user.id = :userId "
           + "AND t.source = 'EXTRATO' "

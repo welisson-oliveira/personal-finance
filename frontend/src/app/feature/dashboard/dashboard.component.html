@@ -380,62 +380,135 @@
     </p>
   }
 
-  <!-- Destaques -->
-  @if (data.destaques) {
-    <div class="section-title">Destaques</div>
-    <mat-card class="destaques-card">
-      <mat-card-content>
-        <div class="destaques-grid">
-          @if (data.destaques.maiorSupermercado) {
-            <div class="destaque-item">
-              <mat-icon>shopping_cart</mat-icon>
-              <div>
-                <div class="destaque-label">Maior Supermercado</div>
-                <div class="destaque-value">{{ data.destaques.maiorSupermercado }}</div>
-                <div class="destaque-sub">{{ fmt(data.destaques.maiorSupermercadoValor) }}</div>
-              </div>
-            </div>
-          }
-          @if (data.destaques.maiorDelivery) {
-            <div class="destaque-item">
-              <mat-icon>delivery_dining</mat-icon>
-              <div>
-                <div class="destaque-label">Maior Delivery</div>
-                <div class="destaque-value">{{ data.destaques.maiorDelivery }}</div>
-                <div class="destaque-sub">{{ fmt(data.destaques.maiorDeliveryValor) }}</div>
-              </div>
-            </div>
-          }
-          <div class="destaque-item">
-            <mat-icon>subscriptions</mat-icon>
-            <div>
-              <div class="destaque-label">Assinaturas</div>
-              <div class="destaque-value">{{ data.destaques.quantidadeAssinaturas }}</div>
-            </div>
-          </div>
-          <div class="destaque-item">
-            <mat-icon>shopping_bag</mat-icon>
-            <div>
-              <div class="destaque-label">Compras</div>
-              <div class="destaque-value">{{ data.destaques.quantidadeCompras }}</div>
-            </div>
-          </div>
-          <div class="destaque-item">
-            <mat-icon>send</mat-icon>
-            <div>
-              <div class="destaque-label">PIX Enviados</div>
-              <div class="destaque-value">{{ data.destaques.quantidadePixEnviados }}</div>
-            </div>
-          </div>
-          <div class="destaque-item">
-            <mat-icon>call_received</mat-icon>
-            <div>
-              <div class="destaque-label">PIX Recebidos</div>
-              <div class="destaque-value">{{ data.destaques.quantidadePixRecebidos }}</div>
-            </div>
-          </div>
-        </div>
-      </mat-card-content>
-    </mat-card>
+  <!-- Insights do mês -->
+  @if (data.insights; as ins) {
+    <div class="section-title">Insights do mês</div>
+    @if (hasAnyInsight()) {
+      <div class="insights-grid">
+        <!-- 4. Ritmo do mês / projeção de fechamento (só mês corrente) -->
+        @if (ins.mesCorrente && ins.projecaoFechamento !== null && ins.projecaoFechamento !== undefined) {
+          <mat-card class="insight-card">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>speed</mat-icon><span>Ritmo do mês</span></div>
+              <p class="insight-sub">
+                {{ fmt(ins.totalMesAtual) }} gastos em {{ ins.diasDecorridos }} de {{ ins.diasNoMes }} dias.
+              </p>
+              <p class="insight-lead">
+                No ritmo atual, o mês fecha em <strong>{{ fmt(ins.projecaoFechamento) }}</strong
+                >.
+              </p>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- 2. Comparativo com o mês passado -->
+        @if (ins.totalMesAnterior > 0) {
+          <mat-card class="insight-card">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>compare_arrows</mat-icon><span>Vs. mês passado</span></div>
+              @if (ins.variacaoPercentual !== null && ins.variacaoPercentual !== undefined) {
+                <p class="insight-lead">
+                  Gastou
+                  <span class="delta" [class.up]="ins.variacaoPercentual > 0" [class.down]="ins.variacaoPercentual < 0">
+                    {{ ins.variacaoPercentual > 0 ? '▲' : ins.variacaoPercentual < 0 ? '▼' : '' }}
+                    {{ abs(ins.variacaoPercentual) | number: '1.0-1' }}%
+                  </span>
+                  vs. o mês passado.
+                </p>
+                <p class="insight-sub">{{ fmt(ins.totalMesAnterior) }} → {{ fmt(ins.totalMesAtual) }}</p>
+              }
+              @if (ins.categoriaQueMaisSubiu) {
+                <p class="insight-sub">
+                  Quem mais subiu: <strong>{{ ins.categoriaQueMaisSubiu }}</strong> (+{{
+                    fmt(ins.categoriaQueMaisSubiuVariacao)
+                  }})
+                </p>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- 5. Estourou a meta -->
+        @if (ins.metasEstouradas.length) {
+          <mat-card class="insight-card alert">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>report</mat-icon><span>Metas estouradas</span></div>
+              @for (m of ins.metasEstouradas; track m.categoriaNome) {
+                <div class="insight-row">
+                  <span class="insight-row-name">
+                    <span class="cat-emoji">{{ m.categoriaIcon || '🎯' }}</span
+                    >{{ m.categoriaNome }}
+                  </span>
+                  <span class="insight-row-val over">
+                    {{ fmt(m.gasto) }} / {{ fmt(m.teto) }}
+                    <span class="pct">{{ m.percentual | number: '1.0-0' }}%</span>
+                  </span>
+                </div>
+              }
+              <a routerLink="/budget-goals">Ver metas</a>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- 1. Maiores gastos do mês -->
+        @if (ins.maioresGastos.length) {
+          <mat-card class="insight-card">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>trending_up</mat-icon><span>Maiores gastos</span></div>
+              @for (g of ins.maioresGastos; track g.id) {
+                <div class="insight-row">
+                  <span class="insight-row-name">{{ g.description }}</span>
+                  <span class="insight-row-val">{{ fmt(g.amount) }}</span>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- 3. Assinaturas & recorrentes -->
+        @if (ins.recorrentes.length) {
+          <mat-card class="insight-card">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>autorenew</mat-icon><span>Assinaturas & recorrentes</span></div>
+              <p class="insight-lead">
+                <strong>{{ fmt(ins.totalRecorrente) }}</strong> comprometidos por mês
+              </p>
+              @for (r of ins.recorrentes; track r.nome) {
+                <div class="insight-row">
+                  <span class="insight-row-name">
+                    {{ r.nome }}
+                    @if (r.nova) {
+                      <span class="nova-badge">nova</span>
+                    }
+                  </span>
+                  <span class="insight-row-val">{{ fmt(r.valor) }}</span>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- 6. Pequenos que somaram muito -->
+        @if (ins.pequenosGastos.length) {
+          <mat-card class="insight-card">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>grain</mat-icon><span>Pequenos que somaram</span></div>
+              <p class="insight-lead">Gastos miúdos e frequentes que, juntos, pesaram:</p>
+              @for (p of ins.pequenosGastos; track p.nome) {
+                <div class="insight-row">
+                  <span class="insight-row-name">{{ p.nome }} ×{{ p.quantidade }}</span>
+                  <span class="insight-row-val">{{ fmt(p.total) }}</span>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    } @else {
+      <p class="insights-empty">
+        <mat-icon>lightbulb</mat-icon>
+        Ainda não há dados suficientes para gerar insights. Importe mais um mês para comparar e revelar recorrências.
+      </p>
+    }
   }
 }

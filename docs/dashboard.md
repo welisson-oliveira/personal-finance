@@ -1,6 +1,6 @@
 # Dashboard
 
-Visão mensal 50/30/20: receita real, despesas por grupo, investimentos, saldo e destaques. O período vem do seletor de mês global.
+Visão mensal 50/30/20: receita real, despesas por grupo, investimentos, saldo e **insights do mês**. O período vem do seletor de mês global.
 
 ## Backend — `DashboardService.getMonthly(user, year, month)`
 
@@ -23,12 +23,27 @@ Retorna `DashboardResponse`. Cálculos (mês corrente do usuário). **As agrega�
 | `usandoSalarioPrevisto`                              | `true` quando a projeção acrescenta renda além da real (`receitaProjetada > entradas`) — o mês corrente ainda não teve o salário importado. Dispara o selo "previsto" e a troca do `baseLabel` |
 | `rendaBase`                                          | base do 50/30/20: **`max(entradas, monthlyNetIncome)` em todo mês** — o salário configurado é **piso** da base, então um mês com renda não importada não colapsa a base e explode os %. Se ambos forem 0, base 0 (percentuais "—") |
 | `percentual{Essenciais,NaoEssenciais,Investimentos}` | cada grupo / `rendaBase` (investimentos usa `aplicado` líquido)                                                     |
-| `breakdown`                                          | **drill-down do 50/30/20**: `essenciais` e `naoEssenciais` — categorias que compõem cada bucket de despesa (`List<CategoryTotalResponse>`, maior→menor, com bucket "Sem categoria"). Reusa `findExpensesWithCategoryInPeriod` (uma única busca, compartilhada com `destaques`) agrupando por `budget_group`→categoria. Investimentos não têm categoria; o detalhe do 20% usa `aportes`/`resgatado`. |
-| `destaques`                                          | maior supermercado/delivery (via `subcategory` das regras), qtd assinaturas, qtd compras, qtd PIX enviados/recebidos |
+| `breakdown`                                          | **drill-down do 50/30/20**: `essenciais` e `naoEssenciais` — categorias que compõem cada bucket de despesa (`List<CategoryTotalResponse>`, maior→menor, com bucket "Sem categoria"). Reusa `findExpensesWithCategoryInPeriod` (uma única busca, compartilhada com `insights`) agrupando por `budget_group`→categoria. Investimentos não têm categoria; o detalhe do 20% usa `aportes`/`resgatado`. |
+| `insights`                                           | **"Insights do mês"** (substitui os antigos "Destaques"): leitura acionável do mês — ver seção abaixo (`buildInsights`) |
 
 > **Meta em R$ + folga/estouro** são calculados no **frontend** a partir de `rendaBase`: meta = 50%/30%/20% × base; folga/estouro = meta − realizado. Essenciais/não-essenciais são **teto** (acima = estouro); investimentos são **piso** (abaixo = "faltam R$ X para os 20%"). Sem novo backend para isso.
 
 > A Home segue os 4 blocos da visão de produto: **quanto entrou / para onde foi / está seguindo o 50-30-20 / quanto sobrou**. `reembolso` deixou de existir (vira `INCOME`).
+
+### Insights do mês — `buildInsights`
+
+Substitui a antiga seção "Destaques" (contadores de supermercado/delivery/assinaturas/PIX) por uma **leitura acionável** do mês. Objeto aninhado `insights` (`DashboardResponse.Insights`), com 6 blocos — cada um é opcional e o front só renderiza o que veio preenchido. Reusa a busca de despesas do mês corrente (`expenses`, já usada pelo `breakdown`) e faz **uma** busca extra dos **3 meses anteriores** (`findExpensesWithCategoryInPeriod` na janela `ym-3 .. ym-1`, bucketizada por competência) para o comparativo e as recorrências.
+
+| Bloco                         | O que traz                                                                                                                                                                          |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maioresGastos`               | **top 5** gastos individuais do mês (`List<TopExpenseResponse>`, `effectiveAmount` desc) — onde o dinheiro vaza                                                                      |
+| comparativo (`totalMesAtual`/`totalMesAnterior`/`variacaoPercentual`/`categoriaQueMaisSubiu…`) | total do mês vs. mês anterior (Δ%; `null` sem base anterior) + a **categoria que mais subiu** em R$ (maior alta absoluta atual − anterior)                                          |
+| `recorrentes` + `totalRecorrente` | **assinaturas & recorrentes**: nome normalizado presente no mês corrente **e** em ≥1 dos 3 meses anteriores, **ou** classificado como "Assinatura" (regra `MerchantRule`/categoria). `nova=true` = assinatura vista pela 1ª vez. `totalRecorrente` = comprometido mensal (top 8 por valor) |
+| ritmo (`mesCorrente`/`diasDecorridos`/`diasNoMes`/`projecaoFechamento`) | **só no mês corrente**: `projecaoFechamento = totalDespesas × diasNoMes / diasDecorridos` (ritmo de gasto). `null` fora do mês corrente                                              |
+| `metasEstouradas`             | metas de orçamento com `remaining < 0` (cruza com `BudgetGoalService.findAll`, reusa o roll-up de subcategorias), maior `percentual` primeiro                                       |
+| `pequenosGastos`              | grupos de gasto **pequeno e frequente** (mesmo nome normalizado, ≥3 ocorrências, cada uma ≤ R$50) que somados pesaram — top 5 por total                                             |
+
+> O "nome" de recorrentes/pequenos usa o `normalized_description` (chave de recorrência/merchant, ver [classificacao-e-aprendizado.md](./classificacao-e-aprendizado.md)); a competência bucketiza o histórico por mês.
 
 ### Resultado do mês × Saldo Geral, e o furo de transição
 
@@ -42,7 +57,7 @@ O regime de caixa faz o **Resultado do mês** oscilar (salário num mês, fatura
 
 No **mês de início do uso** há um "furo": o "Pagamento de fatura" do extrato entra `ignored=true` (para não duplicar com os itens da fatura), mas se a fatura daquele período nunca foi importada, aquela saída real não conta em lugar nenhum → Resultado/Saldo inflados. O tratamento é **enxuto** (sem status novo): o Dashboard **avisa** quando há `pagamentosFaturaIgnorados > 0`, e na tela de Transações o usuário **des-ignora** o pagamento ("Contabilizar neste mês"). Como `resultado`/`saldoAcumulado` contam **toda** despesa não-ignorada, des-ignorar já faz a saída entrar — sem precisar de grupo 50/30/20 (ela aparece em "Outras despesas (sem grupo)"). Ver [transacoes.md](./transacoes.md).
 
-Queries em `TransactionRepository` (`sumIncomeByUserIdAndDateBetween`, `sumInvestmentByDirectionAndDateBetween`, `sumExpenseByBudgetGroupAndDateBetween`, `findExpensesWithCategoryInPeriod`, `count*InPeriod`) — todas excluem `ignored`.
+Queries em `TransactionRepository` (`sumIncomeByUserIdAndDateBetween`, `sumInvestmentByDirectionAndDateBetween`, `sumExpenseByBudgetGroupAndDateBetween`, `findExpensesWithCategoryInPeriod`) — todas excluem `ignored`.
 
 ### Endpoint — `DashboardController`
 
@@ -72,8 +87,8 @@ Usuário troca o mês na toolbar → `PeriodService.set()` → `effect()` do das
 - Salário previsto (Opção A) → lógica `mesCorrente`/`receitaProjetada` em `getMonthly` + `salarioEsperado`/`resultadoPrevisto`/`usandoSalarioPrevisto` + selo "previsto" no card Resultado.
 - Aviso de cobertura → `@if (resultado < 0 && saldoAcumulado >= 0)` no template (`.coverage-notice`).
 - Furo de transição → `sumIgnoredBillPaymentsInPeriod` + `pagamentosFaturaIgnorados` + aviso; `sumAllExpenseByUserIdAndDateBetween` alimenta `totalDespesas`/`resultado`/`despesasSemGrupo`.
-- Novo destaque → `buildDestaques` + `Destaques` + template.
+- Insights do mês → `buildInsights` (backend) + `DashboardResponse.Insights` (+ records `RecurringItem`/`GoalExceeded`/`SmallExpenseGroup`) + `dashboard.model.ts` + a grade `.insights-grid` no template. Cruzamento com metas via `BudgetGoalService.findAll`; recorrências/pequenos via `normalized_description` + histórico dos 3 meses anteriores.
 
 ## Testes relevantes
 
-`DashboardServiceTest` (entradas/totais/resultado, percentuais, aporte líquido = aporte − resgate, renda zero, precedência/fallback do salário líquido, breakdown do 50/30/20 por categoria maior→menor com "Sem categoria", **saldoAcumulado + despesasSemGrupo + pagamentosFaturaIgnorados**, **salário previsto no mês corrente** (`usandoSalarioPrevisto`, `resultadoPrevisto`, base projetada) **e não-projeção em mês passado**, **saldoAcumulado semeado pelo `openingBalance`**).
+`DashboardServiceTest` (entradas/totais/resultado, percentuais, aporte líquido = aporte − resgate, renda zero, precedência/fallback do salário líquido, breakdown do 50/30/20 por categoria maior→menor com "Sem categoria", **saldoAcumulado + despesasSemGrupo + pagamentosFaturaIgnorados**, **salário previsto no mês corrente** (`usandoSalarioPrevisto`, `resultadoPrevisto`, base projetada) **e não-projeção em mês passado**, **saldoAcumulado semeado pelo `openingBalance`**, **insights**: maiores gastos ordenados, comparativo + categoria que mais subiu, recorrentes + assinatura nova, projeção do mês corrente e ausência dela em mês passado, metas estouradas, pequenos gastos agrupados).
