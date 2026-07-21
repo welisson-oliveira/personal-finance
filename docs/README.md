@@ -12,10 +12,10 @@ Esta pasta documenta a aplicação **por feature de negócio**, cruzando backend
 | Importação de PDFs          | [importacao-de-pdfs.md](./importacao-de-pdfs.md)                   | upload/preview de extrato/fatura, parsers Nubank, pipeline de import         |
 | Classificação e aprendizado | [classificacao-e-aprendizado.md](./classificacao-e-aprendizado.md) | regras de estabelecimento, aliases, normalização, propagação (cross-cutting) |
 | Transações                  | [transacoes.md](./transacoes.md)                                   | lista, edição, apelido, exclusão de transações                               |
-| Dashboard                   | [dashboard.md](./dashboard.md)                                     | métricas 50/30/20, destaques, seletor de mês global                          |
+| Dashboard                   | [dashboard.md](./dashboard.md)                                     | métricas 50/30/20, insights do mês, saldo geral, seletor de mês global       |
 | Relatórios                  | [relatorios.md](./relatorios.md)                                   | evolução mensal e gasto por categoria (gráficos)                             |
 | Categorias                  | [categorias.md](./categorias.md)                                   | CRUD de categorias, seletor com busca, merchant rules (leitura)              |
-| Metas de orçamento          | [metas-de-orcamento.md](./metas-de-orcamento.md)                   | teto de gasto por categoria e acompanhamento mensal                          |
+| Metas de orçamento          | [metas-de-orcamento.md](./metas-de-orcamento.md)                   | teto de gasto por categoria, sugestão 50/30/20 e acompanhamento mensal       |
 | Pessoas conhecidas          | [pessoas-conhecidas.md](./pessoas-conhecidas.md)                   | pessoas de PIX e o tratamento padrão de entrada                              |
 
 ---
@@ -52,7 +52,7 @@ DTOs (`dto/request`, `dto/response`) cruzam a fronteira do controller; **entidad
 | `test`         | H2 em memória (modo PostgreSQL)    | desabilitado | `create-drop` |
 
 Env vars: `SPRING_PROFILES_ACTIVE`, `JWT_SECRET`, `JWT_EXPIRATION_MS`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
-Migrations em `backend/src/main/resources/db/migration/` (V1…V12). `jpa.open-in-view: false` — os services carregam as associações necessárias antes de retornar.
+Migrations em `backend/src/main/resources/db/migration/` (V1…V19; a última, `V19`, corrige o tipo de transações de extrato cujo sinal foi invertido por uma regra de merchant — ver [classificacao-e-aprendizado.md](./classificacao-e-aprendizado.md)). `jpa.open-in-view: false` — os services carregam as associações necessárias antes de retornar.
 
 ## Comandos
 
@@ -93,10 +93,10 @@ docker compose -f docker-compose.test.yml up -d   # banco de teste (:5433)
 | `CategorySelectComponent` | `app-category-select` | select de categoria com busca no painel + ícone/cor; two-way `[(value)]`. Usado em editar transação e resolver revisão |
 | `CurrencyMaskDirective`   | `[appCurrencyMask]`   | máscara de moeda pt-BR (ControlValueAccessor). Usado em editar transação e configurações                               |
 | `ConfirmDialogComponent`  | `app-confirm-dialog`  | diálogo de confirmação (`{message}` → boolean). Usado em upload, lista de transações, categorias                       |
+| `AutofocusDirective`      | `[appAutofocus]`      | foca o host ao renderizar (`ngAfterViewInit`). Usado nos inputs inline (ex.: apelido) que o `autofocus` nativo ignora  |
 
 ## Glossário de domínio
 
-- **`type`** (`TransactionType`, único enum): `INCOME` | `EXPENSE`.
 - **`type`** (`TransactionType`, eixo único): `INCOME` (entrada/receita) · `EXPENSE` (despesa) · `INVESTMENT` (investimento). Substituiu o antigo trio `type`+`income_type`+`budget_group`.
 - **`budget_group`** (só em `EXPENSE`, regra 50/30/20): `ESSENTIAL` (50%) · `NON_ESSENTIAL` (30%).
 - **`investment_direction`** (só em `INVESTMENT`): `CONTRIBUTION` (aporte) · `REDEMPTION` (resgate). O 20% do dashboard usa o **líquido** (aportes − resgates).
@@ -105,3 +105,6 @@ docker compose -f docker-compose.test.yml up -d   # banco de teste (:5433)
 - **`source`**: `MANUAL` | `EXTRATO` | `FATURA`.
 - **Nome efetivo (effective-name):** `normalizedDescription` quando existe, senão `description`. É a chave de junção para propagação de classificação, histórico de receita, propagação de apelido e resolução de revisão (`TransactionRepository.findByUserIdAndEffectiveName`).
 - **Regra por tipo (UI e backend):** `EXPENSE` carrega `budget_group` + categoria; `INVESTMENT` carrega `investment_direction`; `INCOME` não carrega nenhum dos dois. Editar uma transação propaga tipo/categoria/grupo/direção/ignored para as de mesmo nome efetivo e limpa o `needs_review` (ver [transacoes.md](./transacoes.md)).
+- **Sinal do extrato = verdade para entrada × saída:** crédito (dinheiro entra) é `INCOME`/`INVESTMENT REDEMPTION`; débito (dinheiro sai) é `EXPENSE`/`INVESTMENT CONTRIBUTION`. Uma regra de merchant aprendida pode **refinar** o tipo dentro da mesma direção, mas **nunca inverter** o sinal (uma receita não vira despesa) — ver a "trava por sinal" em [classificacao-e-aprendizado.md](./classificacao-e-aprendizado.md).
+- **Insights do mês** (Dashboard): leitura acionável do mês (maiores gastos, comparativo, recorrentes, ritmo, metas estouradas, pequenos gastos). Substituiu os antigos "Destaques". Ver [dashboard.md](./dashboard.md).
+- **Sugestão de metas (50/30/20):** motor determinístico que propõe metas por categoria a partir do histórico e as encaixa nos tetos das faixas. Ver [metas-de-orcamento.md](./metas-de-orcamento.md).
