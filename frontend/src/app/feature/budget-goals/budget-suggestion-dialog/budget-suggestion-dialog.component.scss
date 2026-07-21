@@ -1,0 +1,126 @@
+mat-dialog-content {
+  min-width: 460px;
+  max-width: 560px;
+}
+
+.hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #555;
+  margin: 0 0 12px;
+
+  &.warn {
+    color: #b26a00;
+  }
+
+  mat-icon {
+    font-size: 20px;
+    height: 20px;
+    width: 20px;
+    flex-shrink: 0;
+  }
+}
+
+.bucket {
+  margin-bottom: 16px;
+
+  &.investimentos {
+    border-top: 1px solid #eee;
+    padding-top: 12px;
+  }
+}
+
+.bucket-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.bucket-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.bucket-target {
+  color: #999;
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+.bucket-cap {
+  font-weight: 600;
+  font-size: 0.85rem;
+
+  &.over {
+    color: #c62828;
+  }
+}
+
+.bucket-note {
+  margin: 0 0 8px;
+  font-size: 0.76rem;
+  color: #888;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.85rem;
+
+  &.off {
+    opacity: 0.5;
+  }
+}
+
+.row-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+  }
+}
+
+.row-hist {
+  color: #999;
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.row-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+
+  input {
+    width: 80px;
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    text-align: right;
+  }
+}
+
+.badge {
+  padding: 0 6px;
+  border-radius: 8px;
+  background: rgba(21, 101, 192, 0.12);
+  color: #1565c0;
+  font-size: 0.62rem;
+  font-weight: 700;
+}

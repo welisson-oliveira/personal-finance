@@ -1,9 +1,15 @@
 <div class="page-header">
   <h1>Metas de orçamento</h1>
-  <button mat-raised-button color="primary" (click)="openCreate()">
-    <mat-icon>add</mat-icon>
-    Nova meta
-  </button>
+  <div class="header-actions">
+    <button mat-stroked-button color="primary" (click)="openSuggestions()" [disabled]="suggesting">
+      <mat-icon>auto_awesome</mat-icon>
+      {{ suggesting ? 'Gerando...' : 'Sugerir metas' }}
+    </button>
+    <button mat-raised-button color="primary" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      Nova meta
+    </button>
+  </div>
 </div>
 
 <p class="period-hint">Progresso de {{ period.label() }}</p>
