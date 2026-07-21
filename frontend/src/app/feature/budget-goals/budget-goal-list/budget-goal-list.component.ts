@@ -14,6 +14,8 @@ import { CategoryService } from '../../../core/services/category.service';
 import { PeriodService } from '../../../core/services/period.service';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { BudgetGoalFormDialogComponent } from '../budget-goal-form-dialog/budget-goal-form-dialog.component';
+import { BudgetSuggestionDialogComponent } from '../budget-suggestion-dialog/budget-suggestion-dialog.component';
+import { BulkBudgetGoalItem } from '../../../core/models/budget-goal.model';
 
 @Component({
   selector: 'app-budget-goal-list',
@@ -101,6 +103,38 @@ export class BudgetGoalListComponent {
         },
         error: () => this.snackBar.open('Erro ao atualizar meta.', 'Fechar', { duration: 4000 }),
       });
+    });
+  }
+
+  suggesting = false;
+
+  openSuggestions(): void {
+    this.suggesting = true;
+    this.goalService.suggestions(this.period.year(), this.period.month()).subscribe({
+      next: (suggestion) => {
+        this.suggesting = false;
+        const ref = this.dialog.open(BudgetSuggestionDialogComponent, {
+          data: suggestion,
+          width: '600px',
+          maxHeight: '90vh',
+        });
+        ref.afterClosed().subscribe((goals: BulkBudgetGoalItem[] | undefined) => {
+          if (!goals || goals.length === 0) return;
+          this.goalService.bulkUpsert(goals).subscribe({
+            next: () => {
+              this.snackBar.open(`${goals.length} meta(s) aplicada(s).`, 'Fechar', {
+                duration: 2500,
+              });
+              this.load();
+            },
+            error: () => this.snackBar.open('Erro ao aplicar metas.', 'Fechar', { duration: 4000 }),
+          });
+        });
+      },
+      error: () => {
+        this.suggesting = false;
+        this.snackBar.open('Não foi possível gerar sugestões.', 'Fechar', { duration: 4000 });
+      },
     });
   }
 

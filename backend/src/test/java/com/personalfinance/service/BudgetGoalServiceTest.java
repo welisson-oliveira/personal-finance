@@ -4,11 +4,17 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.personalfinance.dto.request.BulkBudgetGoalRequest;
 import com.personalfinance.dto.request.CreateBudgetGoalRequest;
 import com.personalfinance.dto.response.BudgetGoalResponse;
+import com.personalfinance.dto.response.BudgetSuggestionResponse;
+import com.personalfinance.dto.response.BudgetSuggestionResponse.BucketSuggestion;
+import com.personalfinance.dto.response.BudgetSuggestionResponse.CategorySuggestion;
 import com.personalfinance.model.entity.BudgetGoal;
 import com.personalfinance.model.entity.Category;
+import com.personalfinance.model.entity.Transaction;
 import com.personalfinance.model.entity.User;
+import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.BudgetGoalRepository;
 import com.personalfinance.repository.CategoryRepository;
 import com.personalfinance.repository.TransactionRepository;
@@ -126,6 +132,127 @@ class BudgetGoalServiceTest {
         .hasMessageContaining("already exists");
 
     verify(budgetGoalRepository, never()).save(any());
+  }
+
+  @Test
+  void suggest_builds_5030_20_goals_and_fits_an_over_cap_bucket() {
+    // base = configured salary 5000 → essenciais 2500, não-ess. 1500, invest. 1000.
+    user = User.builder().id(userId).name("Teste").monthlyNetIncome(new BigDecimal("5000")).build();
+    Category aluguel = Category.builder().id(UUID.randomUUID()).name("Aluguel").build();
+    Category delivery = Category.builder().id(UUID.randomUUID()).name("Delivery").build();
+    Category compras = Category.builder().id(UUID.randomUUID()).name("Compras").build();
+
+    when(transactionRepository.findExpensesWithCategoryInPeriod(
+            userId, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 4, 30)))
+        .thenReturn(
+            List.of(
+                exp(aluguel, "ESSENTIAL", "1200", LocalDate.of(2026, 2, 10)),
+                exp(aluguel, "ESSENTIAL", "1200", LocalDate.of(2026, 3, 10)),
+                exp(aluguel, "ESSENTIAL", "1200", LocalDate.of(2026, 4, 10)),
+                exp(delivery, "NON_ESSENTIAL", "700", LocalDate.of(2026, 2, 12)),
+                exp(delivery, "NON_ESSENTIAL", "900", LocalDate.of(2026, 3, 12)),
+                exp(delivery, "NON_ESSENTIAL", "800", LocalDate.of(2026, 4, 12)),
+                exp(compras, "NON_ESSENTIAL", "900", LocalDate.of(2026, 2, 20)),
+                exp(compras, "NON_ESSENTIAL", "900", LocalDate.of(2026, 3, 20)),
+                exp(compras, "NON_ESSENTIAL", "900", LocalDate.of(2026, 4, 20))));
+    when(budgetGoalRepository.findByUserId(userId)).thenReturn(List.of());
+    when(transactionRepository.sumInvestmentByDirectionAndDateBetween(
+            eq(userId), anyString(), any(), any()))
+        .thenReturn(BigDecimal.ZERO);
+
+    BudgetSuggestionResponse s = service.suggest(user, 2026, 5);
+
+    assertThat(s.rendaBase()).isEqualByComparingTo("5000");
+
+    BucketSuggestion ess = bucket(s, "ESSENTIAL");
+    assertThat(ess.cap()).isEqualByComparingTo("2500");
+    assertThat(ess.overCap()).isFalse();
+    assertThat(ess.categories())
+        .singleElement()
+        .satisfies(
+            c -> {
+              assertThat(c.categoryName()).isEqualTo("Aluguel");
+              assertThat(c.suggestedAmount()).isEqualByComparingTo("1200"); // median, under cap
+              assertThat(c.hasGoal()).isFalse();
+            });
+
+    BucketSuggestion non = bucket(s, "NON_ESSENTIAL");
+    assertThat(non.cap()).isEqualByComparingTo("1500");
+    // medians 800 (delivery) + 900 (compras) = 1700 > 1500 → scaled down to fit.
+    assertThat(non.historicalTotal()).isEqualByComparingTo("1700");
+    assertThat(non.overCap()).isTrue();
+    assertThat(non.suggestedTotal()).isBetween(new BigDecimal("1480"), new BigDecimal("1520"));
+    assertThat(non.categories())
+        .extracting(CategorySuggestion::categoryName)
+        .containsExactlyInAnyOrder("Delivery", "Compras");
+
+    assertThat(s.investimentos().cap()).isEqualByComparingTo("1000");
+  }
+
+  @Test
+  void suggest_ignores_categories_present_in_at_most_one_month() {
+    user = User.builder().id(userId).name("Teste").monthlyNetIncome(new BigDecimal("5000")).build();
+    Category eventual = Category.builder().id(UUID.randomUUID()).name("Presente").build();
+
+    when(transactionRepository.findExpensesWithCategoryInPeriod(
+            userId, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 4, 30)))
+        .thenReturn(List.of(exp(eventual, "NON_ESSENTIAL", "300", LocalDate.of(2026, 3, 10))));
+    when(budgetGoalRepository.findByUserId(userId)).thenReturn(List.of());
+    when(transactionRepository.sumInvestmentByDirectionAndDateBetween(
+            eq(userId), anyString(), any(), any()))
+        .thenReturn(BigDecimal.ZERO);
+
+    BudgetSuggestionResponse s = service.suggest(user, 2026, 5);
+
+    // median of {300, 0, 0} = 0 → the sporadic category is dropped.
+    assertThat(bucket(s, "NON_ESSENTIAL").categories()).isEmpty();
+  }
+
+  @Test
+  void bulkUpsert_creates_new_and_updates_existing_goals() {
+    Category catA = Category.builder().id(UUID.randomUUID()).name("Aluguel").build();
+    Category catB = Category.builder().id(UUID.randomUUID()).name("Delivery").build();
+    BudgetGoal existing =
+        BudgetGoal.builder().id(UUID.randomUUID()).user(user).category(catA).build();
+
+    when(categoryRepository.findById(catA.getId())).thenReturn(Optional.of(catA));
+    when(categoryRepository.findById(catB.getId())).thenReturn(Optional.of(catB));
+    when(budgetGoalRepository.findByUserIdAndCategoryId(userId, catA.getId()))
+        .thenReturn(Optional.of(existing));
+    when(budgetGoalRepository.findByUserIdAndCategoryId(userId, catB.getId()))
+        .thenReturn(Optional.empty());
+    when(budgetGoalRepository.save(any(BudgetGoal.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(categoryRepository.findByParentId(any())).thenReturn(List.of());
+    when(transactionRepository.sumExpenseByCategoryIdsAndDateBetween(
+            any(), anyList(), any(), any()))
+        .thenReturn(BigDecimal.ZERO);
+
+    List<BudgetGoalResponse> result =
+        service.bulkUpsert(
+            List.of(
+                new BulkBudgetGoalRequest.Item(catA.getId(), new BigDecimal("1200")),
+                new BulkBudgetGoalRequest.Item(catB.getId(), new BigDecimal("500"))),
+            user);
+
+    assertThat(result).hasSize(2);
+    assertThat(existing.getAmount()).isEqualByComparingTo("1200"); // updated in place
+    verify(budgetGoalRepository, times(2)).save(any(BudgetGoal.class));
+  }
+
+  private BucketSuggestion bucket(BudgetSuggestionResponse s, String group) {
+    return s.buckets().stream().filter(b -> b.group().equals(group)).findFirst().orElseThrow();
+  }
+
+  private Transaction exp(Category category, String group, String amount, LocalDate date) {
+    return Transaction.builder()
+        .id(UUID.randomUUID())
+        .type(TransactionType.EXPENSE)
+        .category(category)
+        .budgetGroup(group)
+        .amount(new BigDecimal(amount))
+        .shared(false)
+        .date(date)
+        .build();
   }
 
   @Test

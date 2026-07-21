@@ -1,0 +1,76 @@
+<h2 mat-dialog-title>Sugerir metas (50/30/20)</h2>
+
+<mat-dialog-content>
+  @if (!hasBase) {
+    <p class="hint warn">
+      <mat-icon>info_outline</mat-icon>
+      Sem base de renda. Configure seu salário líquido ou importe um extrato para gerar sugestões proporcionais.
+    </p>
+  } @else if (!hasSuggestions) {
+    <p class="hint">
+      <mat-icon>lightbulb</mat-icon>
+      Ainda não há histórico suficiente (categorias que aparecem em pelo menos 2 dos últimos 3 meses). Importe mais um
+      mês e tente de novo.
+    </p>
+  } @else {
+    <p class="hint">
+      Base da renda: <strong>{{ fmt(rendaBase) }}</strong
+      >. Metas propostas a partir da sua mediana de gasto dos últimos 3 meses, ajustadas para caber em cada faixa.
+      Revise e aplique.
+    </p>
+
+    @for (b of buckets; track b.label) {
+      @if (b.rows.length) {
+        <div class="bucket">
+          <div class="bucket-head">
+            <span class="bucket-title"
+              >{{ b.label }} <span class="bucket-target">(meta {{ b.targetPct }}%)</span></span
+            >
+            <span class="bucket-cap" [class.over]="bucketOverCap(b)">
+              {{ fmt(selectedTotal(b)) }} / {{ fmt(b.cap) }}
+            </span>
+          </div>
+          @if (b.overCap) {
+            <p class="bucket-note">Seu gasto nesta faixa passava do teto — as metas foram reduzidas para caber.</p>
+          }
+          @for (r of b.rows; track r.item.categoryId) {
+            <div class="row" [class.off]="!r.selected">
+              <mat-checkbox [(ngModel)]="r.selected"></mat-checkbox>
+              <span class="row-name">
+                <mat-icon [style.color]="r.item.categoryColor || null">{{ r.item.categoryIcon || 'label' }}</mat-icon>
+                {{ r.item.categoryName }}
+                @if (r.item.hasGoal) {
+                  <span class="badge">atualiza</span>
+                }
+              </span>
+              <span class="row-hist">média {{ fmt(r.item.historicalMonthly) }}</span>
+              <span class="row-input">
+                R$
+                <input type="number" min="0" step="10" [(ngModel)]="r.amount" [disabled]="!r.selected" />
+              </span>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <div class="bucket investimentos">
+      <div class="bucket-head">
+        <span class="bucket-title">Investimentos <span class="bucket-target">(meta 20%)</span></span>
+        <span class="bucket-cap">{{ fmt(investimentos.suggestedAmount) }}</span>
+      </div>
+      <p class="bucket-note">
+        Meta de aporte mensal sugerida: <strong>{{ fmt(investimentos.suggestedAmount) }}</strong> (você aportou em média
+        {{ fmt(investimentos.historicalMonthly) }}). Investimentos não têm categoria, então acompanhe essa meta pelo
+        card de investimentos do dashboard.
+      </p>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="dialogRef.close()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="apply()" [disabled]="selectedCount() === 0">
+    Aplicar {{ selectedCount() }} meta(s)
+  </button>
+</mat-dialog-actions>

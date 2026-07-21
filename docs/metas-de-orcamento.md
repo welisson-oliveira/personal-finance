@@ -15,22 +15,29 @@ Teto de gasto **por categoria**, recorrente mensal (mesma meta todo mês). O aco
 - `create` — valida categoria e **rejeita meta duplicada** para a mesma categoria (UNIQUE); progresso calculado no mês corrente.
 - `update` — altera só o `amount` (a categoria é fixa); posse validada.
 - `delete` — posse validada (`AccessDeniedException` → 403).
+- `bulkUpsert(items, user)` — cria-ou-atualiza várias metas de uma vez (usado por "Aplicar metas sugeridas"): para cada `{categoryId, amount}`, atualiza a meta existente da categoria ou cria uma nova.
+- **`suggest(user, year, month)`** — motor de sugestão **50/30/20** (determinístico, sem IA). Base da renda = salário configurado (`monthlyNetIncome`), senão a **mediana** da renda mensal dos últimos 3 meses. Para cada categoria de despesa dos **últimos 3 meses** (`findExpensesWithCategoryInPeriod`), estima o gasto pela **mediana das somas mensais** (categoria presente em ≤1 mês → mediana 0 → descartada), coloca-a na sua **faixa dominante** (grupo 50/30 onde mais gastou) e, quando o total histórico da faixa **estoura o teto** (50% / 30% da base), **reduz proporcionalmente** as metas para caberem no teto. Valores **arredondados para R$10**. O piso de 20% vira uma **meta única de aporte mensal** (investimentos não têm categoria). Marca `hasGoal` quando a categoria já tem meta (será atualizada).
 
 ### Endpoints — `BudgetGoalController` (`/api/budget-goals`)
 
 - `GET /?year=&month=` → `List<BudgetGoalResponse>` (progresso do mês; sem params usa o mês corrente).
+- `GET /suggestions?year=&month=` → `BudgetSuggestionResponse` (sugestão 50/30/20 a partir do histórico).
 - `POST /` — `CreateBudgetGoalRequest {categoryId, amount(@DecimalMin 0.01)}` (201).
+- `POST /bulk` — `BulkBudgetGoalRequest {goals: [{categoryId, amount}]}` → cria/atualiza em lote e devolve `List<BudgetGoalResponse>`.
 - `PUT /{id}` — atualiza o valor.
 - `DELETE /{id}` (204).
 
 `BudgetGoalResponse`: `id, categoryId, categoryName, categoryIcon, categoryColor, amount, spent, remaining, percentage`.
 
+`BudgetSuggestionResponse`: `rendaBase`, `buckets: [{group, cap, historicalTotal, suggestedTotal, overCap, categories: [{categoryId, categoryName, categoryIcon, categoryColor, historicalMonthly, suggestedAmount, hasGoal}]}]`, `investimentos: {cap, historicalMonthly, suggestedAmount}`.
+
 ## Frontend (`feature/budget-goals/`, `budget-goal.service`)
 
-`budget-goal.service`: `getAll(year, month)` → `GET /api/budget-goals?year=&month=`; `create`/`update`/`delete`.
+`budget-goal.service`: `getAll(year, month)` → `GET /api/budget-goals?year=&month=`; `create`/`update`/`delete`; `suggestions(year, month)` → `GET /suggestions`; `bulkUpsert(goals)` → `POST /bulk`.
 
-- **`budget-goal-list`** (`app-budget-goal-list`) — página `/budget-goals`. **Reage ao mês global** via `effect(() => { period.period(); load(); })`. Cada meta é um card com barra de progresso (verde <80%, âmbar 80–100%, vermelho >100% via `barColor`), gasto vs meta e "resta/excedeu". Criar/editar via dialog; excluir via `ConfirmDialogComponent`.
+- **`budget-goal-list`** (`app-budget-goal-list`) — página `/budget-goals`. **Reage ao mês global** via `effect(() => { period.period(); load(); })`. Cada meta é um card com barra de progresso (verde <80%, âmbar 80–100%, vermelho >100% via `barColor`), gasto vs meta e "resta/excedeu". Criar/editar via dialog; excluir via `ConfirmDialogComponent`. Botão **"Sugerir metas"** abre o `budget-suggestion-dialog`.
 - **`budget-goal-form-dialog`** (`app-budget-goal-form-dialog`) — template inline. Usa `CategorySelectComponent` (na criação, filtra categorias que já têm meta) e `CurrencyMaskDirective` (valor). Na edição, a categoria é fixa (só muda o valor).
+- **`budget-suggestion-dialog`** (`app-budget-suggestion-dialog`) — consome `suggestions()`, mostra as metas propostas **agrupadas por faixa** (Essenciais/Não essenciais) com checkbox + valor editável por categoria e o **total selecionado vs teto** colorido (vermelho quando passa); investimentos aparecem como meta de aporte informativa (sem categoria). "Aplicar" chama `bulkUpsert` e recarrega. Vazio quando não há base de renda ou histórico suficiente.
 - Rota em `app.routes.ts` (filha do shell) e item **"Metas"** (ícone `savings`) no `navItems` do `LayoutComponent`.
 
 ## Fluxo ponta-a-ponta
@@ -51,4 +58,4 @@ Usuário define meta por categoria → ao abrir a tela (ou trocar o mês global)
 
 ## Testes relevantes
 
-`BudgetGoalServiceTest` (cálculo de progresso, percentual > 100 ao estourar, rejeita meta duplicada, bloqueia exclusão de outro usuário).
+`BudgetGoalServiceTest` (cálculo de progresso, percentual > 100 ao estourar, rejeita meta duplicada, bloqueia exclusão de outro usuário, **roll-up de subcategorias**, **sugestão 50/30/20** monta as faixas e reduz a faixa que estoura o teto, **ignora categoria esporádica** (≤1 mês), **`bulkUpsert`** cria novas e atualiza existentes).

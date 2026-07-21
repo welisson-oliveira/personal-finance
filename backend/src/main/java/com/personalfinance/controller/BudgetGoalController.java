@@ -1,7 +1,9 @@
 package com.personalfinance.controller;
 
+import com.personalfinance.dto.request.BulkBudgetGoalRequest;
 import com.personalfinance.dto.request.CreateBudgetGoalRequest;
 import com.personalfinance.dto.response.BudgetGoalResponse;
+import com.personalfinance.dto.response.BudgetSuggestionResponse;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.service.BudgetGoalService;
 import jakarta.validation.Valid;
@@ -31,10 +33,25 @@ public class BudgetGoalController {
         budgetGoalService.findAll(user.getId(), ym.getYear(), ym.getMonthValue()));
   }
 
+  @GetMapping("/suggestions")
+  public ResponseEntity<BudgetSuggestionResponse> suggestions(
+      @RequestParam(required = false) Integer year,
+      @RequestParam(required = false) Integer month,
+      @AuthenticationPrincipal User user) {
+    YearMonth ym = (year != null && month != null) ? YearMonth.of(year, month) : YearMonth.now();
+    return ResponseEntity.ok(budgetGoalService.suggest(user, ym.getYear(), ym.getMonthValue()));
+  }
+
   @PostMapping
   public ResponseEntity<BudgetGoalResponse> create(
       @RequestBody @Valid CreateBudgetGoalRequest request, @AuthenticationPrincipal User user) {
     return ResponseEntity.status(HttpStatus.CREATED).body(budgetGoalService.create(request, user));
+  }
+
+  @PostMapping("/bulk")
+  public ResponseEntity<List<BudgetGoalResponse>> bulkUpsert(
+      @RequestBody @Valid BulkBudgetGoalRequest request, @AuthenticationPrincipal User user) {
+    return ResponseEntity.ok(budgetGoalService.bulkUpsert(request.goals(), user));
   }
 
   @PutMapping("/{id}")
