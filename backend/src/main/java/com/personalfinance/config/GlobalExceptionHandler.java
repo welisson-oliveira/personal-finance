@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -74,6 +75,14 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(NoResourceFoundException.class)
   public ResponseEntity<Map<String, Object>> handleNoResource(NoResourceFoundException ex) {
     return error(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+  public ResponseEntity<Map<String, Object>> handleMethodNotSupported(
+      HttpRequestMethodNotSupportedException ex) {
+    // A wrong/unknown method on a known path (e.g. GET on a path that only has PUT/DELETE, often a
+    // stale deployment missing a newer endpoint) is a 405, not a 500.
+    return error(HttpStatus.METHOD_NOT_ALLOWED, ex.getMessage());
   }
 
   @ExceptionHandler(Exception.class)
