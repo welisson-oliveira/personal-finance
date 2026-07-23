@@ -92,7 +92,7 @@ Se você precisar recomeçar as importações do zero (ex.: erro, duplicata), o 
 | Sessões de importação | Histórico de arquivos importados |
 | Saldo inicial | Deve ser reconfigurado após o novo import |
 
-> A tabela `review_queue` (criada nas migrations V1/V9) é **legada** — a fila de revisão foi substituída pela revisão inline e nenhuma entidade/repositório a usa mais. O script ainda faz `DELETE FROM review_queue` por segurança, mas ela fica sempre vazia.
+> A antiga tabela `review_queue` (criada em V1/V9) foi **removida na migration `V20`** — a fila de revisão deu lugar à revisão inline e nenhuma entidade/repositório a usava mais.
 
 ---
 
