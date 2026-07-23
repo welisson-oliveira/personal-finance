@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Reset de importações em ambiente de desenvolvimento.
-# Apaga transações, sessões de importação e fila de revisão.
+# Apaga transações e sessões de importação.
 # Preserva categorias, merchant rules, metas e configurações de usuário.
 #
 # Uso: ./scripts/dev-reset-imports.sh [--confirm]
@@ -27,7 +27,6 @@ echo "  Banco : $DB_NAME (container: $DB_CONTAINER)"
 echo "  O que será REMOVIDO:"
 echo "    - transactions"
 echo "    - import_sessions"
-echo "    - review_queue"
 echo "    - opening_balance dos usuários"
 echo ""
 echo "  O que será PRESERVADO:"

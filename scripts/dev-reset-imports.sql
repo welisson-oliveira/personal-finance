@@ -1,5 +1,5 @@
 -- Reset de importações (dev)
--- Remove: transactions, import_sessions, review_queue
+-- Remove: transactions, import_sessions
 -- Preserva: categories, merchant_rules, merchant_display_names,
 --            budget_goals, known_persons, users
 --
@@ -7,16 +7,13 @@
 
 BEGIN;
 
--- 1. Fila de revisão (referencia import_sessions)
-DELETE FROM review_queue;
-
--- 2. Transações (referencia import_sessions e categories — mantemos categories)
+-- 1. Transações (referencia import_sessions e categories — mantemos categories)
 DELETE FROM transactions;
 
--- 3. Sessões de importação
+-- 2. Sessões de importação
 DELETE FROM import_sessions;
 
--- 4. Resetar saldo inicial para reconfiguração após novo import
+-- 3. Resetar saldo inicial para reconfiguração após novo import
 UPDATE users
 SET opening_balance      = NULL,
     opening_balance_date = NULL;
@@ -39,6 +36,4 @@ UNION ALL
 SELECT 'transactions (deve ser 0)',        COUNT(*)              FROM transactions
 UNION ALL
 SELECT 'import_sessions (deve ser 0)',     COUNT(*)              FROM import_sessions
-UNION ALL
-SELECT 'review_queue (deve ser 0)',        COUNT(*)              FROM review_queue
 ORDER BY tabela;
