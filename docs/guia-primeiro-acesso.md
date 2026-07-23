@@ -88,10 +88,11 @@ Se você precisar recomeçar as importações do zero (ex.: erro, duplicata), o 
 
 | O que é removido | Por quê |
 |---|---|
-| Transações | São os dados importados — recomeço limpo |
+| Transações | São os dados importados — recomeço limpo. As pendências de **revisão** vão junto: hoje a revisão é **inline** (flag `needs_review` na própria transação), não uma fila separada |
 | Sessões de importação | Histórico de arquivos importados |
-| Fila de revisão | Pendências da importação anterior |
 | Saldo inicial | Deve ser reconfigurado após o novo import |
+
+> A tabela `review_queue` (criada nas migrations V1/V9) é **legada** — a fila de revisão foi substituída pela revisão inline e nenhuma entidade/repositório a usa mais. O script ainda faz `DELETE FROM review_queue` por segurança, mas ela fica sempre vazia.
 
 ---
 
