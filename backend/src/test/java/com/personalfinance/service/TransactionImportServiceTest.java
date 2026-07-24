@@ -10,6 +10,7 @@ import com.personalfinance.dto.response.ImportPreviewResponse;
 import com.personalfinance.dto.response.ParsedTransactionDTO;
 import com.personalfinance.dto.response.ReconciliationCandidateDTO;
 import com.personalfinance.dto.response.ReconciliationSlotDTO;
+import com.personalfinance.model.entity.Category;
 import com.personalfinance.model.entity.ImportSession;
 import com.personalfinance.model.entity.MerchantRule;
 import com.personalfinance.model.entity.Transaction;
@@ -681,5 +682,43 @@ class TransactionImportServiceTest {
     ClassificationResult noType = ClassificationResult.from(MerchantRule.builder().build());
 
     assertThat(service.flipsMoneyDirection(incoming, noType)).isFalse();
+  }
+
+  // --- applyUserOverride applies the learned category to INCOME (shows in "De onde veio o
+  // dinheiro")
+
+  @Test
+  void applyUserOverride_applies_the_learned_category_to_income() {
+    UUID catId = UUID.randomUUID();
+    Category salario = Category.builder().id(catId).name("Salário").user(user).build();
+    ClassificationResult rule =
+        ClassificationResult.from(MerchantRule.builder().type("INCOME").category(salario).build());
+    when(categoryRepository.findById(catId)).thenReturn(Optional.of(salario));
+
+    ParsedTransactionDTO tx =
+        ParsedTransactionDTO.builder().type("INCOME").description("Pix recebido").build();
+    service.applyUserOverride(tx, rule, user.getId());
+
+    assertThat(tx.getType()).isEqualTo("INCOME");
+    assertThat(tx.getCategoryId()).isEqualTo(catId);
+    assertThat(tx.getCategoryName()).isEqualTo("Salário");
+    // Income carries no 50/30/20 group nor investment direction.
+    assertThat(tx.getBudgetGroup()).isNull();
+    assertThat(tx.getInvestmentDirection()).isNull();
+    assertThat(tx.isNeedsReview()).isFalse();
+  }
+
+  @Test
+  void applyUserOverride_leaves_income_category_null_when_the_rule_has_none() {
+    ClassificationResult rule =
+        ClassificationResult.from(MerchantRule.builder().type("INCOME").build());
+
+    ParsedTransactionDTO tx =
+        ParsedTransactionDTO.builder().type("INCOME").description("Pix recebido").build();
+    service.applyUserOverride(tx, rule, user.getId());
+
+    assertThat(tx.getType()).isEqualTo("INCOME");
+    assertThat(tx.getCategoryId()).isNull();
+    assertThat(tx.getCategoryName()).isNull();
   }
 }
