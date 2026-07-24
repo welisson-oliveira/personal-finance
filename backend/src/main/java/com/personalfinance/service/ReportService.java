@@ -114,10 +114,18 @@ public class ReportService {
         .toList();
   }
 
-  /** Per-category and uncategorized expense totals for a single month. */
+  /**
+   * Per-category NET expense totals for a single month. Income transactions sharing a category with
+   * an expense (e.g. flatmates reimbursing their share of utility bills tagged as "Contas") are
+   * subtracted from that category's gross expense. Categories whose income completely covers the
+   * expense are excluded from the breakdown. This gives the user the real net cost per category.
+   */
   private MonthTotals totalsForMonth(UUID userId, YearMonth ym) {
     List<Transaction> expenses =
         transactionRepository.findExpensesWithCategoryInPeriod(
+            userId, ym.atDay(1), ym.atEndOfMonth());
+    List<Transaction> incomes =
+        transactionRepository.findIncomeWithCategoryInPeriod(
             userId, ym.atDay(1), ym.atEndOfMonth());
 
     Map<UUID, BigDecimal> byCategory =
@@ -127,6 +135,22 @@ public class ReportService {
                 Collectors.groupingBy(
                     t -> t.getCategory().getId(),
                     Collectors.reducing(BigDecimal.ZERO, this::effectiveAmount, BigDecimal::add)));
+
+    // Subtract income in the same category (reimbursements / contributions to shared expenses).
+    incomes.stream()
+        .filter(t -> t.getCategory() != null)
+        .collect(
+            Collectors.groupingBy(
+                t -> t.getCategory().getId(),
+                Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)))
+        .forEach(
+            (catId, incomeTotal) ->
+                byCategory.computeIfPresent(
+                    catId,
+                    (k, expenseTotal) -> {
+                      BigDecimal net = expenseTotal.subtract(incomeTotal);
+                      return net.compareTo(BigDecimal.ZERO) > 0 ? net : null;
+                    }));
 
     Map<UUID, Transaction> meta =
         expenses.stream()

@@ -97,6 +97,19 @@ public interface TransactionRepository
       @Param("start") LocalDate start,
       @Param("end") LocalDate end);
 
+  /** Income across a set of categories — used to net reimbursements against budget goals. */
+  @Query(
+      "SELECT COALESCE(SUM(t.amount), 0) "
+          + "FROM Transaction t "
+          + "WHERE t.user.id = :userId AND t.type = 'INCOME' AND t.ignored = false "
+          + "AND t.category.id IN :categoryIds "
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
+  BigDecimal sumIncomeByCategoryIdsAndDateBetween(
+      @Param("userId") UUID userId,
+      @Param("categoryIds") List<UUID> categoryIds,
+      @Param("start") LocalDate start,
+      @Param("end") LocalDate end);
+
   /** All non-ignored expenses in the period (grouped or not) — feeds "Resultado do mês". */
   @Query(
       "SELECT COALESCE(SUM(CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END), 0) "

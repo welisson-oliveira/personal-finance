@@ -49,6 +49,12 @@ class BudgetGoalServiceTest {
     userId = UUID.randomUUID();
     user = User.builder().id(userId).name("Teste").build();
     category = Category.builder().id(UUID.randomUUID()).name("Alimentação").build();
+    // Default: no income offsets (most tests have no income in the same category).
+    lenient()
+        .when(
+            transactionRepository.sumIncomeByCategoryIdsAndDateBetween(
+                any(), anyList(), any(LocalDate.class), any(LocalDate.class)))
+        .thenReturn(BigDecimal.ZERO);
   }
 
   @Test

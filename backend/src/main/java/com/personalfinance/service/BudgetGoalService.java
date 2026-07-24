@@ -319,9 +319,13 @@ public class BudgetGoalService {
     List<UUID> categoryIds = new java.util.ArrayList<>();
     categoryIds.add(category.getId());
     categoryRepository.findByParentId(category.getId()).forEach(c -> categoryIds.add(c.getId()));
-    BigDecimal spent =
+    BigDecimal grossSpent =
         transactionRepository.sumExpenseByCategoryIdsAndDateBetween(
             userId, categoryIds, start, end);
+    BigDecimal incomeOffset =
+        transactionRepository.sumIncomeByCategoryIdsAndDateBetween(
+            userId, categoryIds, start, end);
+    BigDecimal spent = grossSpent.subtract(incomeOffset).max(BigDecimal.ZERO);
     BigDecimal amount = goal.getAmount();
     BigDecimal remaining = amount.subtract(spent);
     BigDecimal percentage =
