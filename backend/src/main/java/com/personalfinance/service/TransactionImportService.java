@@ -185,7 +185,7 @@ public class TransactionImportService {
     return false;
   }
 
-  private void applyUserOverride(ParsedTransactionDTO tx, ClassificationResult cr, UUID userId) {
+  void applyUserOverride(ParsedTransactionDTO tx, ClassificationResult cr, UUID userId) {
     if (cr.getType() != null) {
       tx.setType(cr.getType());
     }
@@ -204,7 +204,11 @@ public class TransactionImportService {
       tx.setBudgetGroup(null);
       tx.setCategoryId(null);
       tx.setCategoryName(null);
-    } else { // INCOME carries no category/budget group today
+    } else { // INCOME: apply learned category (shows in "De onde veio o dinheiro"), clear budget
+      // fields
+      UUID catId = resolveUserCategoryId(userId, cr.getCategoryId(), cr.getCategoryName());
+      tx.setCategoryId(catId);
+      tx.setCategoryName(catId != null ? cr.getCategoryName() : null);
       tx.setBudgetGroup(null);
       tx.setInvestmentDirection(null);
     }
