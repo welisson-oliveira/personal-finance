@@ -47,6 +47,11 @@ public class MerchantRule {
   @Builder.Default
   private boolean ignored = false;
 
+  /** Whether matched income should be treated as a reimbursement (contra-expense). */
+  @Column(nullable = false)
+  @Builder.Default
+  private boolean reimbursement = false;
+
   @Column(name = "investment_direction")
   private String investmentDirection;
 

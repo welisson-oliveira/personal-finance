@@ -10,6 +10,7 @@ export interface ParsedTransaction {
   budgetGroup?: string;
   investmentDirection?: string;
   ignored?: boolean;
+  reimbursement?: boolean;
   categoryId?: string;
   categoryName?: string;
   notes?: string;

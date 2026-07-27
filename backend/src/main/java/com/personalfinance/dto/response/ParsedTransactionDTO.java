@@ -27,6 +27,7 @@ public class ParsedTransactionDTO {
   private String notes;
   private UUID knownPersonId;
   @Builder.Default private boolean ignored = false;
+  @Builder.Default private boolean reimbursement = false;
   private boolean needsReview;
   @Builder.Default private boolean included = true;
   private String autoClassification;

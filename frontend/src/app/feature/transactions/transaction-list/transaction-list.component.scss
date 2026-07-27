@@ -275,6 +275,16 @@
   color: #616161;
 }
 
+.reimbursement-chip {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(21, 101, 192, 0.12);
+  color: #1565c0;
+}
+
 /* Amber pill that flags "needs review" and confirms it on click (hover turns green = confirm). */
 .review-chip {
   display: inline-flex;

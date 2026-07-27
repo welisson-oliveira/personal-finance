@@ -114,19 +114,45 @@ public class ReportService {
         .toList();
   }
 
-  /** Per-category and uncategorized expense totals for a single month. */
+  /**
+   * Per-category and uncategorized NET expense totals for a single month. Reimbursements (INCOME
+   * flagged as contra-expense, e.g. flatmates paying their share of a bill tagged "Contas") are
+   * subtracted from the expense in the same category; a category whose reimbursements cover its
+   * expense is dropped from the breakdown, so the user sees the real net cost.
+   */
   private MonthTotals totalsForMonth(UUID userId, YearMonth ym) {
     List<Transaction> expenses =
         transactionRepository.findExpensesWithCategoryInPeriod(
             userId, ym.atDay(1), ym.atEndOfMonth());
+    List<Transaction> reimbursements =
+        transactionRepository.findReimbursementsWithCategoryInPeriod(
+            userId, ym.atDay(1), ym.atEndOfMonth());
 
     Map<UUID, BigDecimal> byCategory =
-        expenses.stream()
-            .filter(t -> t.getCategory() != null)
-            .collect(
-                Collectors.groupingBy(
-                    t -> t.getCategory().getId(),
-                    Collectors.reducing(BigDecimal.ZERO, this::effectiveAmount, BigDecimal::add)));
+        new java.util.HashMap<>(
+            expenses.stream()
+                .filter(t -> t.getCategory() != null)
+                .collect(
+                    Collectors.groupingBy(
+                        t -> t.getCategory().getId(),
+                        Collectors.reducing(
+                            BigDecimal.ZERO, this::effectiveAmount, BigDecimal::add))));
+
+    // Subtract reimbursements per category; drop categories whose income covers the expense.
+    reimbursements.stream()
+        .filter(t -> t.getCategory() != null)
+        .collect(
+            Collectors.groupingBy(
+                t -> t.getCategory().getId(),
+                Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)))
+        .forEach(
+            (catId, refund) ->
+                byCategory.computeIfPresent(
+                    catId,
+                    (k, gross) -> {
+                      BigDecimal net = gross.subtract(refund);
+                      return net.compareTo(BigDecimal.ZERO) > 0 ? net : null;
+                    }));
 
     Map<UUID, Transaction> meta =
         expenses.stream()

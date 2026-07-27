@@ -22,6 +22,7 @@ public class TransactionResponse {
   private String budgetGroup;
   private String investmentDirection;
   private boolean ignored;
+  private boolean reimbursement;
   private boolean needsReview;
   private LocalDate date;
   private LocalDate competenceDate;

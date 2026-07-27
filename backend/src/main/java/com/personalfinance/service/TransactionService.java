@@ -84,6 +84,7 @@ public class TransactionService {
             .budgetGroup(request.getBudgetGroup())
             .investmentDirection(request.getInvestmentDirection())
             .ignored(request.isIgnored())
+            .reimbursement(request.isReimbursement())
             .date(request.getDate())
             .competenceDate(
                 request.getCompetenceDate() != null
@@ -109,6 +110,7 @@ public class TransactionService {
     tx.setBudgetGroup(request.getBudgetGroup());
     tx.setInvestmentDirection(request.getInvestmentDirection());
     tx.setIgnored(request.isIgnored());
+    tx.setReimbursement(request.isReimbursement());
     tx.setDate(request.getDate());
     tx.setCompetenceDate(
         request.getCompetenceDate() != null ? request.getCompetenceDate() : request.getDate());
@@ -165,6 +167,7 @@ public class TransactionService {
         t.setBudgetGroup(source.getBudgetGroup());
         t.setInvestmentDirection(source.getInvestmentDirection());
         t.setIgnored(source.isIgnored());
+        t.setReimbursement(source.isReimbursement());
         // Classification propagates, but the review must still be confirmed per row.
       }
       transactionRepository.saveAll(targets);
@@ -190,6 +193,7 @@ public class TransactionService {
                           .build());
       rule.setType(source.getType().name());
       rule.setIgnored(source.isIgnored());
+      rule.setReimbursement(source.isReimbursement());
       rule.setCategory(source.getCategory());
       // expense_type is NOT NULL; only overwrite it when the edited transaction actually has a
       // group.
@@ -314,6 +318,7 @@ public class TransactionService {
         .budgetGroup(tx.getBudgetGroup())
         .investmentDirection(tx.getInvestmentDirection())
         .ignored(tx.isIgnored())
+        .reimbursement(tx.isReimbursement())
         .needsReview(tx.isNeedsReview())
         .date(tx.getDate())
         .competenceDate(tx.getCompetenceDate())

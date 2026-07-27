@@ -34,6 +34,7 @@ public class CreateTransactionRequest {
   private String budgetGroup; // EXPENSE: ESSENTIAL | NON_ESSENTIAL
   private String investmentDirection; // INVESTMENT: CONTRIBUTION | REDEMPTION
   private boolean ignored;
+  private boolean reimbursement; // INCOME that offsets an expense category (contra-lançamento)
   private String notes;
   private boolean shared;
   private BigDecimal totalAmount;

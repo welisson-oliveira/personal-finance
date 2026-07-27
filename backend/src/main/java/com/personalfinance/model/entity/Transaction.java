@@ -49,6 +49,17 @@ public class Transaction {
   @Builder.Default
   private boolean ignored = false;
 
+  /**
+   * Reimbursement (contra-expense): an INCOME that is NOT real income but the return of part of an
+   * expense (e.g. flatmates paying their share of a utility bill). It carries a {@link #category}
+   * and {@link #budgetGroup} like an expense; it is excluded from income totals and SUBTRACTED from
+   * its category/group expense, so Dashboard/Reports/Goals show the real net cost. Cash balance
+   * still counts it as money in.
+   */
+  @Column(nullable = false)
+  @Builder.Default
+  private boolean reimbursement = false;
+
   /** Imported but not yet classified with confidence — surfaced for inline review in the list. */
   @Column(name = "needs_review", nullable = false)
   @Builder.Default
