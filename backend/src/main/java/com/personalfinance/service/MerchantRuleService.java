@@ -44,14 +44,11 @@ public class MerchantRuleService {
     MerchantRule rule =
         MerchantRule.builder()
             .user(user)
-            .merchantName(request.merchantName())
             .normalizedName(normalizedName)
-            .category(resolveCategory(request.categoryId()))
-            .subcategory(request.subcategory())
-            .expenseType(request.expenseType())
             .confidence(100)
             .createdBy("USER")
             .build();
+    applyFields(rule, request);
     return toResponse(merchantRuleRepository.save(rule));
   }
 
@@ -66,7 +63,6 @@ public class MerchantRuleService {
         merchantRuleRepository
             .findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Regra não encontrada."));
-    Category category = resolveCategory(request.categoryId());
 
     if (rule.getUser() == null) {
       // Global rule: create (or update) a personal override on the same normalizedName.
@@ -81,21 +77,15 @@ public class MerchantRuleService {
                           .confidence(100)
                           .createdBy("USER")
                           .build());
-      override.setMerchantName(request.merchantName());
-      override.setCategory(category);
-      override.setSubcategory(request.subcategory());
-      override.setExpenseType(request.expenseType());
+      applyFields(override, request);
       return toResponse(merchantRuleRepository.save(override));
     }
 
     if (!rule.getUser().getId().equals(user.getId())) {
       throw new AccessDeniedException("Você não pode editar esta regra.");
     }
-    rule.setMerchantName(request.merchantName());
-    rule.setCategory(category);
-    rule.setSubcategory(request.subcategory());
-    rule.setExpenseType(request.expenseType());
     rule.setCreatedBy("USER");
+    applyFields(rule, request);
     return toResponse(merchantRuleRepository.save(rule));
   }
 
@@ -116,6 +106,27 @@ public class MerchantRuleService {
     merchantRuleRepository.delete(rule);
   }
 
+  /**
+   * Writes the request onto the rule, keeping the fields coherent with the chosen type: budget
+   * group only for expense, direction only for investment, category for expense/income (never
+   * investment). A null type is treated as an expense-only rule (the legacy default). {@code
+   * expense_type} is NOT NULL, so a non-expense rule stores the {@code NON_ESSENTIAL} filler.
+   */
+  private void applyFields(MerchantRule rule, CreateMerchantRuleRequest request) {
+    String type = request.type();
+    boolean investment = "INVESTMENT".equals(type);
+    boolean expense = type == null || "EXPENSE".equals(type);
+
+    rule.setMerchantName(request.merchantName());
+    rule.setType(type);
+    rule.setIgnored(request.ignored());
+    rule.setSubcategory(request.subcategory());
+    rule.setCategory(investment ? null : resolveCategory(request.categoryId()));
+    rule.setExpenseType(
+        expense && request.expenseType() != null ? request.expenseType() : "NON_ESSENTIAL");
+    rule.setInvestmentDirection(investment ? request.investmentDirection() : null);
+  }
+
   private Category resolveCategory(UUID categoryId) {
     if (categoryId == null) return null;
     return categoryRepository
@@ -128,10 +139,13 @@ public class MerchantRuleService {
         r.getId(),
         r.getMerchantName(),
         r.getNormalizedName(),
+        r.getType(),
         r.getCategory() != null ? r.getCategory().getId() : null,
         r.getCategory() != null ? r.getCategory().getName() : null,
         r.getSubcategory(),
         r.getExpenseType(),
+        r.getInvestmentDirection(),
+        r.isIgnored(),
         r.getConfidence(),
         r.getCreatedBy(),
         r.getUser() == null);

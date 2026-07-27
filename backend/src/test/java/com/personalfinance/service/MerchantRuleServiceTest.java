@@ -40,7 +40,8 @@ class MerchantRuleServiceTest {
   }
 
   private CreateMerchantRuleRequest request(UUID categoryId) {
-    return new CreateMerchantRuleRequest("Padaria do Zé", categoryId, null, "ESSENTIAL");
+    return new CreateMerchantRuleRequest(
+        "Padaria do Zé", "EXPENSE", categoryId, null, "ESSENTIAL", null, false);
   }
 
   @Test
@@ -58,8 +59,58 @@ class MerchantRuleServiceTest {
     MerchantRule saved = captor.getValue();
     assertThat(saved.getUser()).isEqualTo(user);
     assertThat(saved.getNormalizedName()).isEqualTo("padaria do ze");
+    assertThat(saved.getType()).isEqualTo("EXPENSE");
     assertThat(saved.getExpenseType()).isEqualTo("ESSENTIAL");
     assertThat(saved.getCreatedBy()).isEqualTo("USER");
+  }
+
+  @Test
+  void create_investmentRule_setsDirection_clearsCategoryAndUsesFillerGroup() {
+    when(normalizationService.normalize("Corretora XP")).thenReturn("corretora xp");
+    when(merchantRuleRepository.findUserRuleByNormalizedName("corretora xp", userId))
+        .thenReturn(Optional.empty());
+    when(merchantRuleRepository.save(any(MerchantRule.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    CreateMerchantRuleRequest req =
+        new CreateMerchantRuleRequest(
+            "Corretora XP",
+            "INVESTMENT",
+            UUID.randomUUID(),
+            null,
+            "ESSENTIAL",
+            "CONTRIBUTION",
+            false);
+    service.create(req, user);
+
+    ArgumentCaptor<MerchantRule> captor = ArgumentCaptor.forClass(MerchantRule.class);
+    verify(merchantRuleRepository).save(captor.capture());
+    MerchantRule saved = captor.getValue();
+    assertThat(saved.getType()).isEqualTo("INVESTMENT");
+    assertThat(saved.getInvestmentDirection()).isEqualTo("CONTRIBUTION");
+    assertThat(saved.getCategory()).isNull(); // investment carries no category
+    assertThat(saved.getExpenseType()).isEqualTo("NON_ESSENTIAL"); // filler, group not applicable
+    verify(categoryRepository, never()).findById(any());
+  }
+
+  @Test
+  void create_incomeRule_canBeIgnored_andHasNoDirection() {
+    when(normalizationService.normalize("Transf Própria")).thenReturn("transf propria");
+    when(merchantRuleRepository.findUserRuleByNormalizedName("transf propria", userId))
+        .thenReturn(Optional.empty());
+    when(merchantRuleRepository.save(any(MerchantRule.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    CreateMerchantRuleRequest req =
+        new CreateMerchantRuleRequest("Transf Própria", "INCOME", null, null, null, null, true);
+    service.create(req, user);
+
+    ArgumentCaptor<MerchantRule> captor = ArgumentCaptor.forClass(MerchantRule.class);
+    verify(merchantRuleRepository).save(captor.capture());
+    MerchantRule saved = captor.getValue();
+    assertThat(saved.getType()).isEqualTo("INCOME");
+    assertThat(saved.isIgnored()).isTrue();
+    assertThat(saved.getInvestmentDirection()).isNull();
   }
 
   @Test

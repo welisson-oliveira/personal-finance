@@ -29,8 +29,21 @@
           </span>
           <span matListItemLine class="rule-meta">
             <mat-chip-set>
-              <mat-chip>{{ rule.categoryName || 'Sem categoria' }}</mat-chip>
-              <mat-chip>{{ groupLabel[rule.expenseType] || rule.expenseType }}</mat-chip>
+              @if (rule.type) {
+                <mat-chip class="type-chip">{{ typeLabel[rule.type] || rule.type }}</mat-chip>
+              }
+              @if (rule.type !== 'INVESTMENT') {
+                <mat-chip>{{ rule.categoryName || 'Sem categoria' }}</mat-chip>
+              }
+              @if (!rule.type || rule.type === 'EXPENSE') {
+                <mat-chip>{{ groupLabel[rule.expenseType] || rule.expenseType }}</mat-chip>
+              }
+              @if (rule.type === 'INVESTMENT' && rule.investmentDirection) {
+                <mat-chip>{{ directionLabel[rule.investmentDirection] || rule.investmentDirection }}</mat-chip>
+              }
+              @if (rule.ignored) {
+                <mat-chip class="ignored-chip">Ignorada</mat-chip>
+              }
             </mat-chip-set>
           </span>
           <div matListItemMeta class="item-actions">

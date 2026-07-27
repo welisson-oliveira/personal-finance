@@ -43,6 +43,17 @@ export class MerchantRuleListComponent implements OnInit {
     NON_ESSENTIAL: 'Não Essencial',
   };
 
+  readonly typeLabel: Record<string, string> = {
+    INCOME: 'Receita',
+    EXPENSE: 'Despesa',
+    INVESTMENT: 'Investimento',
+  };
+
+  readonly directionLabel: Record<string, string> = {
+    CONTRIBUTION: 'Aporte',
+    REDEMPTION: 'Resgate',
+  };
+
   constructor(
     private merchantRuleService: MerchantRuleService,
     private dialog: MatDialog,

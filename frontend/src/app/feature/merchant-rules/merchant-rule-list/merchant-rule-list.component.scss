@@ -55,6 +55,15 @@
   margin-top: 2px;
 }
 
+.type-chip {
+  font-weight: 600;
+}
+
+.ignored-chip {
+  opacity: 0.75;
+  font-style: italic;
+}
+
 .item-actions {
   display: flex;
   gap: 2px;
