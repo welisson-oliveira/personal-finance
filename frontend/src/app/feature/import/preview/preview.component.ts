@@ -348,6 +348,7 @@ export class PreviewComponent implements OnInit {
       budgetGroup: tx.budgetGroup,
       investmentDirection: tx.investmentDirection,
       ignored: tx.ignored ?? false,
+      reimbursement: tx.reimbursement ?? false,
       needsReview: tx.needsReview,
       date: tx.date,
       competenceDate: tx.competenceDate,
@@ -381,6 +382,7 @@ export class PreviewComponent implements OnInit {
         tx.budgetGroup = req.budgetGroup;
         tx.investmentDirection = req.investmentDirection;
         tx.ignored = req.ignored;
+        tx.reimbursement = req.reimbursement;
         this.persistEdits();
       });
   }

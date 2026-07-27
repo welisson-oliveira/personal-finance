@@ -220,6 +220,11 @@
             @if (tx.ignored) {
               <span class="ignored-chip" matTooltip="Não conta nos cálculos">Ignorada</span>
             }
+            @if (tx.reimbursement) {
+              <span class="reimbursement-chip" matTooltip="Abate o gasto da categoria (não conta como receita)"
+                >Reembolso</span
+              >
+            }
           </td>
         </ng-container>
 

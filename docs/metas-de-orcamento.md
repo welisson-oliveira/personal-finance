@@ -11,7 +11,7 @@ Teto de gasto **por categoria**, recorrente mensal (mesma meta todo mês). O aco
 
 ### `BudgetGoalService`
 
-- `findAll(userId, year, month)` — lista as metas e calcula o **progresso do mês**: `spent` = gasto do mês na categoria (`sumExpenseByCategoryAndDateBetween`, usa `userShare` quando `shared`), `remaining` = amount − spent (pode ser negativo), `percentage` = spent / amount × 100.
+- `findAll(userId, year, month)` — lista as metas e calcula o **progresso do mês**: `spent` = gasto do mês na categoria (`sumExpenseByCategoryIdsAndDateBetween`, usa `userShare` quando `shared`), **líquido de reembolsos** (um `INCOME reimbursement=true` na categoria entra como `−amount`) e com piso em zero (`.max(0)` — reembolso maior que o gasto não vira "gasto negativo"), `remaining` = amount − spent (pode ser negativo), `percentage` = spent / amount × 100.
 - `create` — valida categoria e **rejeita meta duplicada** para a mesma categoria (UNIQUE); progresso calculado no mês corrente.
 - `update` — altera só o `amount` (a categoria é fixa); posse validada.
 - `delete` — posse validada (`AccessDeniedException` → 403).
@@ -48,7 +48,7 @@ Usuário define meta por categoria → ao abrir a tela (ou trocar o mês global)
 
 - **Uma meta por categoria** (UNIQUE) — a criação impede duplicar.
 - Meta é **recorrente** (não há coluna de mês); o progresso é sempre relativo ao mês consultado. Para metas específicas por mês, seria preciso evoluir o modelo.
-- `spent` respeita rateio (`userShare` quando `shared`), como o dashboard.
+- `spent` respeita rateio (`userShare` quando `shared`), como o dashboard, e é **líquido de reembolsos** (contra-lançamentos da categoria abatem o gasto; piso em zero). Ver [transacoes.md](./transacoes.md).
 
 ## Onde mexer
 

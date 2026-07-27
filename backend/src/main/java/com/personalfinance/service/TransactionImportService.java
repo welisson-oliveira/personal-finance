@@ -193,6 +193,7 @@ public class TransactionImportService {
     tx.setIncluded(!cr.isIgnored());
     tx.setNeedsReview(false);
     tx.setAutoClassification(null);
+    tx.setReimbursement(false);
     if ("EXPENSE".equals(tx.getType())) {
       UUID catId = resolveUserCategoryId(userId, cr.getCategoryId(), cr.getCategoryName());
       tx.setCategoryId(catId);
@@ -204,13 +205,15 @@ public class TransactionImportService {
       tx.setBudgetGroup(null);
       tx.setCategoryId(null);
       tx.setCategoryName(null);
-    } else { // INCOME: apply learned category (shows in "De onde veio o dinheiro"), clear budget
-      // fields
+    } else { // INCOME: apply learned category (shows in "De onde veio o dinheiro").
       UUID catId = resolveUserCategoryId(userId, cr.getCategoryId(), cr.getCategoryName());
       tx.setCategoryId(catId);
       tx.setCategoryName(catId != null ? cr.getCategoryName() : null);
-      tx.setBudgetGroup(null);
       tx.setInvestmentDirection(null);
+      // A reimbursement carries a budget group so it can offset the expense in that 50/30/20
+      // bucket.
+      tx.setReimbursement(cr.isReimbursement());
+      tx.setBudgetGroup(cr.isReimbursement() ? cr.getExpenseType() : null);
     }
   }
 
@@ -341,6 +344,7 @@ public class TransactionImportService {
               .budgetGroup(dto.getBudgetGroup())
               .investmentDirection(dto.getInvestmentDirection())
               .ignored(dto.isIgnored())
+              .reimbursement(dto.isReimbursement())
               .needsReview(dto.isNeedsReview())
               .date(dto.getDate())
               .competenceDate(
@@ -389,6 +393,7 @@ public class TransactionImportService {
                         .build());
     rule.setType(tx.getType().name());
     rule.setIgnored(tx.isIgnored());
+    rule.setReimbursement(tx.isReimbursement());
     rule.setCategory(tx.getCategory());
     if (tx.getBudgetGroup() != null) {
       rule.setExpenseType(tx.getBudgetGroup());

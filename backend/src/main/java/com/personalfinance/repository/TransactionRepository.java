@@ -45,6 +45,7 @@ public interface TransactionRepository
   @Query(
       "SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t "
           + "WHERE t.user.id = :userId AND t.type = 'INCOME' AND t.ignored = false "
+          + "AND t.reimbursement = false "
           + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   BigDecimal sumIncomeByUserIdAndDateBetween(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
@@ -60,11 +61,16 @@ public interface TransactionRepository
       @Param("start") LocalDate start,
       @Param("end") LocalDate end);
 
+  // NET expense of a 50/30/20 group: expenses minus reimbursements tagged with the same group (an
+  // INCOME flagged reimbursement is a contra-expense — e.g. flatmates paying their share of a
+  // bill).
   @Query(
-      "SELECT COALESCE(SUM(CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END), 0) "
+      "SELECT COALESCE(SUM(CASE "
+          + "WHEN t.type = 'EXPENSE' THEN (CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END) "
+          + "ELSE - t.amount END), 0) "
           + "FROM Transaction t "
-          + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
-          + "AND t.budgetGroup = :budgetGroup "
+          + "WHERE t.user.id = :userId AND t.ignored = false AND t.budgetGroup = :budgetGroup "
+          + "AND (t.type = 'EXPENSE' OR (t.type = 'INCOME' AND t.reimbursement = true)) "
           + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   BigDecimal sumExpenseByBudgetGroupAndDateBetween(
       @Param("userId") UUID userId,
@@ -72,11 +78,14 @@ public interface TransactionRepository
       @Param("start") LocalDate start,
       @Param("end") LocalDate end);
 
+  // NET expense of a category (expenses minus reimbursements tagged with that category).
   @Query(
-      "SELECT COALESCE(SUM(CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END), 0) "
+      "SELECT COALESCE(SUM(CASE "
+          + "WHEN t.type = 'EXPENSE' THEN (CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END) "
+          + "ELSE - t.amount END), 0) "
           + "FROM Transaction t "
-          + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
-          + "AND t.category.id = :categoryId "
+          + "WHERE t.user.id = :userId AND t.ignored = false AND t.category.id = :categoryId "
+          + "AND (t.type = 'EXPENSE' OR (t.type = 'INCOME' AND t.reimbursement = true)) "
           + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   BigDecimal sumExpenseByCategoryAndDateBetween(
       @Param("userId") UUID userId,
@@ -84,12 +93,17 @@ public interface TransactionRepository
       @Param("start") LocalDate start,
       @Param("end") LocalDate end);
 
-  /** Expenses across a set of categories (a budget goal on a parent sums its subcategories too). */
+  /**
+   * NET expense across a set of categories (a budget goal on a parent sums its subcategories too),
+   * with reimbursements in those categories subtracted.
+   */
   @Query(
-      "SELECT COALESCE(SUM(CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END), 0) "
+      "SELECT COALESCE(SUM(CASE "
+          + "WHEN t.type = 'EXPENSE' THEN (CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END) "
+          + "ELSE - t.amount END), 0) "
           + "FROM Transaction t "
-          + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
-          + "AND t.category.id IN :categoryIds "
+          + "WHERE t.user.id = :userId AND t.ignored = false AND t.category.id IN :categoryIds "
+          + "AND (t.type = 'EXPENSE' OR (t.type = 'INCOME' AND t.reimbursement = true)) "
           + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   BigDecimal sumExpenseByCategoryIdsAndDateBetween(
       @Param("userId") UUID userId,
@@ -97,11 +111,17 @@ public interface TransactionRepository
       @Param("start") LocalDate start,
       @Param("end") LocalDate end);
 
-  /** All non-ignored expenses in the period (grouped or not) — feeds "Resultado do mês". */
+  /**
+   * All non-ignored NET expenses in the period (grouped or not, minus reimbursements) — feeds
+   * "Resultado do mês".
+   */
   @Query(
-      "SELECT COALESCE(SUM(CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END), 0) "
+      "SELECT COALESCE(SUM(CASE "
+          + "WHEN t.type = 'EXPENSE' THEN (CASE WHEN t.shared = true AND t.userShare IS NOT NULL THEN t.userShare ELSE t.amount END) "
+          + "ELSE - t.amount END), 0) "
           + "FROM Transaction t "
-          + "WHERE t.user.id = :userId AND t.type = 'EXPENSE' AND t.ignored = false "
+          + "WHERE t.user.id = :userId AND t.ignored = false "
+          + "AND (t.type = 'EXPENSE' OR (t.type = 'INCOME' AND t.reimbursement = true)) "
           + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   BigDecimal sumAllExpenseByUserIdAndDateBetween(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
@@ -145,8 +165,18 @@ public interface TransactionRepository
   @Query(
       "SELECT t FROM Transaction t LEFT JOIN FETCH t.category "
           + "WHERE t.user.id = :userId AND t.type = 'INCOME' AND t.ignored = false "
+          + "AND t.reimbursement = false "
           + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
   List<Transaction> findIncomeWithCategoryInPeriod(
+      @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+  /** Reimbursements (INCOME flagged as contra-expense) with their category — to net breakdowns. */
+  @Query(
+      "SELECT t FROM Transaction t LEFT JOIN FETCH t.category "
+          + "WHERE t.user.id = :userId AND t.type = 'INCOME' AND t.reimbursement = true "
+          + "AND t.ignored = false "
+          + "AND COALESCE(t.competenceDate, t.date) BETWEEN :start AND :end")
+  List<Transaction> findReimbursementsWithCategoryInPeriod(
       @Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 
   @Query(

@@ -7,6 +7,7 @@ export interface Transaction {
   budgetGroup?: string;
   investmentDirection?: string;
   ignored: boolean;
+  reimbursement: boolean;
   needsReview: boolean;
   date: string;
   competenceDate?: string;
@@ -31,6 +32,7 @@ export interface UpdateTransactionRequest {
   budgetGroup?: string;
   investmentDirection?: string;
   ignored?: boolean;
+  reimbursement?: boolean;
   notes?: string;
   shared: boolean;
   totalAmount?: number;

@@ -16,6 +16,7 @@ public class ClassificationResult {
   // the investment direction. Null/false on legacy expense-only rules.
   private final String type;
   private final boolean ignored;
+  private final boolean reimbursement;
   private final String investmentDirection;
 
   private ClassificationResult(
@@ -26,6 +27,7 @@ public class ClassificationResult {
       int confidence,
       String type,
       boolean ignored,
+      boolean reimbursement,
       String investmentDirection) {
     this.categoryId = categoryId;
     this.categoryName = categoryName;
@@ -34,11 +36,12 @@ public class ClassificationResult {
     this.confidence = confidence;
     this.type = type;
     this.ignored = ignored;
+    this.reimbursement = reimbursement;
     this.investmentDirection = investmentDirection;
   }
 
   public static ClassificationResult unknown() {
-    return new ClassificationResult(null, null, null, null, 0, null, false, null);
+    return new ClassificationResult(null, null, null, null, 0, null, false, false, null);
   }
 
   public static ClassificationResult from(MerchantRule rule) {
@@ -50,6 +53,7 @@ public class ClassificationResult {
         rule.getConfidence(),
         rule.getType(),
         rule.isIgnored(),
+        rule.isReimbursement(),
         rule.getInvestmentDirection());
   }
 

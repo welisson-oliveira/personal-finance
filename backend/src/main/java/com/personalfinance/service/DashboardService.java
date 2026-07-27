@@ -119,8 +119,11 @@ public class DashboardService {
     // and the 50/30/20 drill-down.
     List<Transaction> expenses =
         transactionRepository.findExpensesWithCategoryInPeriod(userId, start, end);
+    // Reimbursements (contra-expenses) net against the categories they were tagged with.
+    List<Transaction> reimbursements =
+        transactionRepository.findReimbursementsWithCategoryInPeriod(userId, start, end);
 
-    DashboardResponse.Breakdown breakdown = buildBudgetBreakdown(expenses);
+    DashboardResponse.Breakdown breakdown = buildBudgetBreakdown(expenses, reimbursements);
     Insights insights = buildInsights(user, ym, expenses, totalDespesas);
 
     // "De onde veio o dinheiro": entradas agrupadas por categoria (income uses raw amount, like the
@@ -157,11 +160,15 @@ public class DashboardService {
         .build();
   }
 
-  /** Categories composing each expense bucket (ESSENTIAL / NON_ESSENTIAL), biggest first. */
-  private DashboardResponse.Breakdown buildBudgetBreakdown(List<Transaction> expenses) {
+  /**
+   * Categories composing each expense bucket (ESSENTIAL / NON_ESSENTIAL), net of reimbursements,
+   * biggest first.
+   */
+  private DashboardResponse.Breakdown buildBudgetBreakdown(
+      List<Transaction> expenses, List<Transaction> reimbursements) {
     return DashboardResponse.Breakdown.builder()
-        .essenciais(categoriesForGroup(expenses, "ESSENTIAL"))
-        .naoEssenciais(categoriesForGroup(expenses, "NON_ESSENTIAL"))
+        .essenciais(netCategoriesForGroup(expenses, reimbursements, "ESSENTIAL"))
+        .naoEssenciais(netCategoriesForGroup(expenses, reimbursements, "NON_ESSENTIAL"))
         .build();
   }
 
@@ -170,6 +177,36 @@ public class DashboardService {
     return categoriesFrom(
         expenses.stream().filter(t -> budgetGroup.equals(t.getBudgetGroup())).toList(),
         this::effectiveAmount);
+  }
+
+  /** Per-category expense totals for a group, minus reimbursements in the same group/category. */
+  private List<CategoryTotalResponse> netCategoriesForGroup(
+      List<Transaction> expenses, List<Transaction> reimbursements, String budgetGroup) {
+    List<CategoryTotalResponse> gross = categoriesForGroup(expenses, budgetGroup);
+    Map<UUID, BigDecimal> refundByCategory =
+        reimbursements.stream()
+            .filter(t -> budgetGroup.equals(t.getBudgetGroup()) && t.getCategory() != null)
+            .collect(
+                Collectors.groupingBy(
+                    t -> t.getCategory().getId(),
+                    Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)));
+    if (refundByCategory.isEmpty()) return gross;
+
+    List<CategoryTotalResponse> netted = new ArrayList<>();
+    for (CategoryTotalResponse c : gross) {
+      BigDecimal refund =
+          c.categoryId() != null
+              ? refundByCategory.getOrDefault(c.categoryId(), BigDecimal.ZERO)
+              : BigDecimal.ZERO;
+      BigDecimal net = c.total().subtract(refund);
+      if (net.compareTo(BigDecimal.ZERO) > 0) {
+        netted.add(
+            CategoryTotalResponse.of(
+                c.categoryId(), c.categoryName(), c.categoryIcon(), c.categoryColor(), net));
+      }
+    }
+    netted.sort(Comparator.comparing(CategoryTotalResponse::total).reversed());
+    return netted;
   }
 
   /** Groups transactions by category (biggest first) with a "Sem categoria" bucket. */

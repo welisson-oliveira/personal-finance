@@ -1,5 +1,6 @@
 package com.personalfinance.controller;
 
+import static org.hamcrest.Matchers.closeTo;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -147,6 +148,59 @@ class BudgetGoalControllerTest {
                 .header("Authorization", "Bearer " + auth.token()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.rendaBase").exists());
+  }
+
+  @Test
+  void goal_spent_is_net_of_reimbursements_in_the_same_category() throws Exception {
+    Auth auth = register("goal.reimb." + UUID.randomUUID() + "@example.com");
+    User user = auth.user();
+    Category contas = categoryRepository.save(Category.builder().user(user).name("Contas").build());
+    createGoal(auth.token(), contas.getId(), "1000.00");
+
+    LocalDate d = LocalDate.of(2026, 6, 10);
+    transactionRepository.save(
+        Transaction.builder()
+            .user(user)
+            .description("EDP + SABESP")
+            .amount(new BigDecimal("2240.00"))
+            .type(TransactionType.EXPENSE)
+            .budgetGroup("ESSENTIAL")
+            .category(contas)
+            .date(d)
+            .source("MANUAL")
+            .build());
+    transactionRepository.save(
+        Transaction.builder()
+            .user(user)
+            .description("Rateio moradores")
+            .amount(new BigDecimal("1341.00"))
+            .type(TransactionType.INCOME)
+            .reimbursement(true)
+            .budgetGroup("ESSENTIAL")
+            .category(contas)
+            .date(d)
+            .source("MANUAL")
+            .build());
+
+    mockMvc
+        .perform(
+            get("/api/budget-goals?year=2026&month=6")
+                .header("Authorization", "Bearer " + auth.token()))
+        .andExpect(status().isOk())
+        // spent = 2240 − 1341 = 899, within the 1000 goal (not over).
+        .andExpect(jsonPath("$[0].categoryName").value("Contas"))
+        .andExpect(jsonPath("$[0].spent").value(closeTo(899.0, 0.001)))
+        .andExpect(jsonPath("$[0].remaining").value(closeTo(101.0, 0.001)));
+  }
+
+  private void createGoal(String token, UUID categoryId, String amount) throws Exception {
+    mockMvc
+        .perform(
+            post("/api/budget-goals")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"categoryId\":\"" + categoryId + "\",\"amount\":" + amount + "}"))
+        .andExpect(status().isCreated());
   }
 
   private Category newCategory(User user) {

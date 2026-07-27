@@ -50,6 +50,7 @@ export class TransactionEditDialogComponent {
   budgetGroup: string;
   investmentDirection: string;
   ignored: boolean;
+  reimbursement: boolean;
   date: string;
   /** Competence as a yyyy-MM value for <input type="month">; only the month (with year) matters. */
   competenceMonth: string;
@@ -95,6 +96,7 @@ export class TransactionEditDialogComponent {
     this.budgetGroup = tx.budgetGroup || '';
     this.investmentDirection = tx.investmentDirection || '';
     this.ignored = tx.ignored;
+    this.reimbursement = tx.reimbursement;
     this.date = tx.date;
     // Keep year+month (yyyy-MM); the day is irrelevant for the monthly Dashboard/Reports window.
     this.competenceMonth = (tx.competenceDate || tx.date).slice(0, 7);
@@ -117,10 +119,18 @@ export class TransactionEditDialogComponent {
     return !!this.description.trim() && this.amount != null && this.amount > 0 && !!this.date;
   }
 
+  /** A reimbursement (income offsetting an expense) carries a budget group like an expense does. */
+  get showBudgetGroup(): boolean {
+    return this.isExpense || (this.isIncome && this.reimbursement);
+  }
+
   onTypeChange(): void {
-    // Category applies to expense + income; budget group only to expense; direction only to
-    // investment. Investment carries no category.
-    if (!this.isExpense) {
+    // Category applies to expense + income; budget group to expense (and income reimbursements);
+    // direction only to investment. Investment carries no category. Reimbursement is income-only.
+    if (!this.isIncome) {
+      this.reimbursement = false;
+    }
+    if (!this.showBudgetGroup) {
       this.budgetGroup = '';
     }
     if (!this.isInvestment) {
@@ -128,6 +138,12 @@ export class TransactionEditDialogComponent {
     }
     if (this.isInvestment) {
       this.categoryId = '';
+    }
+  }
+
+  onReimbursementChange(): void {
+    if (!this.reimbursement) {
+      this.budgetGroup = '';
     }
   }
 
@@ -142,9 +158,10 @@ export class TransactionEditDialogComponent {
       // First day of the chosen month; the aggregation window only cares about the month (with year).
       competenceDate: this.competenceMonth ? `${this.competenceMonth}-01` : this.date,
       categoryId: this.isInvestment ? undefined : this.categoryId || undefined,
-      budgetGroup: this.isExpense ? this.budgetGroup || undefined : undefined,
+      budgetGroup: this.showBudgetGroup ? this.budgetGroup || undefined : undefined,
       investmentDirection: this.isInvestment ? this.investmentDirection || undefined : undefined,
       ignored: this.ignored,
+      reimbursement: this.isIncome && this.reimbursement,
       notes: tx.notes,
       shared: tx.shared,
       totalAmount: tx.totalAmount,

@@ -6,8 +6,8 @@ Relatórios visuais (gráficos em SVG/CSS, sem dependência externa): **evoluç�
 
 ### `ReportService`
 
-- `monthlyEvolution(userId, months)` — para os últimos `months` meses (clamp 1–24): `receita` = `type=INCOME` (exclui `ignored`); `despesa` = `budget_group` ESSENTIAL + NON_ESSENTIAL; `saldo` = receita − despesa. Reaproveita as somas do `DashboardService`.
-- `categoryBreakdown(userId, year, month)` — agrupa as despesas do mês por categoria (`findExpensesWithCategoryInPeriod`), usando `userShare` quando `shared` (`effectiveAmount`), ordenado do maior para o menor, com bucket "Sem categoria". **Também computa o mês anterior** (`totalsForMonth(ym.minusMonths(1))`) e casa por `categoryId`: cada linha carrega `previousTotal` e `deltaPercent` (variação mês a mês; `null` quando o mês anterior foi 0).
+- `monthlyEvolution(userId, months)` — para os últimos `months` meses (clamp 1–24): `receita` = `type=INCOME` **exceto reembolsos** (exclui `ignored` e `reimbursement`); `despesa` = `budget_group` ESSENTIAL + NON_ESSENTIAL **líquida de reembolsos** (as somas já subtraem `reimbursement`); `saldo` = receita − despesa. Reaproveita as somas do `DashboardService`.
+- `categoryBreakdown(userId, year, month)` — agrupa as despesas do mês por categoria (`findExpensesWithCategoryInPeriod`), usando `userShare` quando `shared` (`effectiveAmount`), ordenado do maior para o menor, com bucket "Sem categoria". **Abate os reembolsos** (`findReimbursementsWithCategoryInPeriod`) por `categoryId` — `total = gasto bruto − reembolso`, e a categoria some do ranking quando o líquido fica ≤ 0. **Também computa o mês anterior** (`totalsForMonth(ym.minusMonths(1))`) e casa por `categoryId`: cada linha carrega `previousTotal` e `deltaPercent` (variação mês a mês; `null` quando o mês anterior foi 0).
 - `topExpenses(userId, year, month, limit)` — os `limit` maiores **lançamentos individuais** do mês (reusa `findExpensesWithCategoryInPeriod`, ordena por `effectiveAmount` desc), cada um com descrição, categoria (nome+cor), data e valor.
 
 ### Endpoints — `ReportController` (`/api/reports`)

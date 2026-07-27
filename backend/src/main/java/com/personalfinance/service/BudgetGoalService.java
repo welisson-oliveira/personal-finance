@@ -319,9 +319,12 @@ public class BudgetGoalService {
     List<UUID> categoryIds = new java.util.ArrayList<>();
     categoryIds.add(category.getId());
     categoryRepository.findByParentId(category.getId()).forEach(c -> categoryIds.add(c.getId()));
+    // Net expense (reimbursements already subtracted by the query); clamp so a category whose
+    // reimbursements exceed its expense shows 0 spent, not negative.
     BigDecimal spent =
-        transactionRepository.sumExpenseByCategoryIdsAndDateBetween(
-            userId, categoryIds, start, end);
+        transactionRepository
+            .sumExpenseByCategoryIdsAndDateBetween(userId, categoryIds, start, end)
+            .max(BigDecimal.ZERO);
     BigDecimal amount = goal.getAmount();
     BigDecimal remaining = amount.subtract(spent);
     BigDecimal percentage =

@@ -721,4 +721,29 @@ class TransactionImportServiceTest {
     assertThat(tx.getCategoryId()).isNull();
     assertThat(tx.getCategoryName()).isNull();
   }
+
+  @Test
+  void applyUserOverride_marks_reimbursement_and_carries_category_and_group() {
+    UUID catId = UUID.randomUUID();
+    Category contas = Category.builder().id(catId).name("Contas").user(user).build();
+    ClassificationResult rule =
+        ClassificationResult.from(
+            MerchantRule.builder()
+                .type("INCOME")
+                .reimbursement(true)
+                .category(contas)
+                .expenseType("ESSENTIAL")
+                .build());
+    when(categoryRepository.findById(catId)).thenReturn(Optional.of(contas));
+
+    ParsedTransactionDTO tx =
+        ParsedTransactionDTO.builder().type("INCOME").description("Rateio moradores").build();
+    service.applyUserOverride(tx, rule, user.getId());
+
+    // Auto-flagged as reimbursement, carrying the category + 50/30/20 group so it can offset.
+    assertThat(tx.isReimbursement()).isTrue();
+    assertThat(tx.getCategoryId()).isEqualTo(catId);
+    assertThat(tx.getCategoryName()).isEqualTo("Contas");
+    assertThat(tx.getBudgetGroup()).isEqualTo("ESSENTIAL");
+  }
 }

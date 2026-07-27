@@ -46,7 +46,7 @@
         </mat-select>
       </mat-form-field>
 
-      @if (isExpense) {
+      @if (showBudgetGroup) {
         <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
           <mat-label>Grupo de orçamento</mat-label>
           <mat-select [(ngModel)]="budgetGroup">
@@ -56,7 +56,11 @@
               </mat-option>
             }
           </mat-select>
-          <mat-hint>Regra 50/30/20: Essencial (50%) e Não Essencial (30%)</mat-hint>
+          <mat-hint>{{
+            isIncome
+              ? 'Faixa do gasto que este reembolso abate'
+              : 'Regra 50/30/20: Essencial (50%) e Não Essencial (30%)'
+          }}</mat-hint>
         </mat-form-field>
       } @else if (isInvestment) {
         <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
@@ -80,6 +84,14 @@
           [(value)]="categoryId"
           (categoryCreated)="data.categories = data.categories.concat($event)"
         />
+      </div>
+    }
+
+    @if (isIncome) {
+      <div class="field-row reimb-row">
+        <mat-checkbox [(ngModel)]="reimbursement" (ngModelChange)="onReimbursementChange()">
+          É reembolso — abate o gasto desta categoria (não conta como receita)
+        </mat-checkbox>
       </div>
     }
 

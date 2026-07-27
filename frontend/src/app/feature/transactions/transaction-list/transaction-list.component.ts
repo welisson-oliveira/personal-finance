@@ -607,6 +607,9 @@ export class TransactionListComponent implements OnInit {
     const isInvestment = type === 'INVESTMENT';
     // Category applies to expense + income (investment carries none).
     const keepsCategory = type === 'EXPENSE' || type === 'INCOME';
+    // Preserve the reimbursement flag (income-only) through inline edits; a reimbursement keeps its
+    // budget group so it still offsets the right 50/30/20 bucket.
+    const isReimbursement = type === 'INCOME' && tx.reimbursement;
     const req: UpdateTransactionRequest = {
       description: tx.description,
       amount: tx.amount,
@@ -614,11 +617,12 @@ export class TransactionListComponent implements OnInit {
       date: tx.date,
       competenceDate: tx.competenceDate,
       categoryId: keepsCategory ? (patch.categoryId ?? tx.categoryId) : undefined,
-      budgetGroup: isExpense ? (patch.budgetGroup ?? tx.budgetGroup) : undefined,
+      budgetGroup: isExpense || isReimbursement ? (patch.budgetGroup ?? tx.budgetGroup) : undefined,
       investmentDirection: isInvestment
         ? (patch.investmentDirection ?? tx.investmentDirection)
         : undefined,
       ignored: patch.ignored ?? tx.ignored,
+      reimbursement: isReimbursement,
       notes: tx.notes,
       shared: tx.shared,
       totalAmount: tx.totalAmount,
