@@ -41,6 +41,7 @@ export class LayoutComponent {
     { label: 'Importar', icon: 'upload_file', route: '/import' },
     { label: 'Categorias', icon: 'category', route: '/categories' },
     { label: 'Metas', icon: 'savings', route: '/budget-goals' },
+    { label: 'Regras', icon: 'rule', route: '/merchant-rules' },
     { label: 'Pessoas Conhecidas', icon: 'people', route: '/known-persons' },
     { label: 'Configurações', icon: 'settings', route: '/settings' },
   ];

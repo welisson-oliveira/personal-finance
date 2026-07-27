@@ -1,11 +1,14 @@
 package com.personalfinance.controller;
 
+import com.personalfinance.dto.request.CreateMerchantRuleRequest;
 import com.personalfinance.dto.response.MerchantRuleResponse;
-import com.personalfinance.model.entity.MerchantRule;
 import com.personalfinance.model.entity.User;
-import com.personalfinance.repository.MerchantRuleRepository;
+import com.personalfinance.service.MerchantRuleService;
+import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -15,27 +18,31 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class MerchantRuleController {
 
-  private final MerchantRuleRepository merchantRuleRepository;
+  private final MerchantRuleService merchantRuleService;
 
   @GetMapping
   public ResponseEntity<List<MerchantRuleResponse>> list(@AuthenticationPrincipal User user) {
-    return ResponseEntity.ok(
-        merchantRuleRepository.findAllVisibleToUser(user.getId()).stream()
-            .map(this::toResponse)
-            .toList());
+    return ResponseEntity.ok(merchantRuleService.findAll(user.getId()));
   }
 
-  private MerchantRuleResponse toResponse(MerchantRule r) {
-    return new MerchantRuleResponse(
-        r.getId(),
-        r.getMerchantName(),
-        r.getNormalizedName(),
-        r.getCategory() != null ? r.getCategory().getId() : null,
-        r.getCategory() != null ? r.getCategory().getName() : null,
-        r.getSubcategory(),
-        r.getExpenseType(),
-        r.getConfidence(),
-        r.getCreatedBy(),
-        r.getUser() == null);
+  @PostMapping
+  public ResponseEntity<MerchantRuleResponse> create(
+      @RequestBody @Valid CreateMerchantRuleRequest request, @AuthenticationPrincipal User user) {
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(merchantRuleService.create(request, user));
+  }
+
+  @PutMapping("/{id}")
+  public ResponseEntity<MerchantRuleResponse> update(
+      @PathVariable UUID id,
+      @RequestBody @Valid CreateMerchantRuleRequest request,
+      @AuthenticationPrincipal User user) {
+    return ResponseEntity.ok(merchantRuleService.update(id, request, user));
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> delete(@PathVariable UUID id, @AuthenticationPrincipal User user) {
+    merchantRuleService.delete(id, user);
+    return ResponseEntity.noContent().build();
   }
 }
