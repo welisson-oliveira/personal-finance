@@ -9,6 +9,18 @@
 } @else if (errorMessage) {
   <p class="error-text">{{ errorMessage }}</p>
 } @else if (data) {
+  @if (alerts.length > 0) {
+    <a class="alerts-banner" routerLink="/anomalies">
+      <mat-icon>notification_important</mat-icon>
+      <span class="alerts-text">
+        <strong>{{ alerts.length }}</strong>
+        {{ alerts.length === 1 ? 'alerta' : 'alertas' }} de transação — {{ alerts[0].title }}:
+        {{ alerts[0].description }}
+      </span>
+      <span class="alerts-cta">Revisar <mat-icon>chevron_right</mat-icon></span>
+    </a>
+  }
+
   <!-- 1. Quanto dinheiro entrou? -->
   <div class="section-title">Quanto entrou? — {{ period.label() }}</div>
   <div class="cards-row">

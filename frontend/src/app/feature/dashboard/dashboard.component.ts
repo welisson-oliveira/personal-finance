@@ -10,6 +10,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { DashboardService } from './dashboard.service';
 import { DashboardResponse } from '../../core/models/dashboard.model';
 import { PeriodService } from '../../core/services/period.service';
+import { AnomalyService } from '../anomalies/anomaly.service';
+import { Anomaly } from '../../core/models/anomaly.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -31,14 +33,25 @@ export class DashboardComponent {
   data: DashboardResponse | null = null;
   loading = true;
   errorMessage = '';
+  alerts: Anomaly[] = [];
 
   constructor(
     private dashboardService: DashboardService,
+    private anomalyService: AnomalyService,
     public period: PeriodService
   ) {
     effect(() => {
       this.period.period();
       this.load();
+    });
+    // Anomalies are a recent-window signal (last 90 days), not month-bound.
+    this.loadAlerts();
+  }
+
+  loadAlerts(): void {
+    this.anomalyService.getAll(false).subscribe({
+      next: (a) => (this.alerts = a),
+      error: () => (this.alerts = []),
     });
   }
 

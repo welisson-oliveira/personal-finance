@@ -42,6 +42,7 @@ export class LayoutComponent {
     { label: 'Categorias', icon: 'category', route: '/categories' },
     { label: 'Metas', icon: 'savings', route: '/budget-goals' },
     { label: 'Regras', icon: 'rule', route: '/merchant-rules' },
+    { label: 'Alertas', icon: 'notification_important', route: '/anomalies' },
     { label: 'Pessoas Conhecidas', icon: 'people', route: '/known-persons' },
     { label: 'Configurações', icon: 'settings', route: '/settings' },
   ];

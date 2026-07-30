@@ -96,6 +96,13 @@ export const routes: Routes = [
             (m) => m.MerchantRuleListComponent
           ),
       },
+      {
+        path: 'anomalies',
+        loadComponent: () =>
+          import('./feature/anomalies/anomaly-list/anomaly-list.component').then(
+            (m) => m.AnomalyListComponent
+          ),
+      },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

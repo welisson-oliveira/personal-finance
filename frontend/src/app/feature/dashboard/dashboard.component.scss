@@ -475,3 +475,31 @@
   font-size: 0.85rem;
   color: #777;
 }
+
+.alerts-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: rgba(255, 152, 0, 0.12);
+  border: 1px solid rgba(255, 152, 0, 0.35);
+  text-decoration: none;
+  color: #5d4037;
+  .alerts-text {
+    flex: 1;
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .alerts-cta {
+    display: inline-flex;
+    align-items: center;
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: #e65100;
+    white-space: nowrap;
+  }
+}

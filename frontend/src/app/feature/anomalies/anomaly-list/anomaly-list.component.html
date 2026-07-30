@@ -1,0 +1,67 @@
+<div class="page-header">
+  <div>
+    <h1>Alertas de Transações</h1>
+    <p class="subtitle">Cobranças fora do seu padrão (valores atípicos e possíveis duplicatas) dos últimos 90 dias.</p>
+  </div>
+  <mat-slide-toggle [checked]="includeResolved" (change)="toggleResolved()"> Mostrar resolvidos </mat-slide-toggle>
+</div>
+
+@if (loading) {
+  <div class="loading-center">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+} @else if (anomalies.length === 0) {
+  <mat-card class="empty-card">
+    <mat-icon>verified</mat-icon>
+    <p>Nenhum alerta {{ includeResolved ? '' : 'em aberto' }}. Tudo dentro do padrão.</p>
+  </mat-card>
+} @else {
+  @for (a of anomalies; track a.transactionId + a.type) {
+    <mat-card class="anomaly-card" [class.resolved]="a.status !== 'OPEN'">
+      <div class="anomaly-body">
+        <mat-icon
+          class="type-icon"
+          [class.outlier]="a.type === 'AMOUNT_OUTLIER'"
+          [class.duplicate]="a.type === 'DUPLICATE_CHARGE'"
+          >{{ typeIcon[a.type] || 'warning' }}</mat-icon
+        >
+        <div class="anomaly-main">
+          <div class="anomaly-title">
+            {{ a.title }}
+            @if (a.status !== 'OPEN') {
+              <span class="status-badge">{{ statusLabel[a.status] || a.status }}</span>
+            }
+          </div>
+          <div class="anomaly-desc">{{ a.description }}</div>
+          <div class="anomaly-msg">{{ a.message }}</div>
+          <div class="anomaly-meta">
+            <span class="amount">R$ {{ a.amount | number: '1.2-2' }}</span>
+            <span>·</span>
+            <span>{{ a.date | date: 'dd/MM/yyyy' }}</span>
+            @if (a.categoryName) {
+              <span>·</span>
+              <span>{{ a.categoryName }}</span>
+            }
+            @if (a.relatedDate) {
+              <span>·</span>
+              <span>1ª em {{ a.relatedDate | date: 'dd/MM/yyyy' }}</span>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="anomaly-actions">
+        <a mat-button routerLink="/transactions"><mat-icon>open_in_new</mat-icon> Ver</a>
+        @if (a.status === 'OPEN') {
+          <button mat-button (click)="acknowledge(a)" matTooltip="Já verifiquei, está tudo certo">
+            <mat-icon>check</mat-icon> Revisada
+          </button>
+          <button mat-button color="warn" (click)="markFalsePositive(a)" matTooltip="Não é uma anomalia">
+            <mat-icon>thumb_down</mat-icon> Falso positivo
+          </button>
+        } @else {
+          <button mat-button (click)="reopen(a)"><mat-icon>undo</mat-icon> Reabrir</button>
+        }
+      </div>
+    </mat-card>
+  }
+}
