@@ -1,12 +1,14 @@
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}
+    # DB_PARAMS lets you append query options — e.g. "?sslmode=require" for Neon/hosted Postgres.
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}${DB_PARAMS:}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
+      # Small pool by default: fits 512MB instances and free Postgres connection caps (Neon).
+      maximum-pool-size: ${DB_POOL_MAX:5}
+      minimum-idle: ${DB_POOL_MIN:1}
       connection-timeout: 30000
   jpa:
     hibernate:

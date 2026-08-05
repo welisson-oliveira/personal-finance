@@ -12,6 +12,7 @@ import lombok.*;
 public class ParsedTransactionDTO {
 
   private LocalDate date;
+  private LocalDate competenceDate; // payment month for faturas; = date otherwise
   private String description;
   private BigDecimal amount;
   private String type;
@@ -19,11 +20,23 @@ public class ParsedTransactionDTO {
   private String installmentInfo;
 
   private String normalizedDescription;
-  private String incomeType;
-  private String budgetGroup;
+  private String budgetGroup; // EXPENSE: ESSENTIAL | NON_ESSENTIAL
+  private String investmentDirection; // INVESTMENT: CONTRIBUTION | REDEMPTION
   private UUID categoryId;
   private String categoryName;
   private String notes;
   private UUID knownPersonId;
+  @Builder.Default private boolean ignored = false;
+  @Builder.Default private boolean reimbursement = false;
   private boolean needsReview;
+  @Builder.Default private boolean included = true;
+  private String autoClassification;
+
+  // EXTRATO import only: when true, this "Pagamento de fatura" was reconciled to a fatura and must
+  // not be persisted (the fatura's items already represent it).
+  @Builder.Default private boolean reconciled = false;
+
+  // Set when the user classified this row in the preview: on confirm we learn a MerchantRule so
+  // future imports of the same merchant are classified automatically (parity with the list's edit).
+  @Builder.Default private boolean learn = false;
 }

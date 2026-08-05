@@ -1,0 +1,79 @@
+.full-width {
+  width: 100%;
+}
+
+/* Compact, form-field-less trigger for use inside table rows (matches neighbouring inline selects). */
+.category-inline {
+  display: inline-block;
+  width: 100%;
+  min-width: 150px;
+  font-size: 0.85rem;
+}
+
+.category-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  position: sticky;
+  top: 0;
+  background: var(--mat-app-background-color, #fff);
+  z-index: 1;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+  mat-icon {
+    color: #888;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.9rem;
+    color: inherit;
+  }
+}
+
+.option-icon {
+  vertical-align: middle;
+  margin-right: 8px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.no-results {
+  padding: 12px;
+  color: #888;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.category-create {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  position: sticky;
+  bottom: 0;
+  background: var(--mat-app-background-color, #fff);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  color: #3f51b5;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(63, 81, 181, 0.08);
+  }
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}

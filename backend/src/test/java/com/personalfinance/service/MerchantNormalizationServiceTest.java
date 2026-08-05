@@ -61,15 +61,45 @@ class MerchantNormalizationServiceTest {
   }
 
   @Test
-  void normalize_withUnknownMerchant_returnsRawDescription() {
+  void normalize_withUnknownMerchant_returnsCanonicalLowercase() {
     when(merchantAliasRepository.findAllGlobal()).thenReturn(aliases);
     assertThat(service.normalize("EstabelecimentoDesconhecido"))
-        .isEqualTo("EstabelecimentoDesconhecido");
+        .isEqualTo("estabelecimentodesconhecido");
   }
 
   @Test
   void normalize_withCaseInsensitiveAlias_matches() {
     when(merchantAliasRepository.findAllGlobal()).thenReturn(aliases);
     assertThat(service.normalize("IFOOD DELIVERY")).isEqualTo("iFood");
+  }
+
+  @Test
+  void normalize_recurringTransfer_differentValueAndDate_yieldsSameCanonical() {
+    when(merchantAliasRepository.findAllGlobal()).thenReturn(aliases);
+    String a = service.normalize("Transferencia Pix Joao 12/05 R$ 100,00");
+    String b = service.normalize("Transferencia Pix Joao 15/06 R$ 250,00");
+    assertThat(a).isEqualTo(b);
+    assertThat(a).isEqualTo("transferencia pix joao");
+  }
+
+  @Test
+  void normalize_stripsLongIdRuns_butKeepsMerchantName() {
+    when(merchantAliasRepository.findAllGlobal()).thenReturn(aliases);
+    String a = service.normalize("Boleto 12345678 Empresa Agua");
+    String b = service.normalize("Boleto 87654321 Empresa Agua");
+    assertThat(a).isEqualTo(b).isEqualTo("boleto empresa agua");
+  }
+
+  @Test
+  void normalize_keepsShortEmbeddedDigits() {
+    when(merchantAliasRepository.findAllGlobal()).thenReturn(aliases);
+    assertThat(service.normalize("Loja 24h")).isEqualTo("loja 24h");
+  }
+
+  @Test
+  void normalize_distinctMerchants_stayDistinct() {
+    when(merchantAliasRepository.findAllGlobal()).thenReturn(aliases);
+    assertThat(service.normalize("Pix Joao R$ 10,00"))
+        .isNotEqualTo(service.normalize("Pix Maria R$ 10,00"));
   }
 }

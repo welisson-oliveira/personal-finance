@@ -30,8 +30,8 @@ public class KnownPersonService {
             .user(user)
             .name(request.name())
             .relationship(request.relationship())
-            .defaultIncomeType(
-                request.defaultIncomeType() != null ? request.defaultIncomeType() : "REIMBURSEMENT")
+            .defaultTreatment(
+                request.defaultTreatment() != null ? request.defaultTreatment() : "INCOME")
             .defaultLabel(request.defaultLabel())
             .build();
     return toResponse(knownPersonRepository.save(person));
@@ -42,8 +42,8 @@ public class KnownPersonService {
     KnownPerson person = findOwnedByUser(id, user.getId());
     person.setName(request.name());
     person.setRelationship(request.relationship());
-    if (request.defaultIncomeType() != null) {
-      person.setDefaultIncomeType(request.defaultIncomeType());
+    if (request.defaultTreatment() != null) {
+      person.setDefaultTreatment(request.defaultTreatment());
     }
     person.setDefaultLabel(request.defaultLabel());
     return toResponse(knownPersonRepository.save(person));
@@ -68,7 +68,7 @@ public class KnownPersonService {
         p.getId(),
         p.getName(),
         p.getRelationship(),
-        p.getDefaultIncomeType(),
+        p.getDefaultTreatment(),
         p.getDefaultLabel(),
         p.isActive());
   }

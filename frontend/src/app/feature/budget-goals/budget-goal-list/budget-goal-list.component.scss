@@ -1,0 +1,94 @@
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.period-hint {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 0 0 16px;
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.empty-card {
+  text-align: center;
+
+  .empty-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: #bbb;
+  }
+
+  p {
+    color: #777;
+  }
+}
+
+.goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.goal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.goal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.goal-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.goal-pct {
+  font-weight: 700;
+  margin-right: 4px;
+
+  &.near {
+    color: #e65100;
+  }
+  &.over {
+    color: #c62828;
+  }
+}
+
+.goal-values {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #555;
+  margin-top: 8px;
+
+  .remaining {
+    font-weight: 600;
+    color: #2e7d32;
+
+    &.over {
+      color: #c62828;
+    }
+  }
+}

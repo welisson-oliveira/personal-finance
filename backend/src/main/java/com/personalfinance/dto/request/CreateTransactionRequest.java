@@ -27,11 +27,19 @@ public class CreateTransactionRequest {
 
   @NotNull private LocalDate date;
 
+  /** Optional: month the transaction counts in Dashboard/Reports. Defaults to {@code date}. */
+  private LocalDate competenceDate;
+
   private UUID categoryId;
-  private String budgetGroup;
-  private String incomeType;
+  private String budgetGroup; // EXPENSE: ESSENTIAL | NON_ESSENTIAL
+  private String investmentDirection; // INVESTMENT: CONTRIBUTION | REDEMPTION
+  private boolean ignored;
+  private boolean reimbursement; // INCOME that offsets an expense category (contra-lançamento)
   private String notes;
   private boolean shared;
   private BigDecimal totalAmount;
   private BigDecimal userShare;
+
+  /** Propagation scope when updating: ALL | FUTURE | CURRENT. Null defaults to ALL. */
+  private String propagate;
 }

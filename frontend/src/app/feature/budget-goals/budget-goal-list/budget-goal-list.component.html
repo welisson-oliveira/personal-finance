@@ -1,0 +1,72 @@
+<div class="page-header">
+  <h1>Metas de orçamento</h1>
+  <div class="header-actions">
+    <button mat-stroked-button color="primary" (click)="openSuggestions()" [disabled]="suggesting">
+      <mat-icon>auto_awesome</mat-icon>
+      {{ suggesting ? 'Gerando...' : 'Sugerir metas' }}
+    </button>
+    <button mat-raised-button color="primary" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      Nova meta
+    </button>
+  </div>
+</div>
+
+<p class="period-hint">Progresso de {{ period.label() }}</p>
+
+@if (loading) {
+  <div class="loading-center">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+} @else if (goals.length === 0) {
+  <mat-card class="empty-card">
+    <mat-card-content>
+      <mat-icon class="empty-icon">savings</mat-icon>
+      <p>Nenhuma meta definida. Crie uma meta por categoria para acompanhar seus gastos.</p>
+    </mat-card-content>
+  </mat-card>
+} @else {
+  <div class="goals-list">
+    @for (goal of goals; track goal.id) {
+      <mat-card class="goal-card">
+        <mat-card-content>
+          <div class="goal-head">
+            <div class="goal-title">
+              <mat-icon [style.color]="goal.categoryColor || null">{{ goal.categoryIcon || 'label' }}</mat-icon>
+              <span>{{ goal.categoryName }}</span>
+            </div>
+            <div class="goal-actions">
+              <span
+                class="goal-pct"
+                [class.over]="goal.percentage > 100"
+                [class.near]="goal.percentage >= 80 && goal.percentage <= 100"
+                >{{ goal.percentage | number: '1.0-0' }}%</span
+              >
+              <button mat-icon-button (click)="openEdit(goal)" title="Editar">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="confirmDelete(goal)" title="Excluir">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <mat-progress-bar
+            mode="determinate"
+            [value]="clamp(goal.percentage)"
+            [color]="barColor(goal.percentage)"
+          ></mat-progress-bar>
+
+          <div class="goal-values">
+            <span>{{ fmt(goal.spent) }} de {{ fmt(goal.amount) }}</span>
+            @if (goal.remaining >= 0) {
+              <span class="remaining">resta {{ fmt(goal.remaining) }}</span>
+            } @else {
+              <span class="remaining over">excedeu {{ fmt(-goal.remaining) }}</span>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+}

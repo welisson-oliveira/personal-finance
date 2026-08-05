@@ -1,0 +1,132 @@
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+
+  .subtitle {
+    margin: 4px 0 0;
+    font-size: 0.85rem;
+    color: #777;
+    max-width: 560px;
+  }
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+}
+
+.empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px;
+  color: #4caf50;
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  p {
+    margin: 0;
+    color: #666;
+  }
+}
+
+.anomaly-card {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+
+  &.resolved {
+    opacity: 0.65;
+  }
+}
+
+.anomaly-body {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 260px;
+}
+
+.type-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+
+  &.outlier {
+    color: #e65100;
+  }
+  &.duplicate {
+    color: #6a1b9a;
+  }
+}
+
+.anomaly-main {
+  min-width: 0;
+}
+
+.anomaly-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.status-badge {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: rgba(120, 120, 120, 0.15);
+  color: #616161;
+}
+
+.anomaly-desc {
+  font-weight: 500;
+  font-size: 0.85rem;
+  margin-top: 2px;
+}
+
+.anomaly-msg {
+  font-size: 0.8rem;
+  color: #777;
+  margin-top: 2px;
+}
+
+.anomaly-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #888;
+  margin-top: 6px;
+
+  .amount {
+    font-weight: 600;
+    color: #c62828;
+  }
+}
+
+.anomaly-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}

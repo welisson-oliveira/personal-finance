@@ -27,7 +27,7 @@
           <span matListItemLine class="person-meta">
             <mat-chip-set>
               <mat-chip>{{ relationshipLabel[person.relationship] || person.relationship }}</mat-chip>
-              <mat-chip>{{ incomeTypeLabel[person.defaultIncomeType] || person.defaultIncomeType }}</mat-chip>
+              <mat-chip>{{ treatmentLabel[person.defaultTreatment] || person.defaultTreatment }}</mat-chip>
             </mat-chip-set>
             @if (person.defaultLabel) {
               <span class="label-hint">{{ person.defaultLabel }}</span>

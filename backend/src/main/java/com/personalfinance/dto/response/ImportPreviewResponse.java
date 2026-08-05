@@ -10,4 +10,5 @@ public record ImportPreviewResponse(
     LocalDate periodStart,
     LocalDate periodEnd,
     List<ParsedTransactionDTO> transactions,
-    int reviewQueueCount) {}
+    int reviewQueueCount,
+    List<ReconciliationSlotDTO> reconciliation) {}

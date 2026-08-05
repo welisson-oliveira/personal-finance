@@ -1,19 +1,28 @@
 package com.personalfinance.service;
 
+import com.personalfinance.dto.request.BulkUpdateRequest;
 import com.personalfinance.dto.request.CreateTransactionRequest;
 import com.personalfinance.dto.response.TransactionResponse;
 import com.personalfinance.model.entity.Category;
+import com.personalfinance.model.entity.MerchantDisplayName;
+import com.personalfinance.model.entity.MerchantRule;
 import com.personalfinance.model.entity.Transaction;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.model.entity.enums.TransactionType;
 import com.personalfinance.repository.CategoryRepository;
+import com.personalfinance.repository.MerchantDisplayNameRepository;
+import com.personalfinance.repository.MerchantRuleRepository;
 import com.personalfinance.repository.TransactionRepository;
+import com.personalfinance.repository.TransactionSpecifications;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,25 +33,43 @@ public class TransactionService {
 
   private final TransactionRepository transactionRepository;
   private final CategoryRepository categoryRepository;
+  private final MerchantDisplayNameRepository merchantDisplayNameRepository;
+  private final MerchantRuleRepository merchantRuleRepository;
 
+  @Transactional(readOnly = true)
   public Page<TransactionResponse> findAll(
-      UUID userId, String month, String type, Pageable pageable) {
-    if (month != null) {
+      UUID userId,
+      String month,
+      String type,
+      UUID categoryId,
+      Boolean needsReview,
+      String search,
+      String budgetGroup,
+      boolean includeIgnored,
+      Pageable pageable) {
+    LocalDate start = null;
+    LocalDate end = null;
+    if (month != null && !month.isBlank()) {
       YearMonth ym = YearMonth.parse(month);
-      LocalDate start = ym.atDay(1);
-      LocalDate end = ym.atEndOfMonth();
-      return transactionRepository
-          .findByUserIdAndMonthExcludingOwnTransfer(userId, start, end, pageable)
-          .map(this::toResponse);
+      start = ym.atDay(1);
+      end = ym.atEndOfMonth();
     }
-    if (type != null) {
-      return transactionRepository
-          .findByUserIdAndTypeOrderByDateDesc(userId, TransactionType.valueOf(type), pageable)
-          .map(this::toResponse);
+    TransactionType txType =
+        (type != null && !type.isBlank()) ? TransactionType.valueOf(type) : null;
+
+    Specification<Transaction> spec =
+        Specification.where(TransactionSpecifications.forUser(userId))
+            .and(TransactionSpecifications.inDateRange(start, end))
+            .and(TransactionSpecifications.ofType(txType))
+            .and(TransactionSpecifications.inCategory(categoryId))
+            .and(TransactionSpecifications.needingReview(needsReview))
+            .and(TransactionSpecifications.descriptionContains(search))
+            .and(TransactionSpecifications.ofBudgetGroup(budgetGroup));
+    if (!includeIgnored) {
+      spec = spec.and(TransactionSpecifications.excludingIgnored());
     }
-    return transactionRepository
-        .findByUserIdOrderByDateDesc(userId, pageable)
-        .map(this::toResponse);
+
+    return transactionRepository.findAll(spec, pageable).map(this::toResponse);
   }
 
   @Transactional
@@ -54,9 +81,15 @@ public class TransactionService {
             .description(request.getDescription())
             .amount(request.getAmount())
             .type(TransactionType.valueOf(request.getType()))
-            .incomeType(request.getIncomeType())
             .budgetGroup(request.getBudgetGroup())
+            .investmentDirection(request.getInvestmentDirection())
+            .ignored(request.isIgnored())
+            .reimbursement(request.isReimbursement())
             .date(request.getDate())
+            .competenceDate(
+                request.getCompetenceDate() != null
+                    ? request.getCompetenceDate()
+                    : request.getDate())
             .notes(request.getNotes())
             .category(category)
             .source("MANUAL")
@@ -74,15 +107,179 @@ public class TransactionService {
     tx.setDescription(request.getDescription());
     tx.setAmount(request.getAmount());
     tx.setType(TransactionType.valueOf(request.getType()));
-    tx.setIncomeType(request.getIncomeType());
     tx.setBudgetGroup(request.getBudgetGroup());
+    tx.setInvestmentDirection(request.getInvestmentDirection());
+    tx.setIgnored(request.isIgnored());
+    tx.setReimbursement(request.isReimbursement());
     tx.setDate(request.getDate());
+    tx.setCompetenceDate(
+        request.getCompetenceDate() != null ? request.getCompetenceDate() : request.getDate());
     tx.setNotes(request.getNotes());
     tx.setCategory(category);
     tx.setShared(request.isShared());
     tx.setTotalAmount(request.getTotalAmount());
     tx.setUserShare(request.getUserShare());
+    // Editing does NOT resolve the review — the user confirms it explicitly (confirmReview),
+    // so classifying a field (e.g. budget group) keeps the "needs review" flag and the row
+    // stays put under the "pending only" filter.
+    Transaction saved = transactionRepository.save(tx);
+    String scope = request.getPropagate() != null ? request.getPropagate() : "CURRENT";
+    propagateClassification(saved, user, scope);
+    return toResponse(saved);
+  }
+
+  /**
+   * Explicitly marks a transaction as reviewed (clears the pending-review flag) without touching
+   * any other field. This is the only path that resolves a review now.
+   */
+  @Transactional
+  public TransactionResponse confirmReview(UUID id, User user) {
+    Transaction tx = findOwned(id, user.getId());
+    tx.setNeedsReview(false);
     return toResponse(transactionRepository.save(tx));
+  }
+
+  /**
+   * Propagates the classification (type, category, budget group, investment direction, ignored) of
+   * an edited transaction to every other transaction with the same effective name for this user,
+   * and learns a merchant rule so future imports are classified the same way. The pending-review
+   * flag is left untouched — each row is resolved explicitly via {@link #confirmReview}.
+   */
+  private void propagateClassification(Transaction source, User user, String scope) {
+    String effectiveName =
+        source.getNormalizedDescription() != null
+            ? source.getNormalizedDescription()
+            : source.getDescription();
+    if (effectiveName == null || effectiveName.isBlank()) return;
+
+    if (!"CURRENT".equals(scope)) {
+      LocalDate sourceAnchor = effectiveDate(source);
+      List<Transaction> matching =
+          transactionRepository.findByUserIdAndEffectiveName(user.getId(), effectiveName);
+      List<Transaction> targets =
+          matching.stream()
+              .filter(t -> !t.getId().equals(source.getId()))
+              .filter(t -> t.getType() == source.getType())
+              .filter(t -> !"FUTURE".equals(scope) || !effectiveDate(t).isBefore(sourceAnchor))
+              .toList();
+      for (Transaction t : targets) {
+        t.setCategory(source.getCategory());
+        t.setBudgetGroup(source.getBudgetGroup());
+        t.setInvestmentDirection(source.getInvestmentDirection());
+        t.setIgnored(source.isIgnored());
+        t.setReimbursement(source.isReimbursement());
+        // Classification propagates, but the review must still be confirmed per row.
+      }
+      transactionRepository.saveAll(targets);
+    }
+
+    // Learn a USER override so future imports classify this merchant the same way — for ANY type,
+    // capturing the type and the ignored flag too (e.g. "this Open Banking transfer is my salary,
+    // not an own-transfer"). Skip "Pagamento de fatura": its ignore is a structural
+    // anti-duplication
+    // rule handled by reconciliation, not a per-merchant classification to learn.
+    String descLower = source.getDescription() != null ? source.getDescription().toLowerCase() : "";
+    if (!descLower.startsWith("pagamento de fatura")) {
+      MerchantRule rule =
+          merchantRuleRepository
+              .findUserRuleByNormalizedName(effectiveName, user.getId())
+              .orElseGet(
+                  () ->
+                      MerchantRule.builder()
+                          .user(user)
+                          .merchantName(source.getDescription())
+                          .normalizedName(effectiveName)
+                          .createdBy("USER")
+                          .build());
+      rule.setType(source.getType().name());
+      rule.setIgnored(source.isIgnored());
+      rule.setReimbursement(source.isReimbursement());
+      rule.setCategory(source.getCategory());
+      // expense_type is NOT NULL; only overwrite it when the edited transaction actually has a
+      // group.
+      if (source.getBudgetGroup() != null) {
+        rule.setExpenseType(source.getBudgetGroup());
+      }
+      rule.setInvestmentDirection(source.getInvestmentDirection());
+      rule.setConfidence(100);
+      rule.setCreatedBy("USER");
+      merchantRuleRepository.save(rule);
+    }
+  }
+
+  @Transactional
+  public TransactionResponse updateNotes(UUID id, User user, String notes) {
+    Transaction tx = findOwned(id, user.getId());
+    String effectiveName =
+        tx.getNormalizedDescription() != null ? tx.getNormalizedDescription() : tx.getDescription();
+    String cleanNotes = (notes == null || notes.isBlank()) ? null : notes.trim();
+
+    // Upsert or delete the merchant display name mapping
+    if (cleanNotes == null) {
+      merchantDisplayNameRepository
+          .findByUserIdAndNormalizedName(user.getId(), effectiveName)
+          .ifPresent(merchantDisplayNameRepository::delete);
+    } else {
+      MerchantDisplayName mdn =
+          merchantDisplayNameRepository
+              .findByUserIdAndNormalizedName(user.getId(), effectiveName)
+              .orElseGet(
+                  () ->
+                      MerchantDisplayName.builder()
+                          .user(user)
+                          .normalizedName(effectiveName)
+                          .build());
+      mdn.setDisplayName(cleanNotes);
+      mdn.setUpdatedAt(LocalDateTime.now());
+      merchantDisplayNameRepository.save(mdn);
+    }
+
+    // Propagate to all transactions with the same effective name for this user
+    List<Transaction> matching =
+        transactionRepository.findByUserIdAndEffectiveName(user.getId(), effectiveName);
+    matching.forEach(t -> t.setNotes(cleanNotes));
+    transactionRepository.saveAll(matching);
+
+    return toResponse(matching.stream().filter(t -> t.getId().equals(id)).findFirst().orElse(tx));
+  }
+
+  /**
+   * Applies a bulk edit to the selected transactions (the toolbar in the list). Only the non-null
+   * fields of the request are applied, and each is scoped to the types it makes sense for: budget
+   * group to EXPENSE, category to EXPENSE/INCOME, competence month and ignored to all. Rows not
+   * owned by the user are silently skipped. Unlike {@link #update}, this does NOT propagate to
+   * same-name siblings nor learn merchant rules — the user picked exactly these rows.
+   */
+  @Transactional
+  public List<TransactionResponse> bulkUpdate(BulkUpdateRequest request, User user) {
+    List<Transaction> owned =
+        transactionRepository.findAllById(request.getIds()).stream()
+            .filter(t -> t.getUser().getId().equals(user.getId()))
+            .toList();
+
+    LocalDate competence =
+        (request.getCompetenceMonth() != null && !request.getCompetenceMonth().isBlank())
+            ? YearMonth.parse(request.getCompetenceMonth()).atDay(1)
+            : null;
+    Category category =
+        request.getCategoryId() != null ? resolveCategory(request.getCategoryId()) : null;
+
+    for (Transaction tx : owned) {
+      if (request.getBudgetGroup() != null && tx.getType() == TransactionType.EXPENSE) {
+        tx.setBudgetGroup(request.getBudgetGroup());
+      }
+      if (request.getCategoryId() != null
+          && (tx.getType() == TransactionType.EXPENSE || tx.getType() == TransactionType.INCOME)) {
+        tx.setCategory(category);
+      }
+      if (competence != null) {
+        tx.setCompetenceDate(competence);
+      }
+      if (request.getIgnored() != null) {
+        tx.setIgnored(request.getIgnored());
+      }
+    }
+    return transactionRepository.saveAll(owned).stream().map(this::toResponse).toList();
   }
 
   @Transactional
@@ -107,6 +304,10 @@ public class TransactionService {
     return categoryRepository.findById(categoryId).orElse(null);
   }
 
+  private LocalDate effectiveDate(Transaction t) {
+    return t.getCompetenceDate() != null ? t.getCompetenceDate() : t.getDate();
+  }
+
   public TransactionResponse toResponse(Transaction tx) {
     return TransactionResponse.builder()
         .id(tx.getId())
@@ -114,9 +315,13 @@ public class TransactionService {
         .normalizedDescription(tx.getNormalizedDescription())
         .amount(tx.getAmount())
         .type(tx.getType().name())
-        .incomeType(tx.getIncomeType())
         .budgetGroup(tx.getBudgetGroup())
+        .investmentDirection(tx.getInvestmentDirection())
+        .ignored(tx.isIgnored())
+        .reimbursement(tx.isReimbursement())
+        .needsReview(tx.isNeedsReview())
         .date(tx.getDate())
+        .competenceDate(tx.getCompetenceDate())
         .notes(tx.getNotes())
         .categoryId(tx.getCategory() != null ? tx.getCategory().getId() : null)
         .categoryName(tx.getCategory() != null ? tx.getCategory().getName() : null)

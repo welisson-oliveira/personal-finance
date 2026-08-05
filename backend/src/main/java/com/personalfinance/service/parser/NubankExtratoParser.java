@@ -98,11 +98,51 @@ public class NubankExtratoParser {
         continue;
       }
 
-      if (isRdb(line) || isPagamentoFatura(line)) {
+      if (isRdb(line)) {
         if (collecting) {
           emitFromAccumulated(descLines, currentDate, incomeBlock, transactions);
           collecting = false;
           descLines = new ArrayList<>();
+        }
+        BigDecimal rdbAmount = extractTrailing(line);
+        if (rdbAmount != null && currentDate != null) {
+          // Both directions are INVESTMENT: Aplicação RDB = CONTRIBUTION (aporte),
+          // Resgate RDB = REDEMPTION (resgate).
+          boolean isResgate = line.toLowerCase().startsWith("resgate");
+          transactions.add(
+              ParsedTransactionDTO.builder()
+                  .date(currentDate)
+                  .description(line)
+                  .amount(rdbAmount)
+                  .type("INVESTMENT")
+                  .investmentDirection(isResgate ? "REDEMPTION" : "CONTRIBUTION")
+                  .autoClassification("INVESTMENT")
+                  .included(true)
+                  .build());
+        }
+        continue;
+      }
+
+      if (isPagamentoFatura(line)) {
+        if (collecting) {
+          emitFromAccumulated(descLines, currentDate, incomeBlock, transactions);
+          collecting = false;
+          descLines = new ArrayList<>();
+        }
+        BigDecimal internalAmount = extractTrailing(line);
+        if (internalAmount != null && currentDate != null) {
+          transactions.add(
+              ParsedTransactionDTO.builder()
+                  .date(currentDate)
+                  .description(line)
+                  .amount(internalAmount)
+                  .type(incomeBlock ? "INCOME" : "EXPENSE")
+                  .autoClassification("INTERNAL")
+                  // Ignored by default: the itemized fatura is the source of truth, so this lump
+                  // payment must never inflate expenses/reports even if reconciliation doesn't run.
+                  .ignored(true)
+                  .included(true)
+                  .build());
         }
         continue;
       }
@@ -206,19 +246,28 @@ public class NubankExtratoParser {
       BigDecimal amount,
       List<ParsedTransactionDTO> transactions) {
     if (date == null || descLines.isEmpty()) return;
-    String firstLine = descLines.get(0);
-    String type = incomeBlock ? "INCOME" : "EXPENSE";
-    boolean openBanking =
-        firstLine.contains("via")
-            && descLines.size() > 1
-            && descLines.stream().anyMatch(l -> l.contains("Open Banking"));
+    String description = String.join(" ", descLines).replaceAll("\\s+", " ").trim();
+    String type = resolveType(description, incomeBlock);
     transactions.add(
         ParsedTransactionDTO.builder()
             .date(date)
-            .description(String.join(" ", descLines).replaceAll("\\s+", " ").trim())
+            .description(description)
             .amount(amount)
             .type(type)
             .build());
+  }
+
+  /**
+   * The Nubank statement groups lines under "Total de entradas/saídas" headers, but that section
+   * can be mis-detected for a given line. The transfer wording itself is authoritative: "recebida"
+   * means money in (INCOME), "enviada" means money out (EXPENSE). Fall back to the section
+   * otherwise.
+   */
+  private String resolveType(String description, boolean incomeBlock) {
+    String lower = description.toLowerCase();
+    if (lower.contains("recebida") || lower.contains("recebido")) return "INCOME";
+    if (lower.contains("enviada") || lower.contains("enviado")) return "EXPENSE";
+    return incomeBlock ? "INCOME" : "EXPENSE";
   }
 
   private boolean isBoilerplate(String line, String holderName) {

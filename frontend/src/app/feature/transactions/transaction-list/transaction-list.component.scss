@@ -24,6 +24,10 @@
   mat-form-field {
     width: 180px;
   }
+
+  .search-field {
+    width: 240px;
+  }
 }
 
 .loading-center {
@@ -42,11 +46,34 @@
 
 .tx-table {
   width: 100%;
-  min-width: 700px;
+  min-width: 860px;
 }
 
 .desc-cell {
   max-width: 280px;
+
+  .desc-content {
+    position: relative;
+    cursor: pointer;
+    padding-right: 28px;
+
+    .edit-icon {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #999;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    &:hover .edit-icon {
+      opacity: 1;
+    }
+  }
 
   .desc-main {
     font-size: 0.875rem;
@@ -64,6 +91,15 @@
     text-overflow: ellipsis;
   }
 
+  .desc-note-placeholder {
+    opacity: 0;
+    font-style: italic;
+  }
+
+  .desc-content:hover .desc-note-placeholder {
+    opacity: 0.5;
+  }
+
   .source-badge {
     font-size: 0.65rem;
     background: rgba(63, 81, 181, 0.1);
@@ -71,6 +107,34 @@
     padding: 1px 6px;
     border-radius: 8px;
     font-weight: 600;
+  }
+
+  .desc-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .notes-input {
+      flex: 1;
+      border: none;
+      border-bottom: 2px solid #3f51b5;
+      outline: none;
+      font-size: 0.875rem;
+      padding: 2px 4px;
+      background: transparent;
+      color: inherit;
+      min-width: 0;
+    }
+
+    button.mat-icon-button {
+      width: 28px;
+      height: 28px;
+      line-height: 28px;
+
+      mat-icon {
+        font-size: 18px;
+      }
+    }
   }
 }
 
@@ -124,5 +188,167 @@
   &.group-investment {
     background: rgba(76, 175, 80, 0.12);
     color: #1b5e20;
+  }
+}
+
+.actions-cell {
+  white-space: nowrap;
+}
+
+.investment-chip {
+  background: rgba(63, 81, 181, 0.14);
+  color: #283593;
+}
+
+.pending-filter {
+  margin-left: 4px;
+}
+
+.type-cell,
+.cat-cell,
+.group-cell {
+  white-space: nowrap;
+}
+
+/* Clickable chip that opens a per-field menu */
+.cell-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: none;
+  background: transparent;
+  padding: 2px 2px 2px 0;
+  cursor: pointer;
+  border-radius: 14px;
+  max-width: 100%;
+
+  .chip-caret {
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+    color: #b0b0b0;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+  }
+  &:hover .chip-caret {
+    opacity: 1;
+  }
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.cat-chip {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  background: rgba(96, 125, 139, 0.12);
+  color: #37474f;
+}
+
+.cat-chip.empty,
+.group-chip.empty {
+  background: transparent;
+  color: #9e9e9e;
+  font-style: italic;
+  border: 1px dashed #cfcfcf;
+}
+
+.muted {
+  color: #bdbdbd;
+}
+
+.ignored-chip {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(120, 120, 120, 0.15);
+  color: #616161;
+}
+
+.reimbursement-chip {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(21, 101, 192, 0.12);
+  color: #1565c0;
+}
+
+/* Amber pill that flags "needs review" and confirms it on click (hover turns green = confirm). */
+.review-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 2px 9px 2px 6px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 152, 0, 0.18);
+  color: #e65100;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  vertical-align: middle;
+  transition:
+    background 0.15s,
+    color 0.15s;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover {
+    background: rgba(46, 125, 50, 0.2);
+    color: #2e7d32;
+  }
+}
+
+.needs-review-row {
+  box-shadow: inset 3px 0 0 #ffa726;
+}
+
+.ignored-row {
+  opacity: 0.55;
+}
+
+.selected-row {
+  background: rgba(63, 81, 181, 0.08);
+}
+
+.select-cell {
+  width: 48px;
+  padding-right: 0;
+}
+
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 10px 16px !important;
+  background: rgba(63, 81, 181, 0.06);
+
+  .bulk-count {
+    font-weight: 600;
+    font-size: 0.88rem;
+    margin-right: 4px;
+  }
+
+  .bulk-field {
+    width: 150px;
   }
 }

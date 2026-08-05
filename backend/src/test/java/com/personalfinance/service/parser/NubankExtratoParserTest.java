@@ -40,20 +40,42 @@ class NubankExtratoParserTest {
   }
 
   @Test
-  void rdb_transactions_are_filtered() {
-    List<ParsedTransactionDTO> txs = result.transactions();
-    assertThat(txs)
-        .noneMatch(t -> t.getDescription().contains("Resgate RDB"))
-        .noneMatch(
-            t ->
-                t.getDescription().toLowerCase().contains("aplica")
-                    && t.getDescription().contains("RDB"));
+  void rdb_transactions_are_classified_as_investment_and_included() {
+    List<ParsedTransactionDTO> rdbs =
+        result.transactions().stream()
+            .filter(
+                t ->
+                    t.getDescription().contains("Resgate RDB")
+                        || (t.getDescription().toLowerCase().contains("aplica")
+                            && t.getDescription().contains("RDB")))
+            .toList();
+    assertThat(rdbs).isNotEmpty();
+    // RDB now feeds the dashboard: aporte = despesa/Investimento; resgate = receita/Investimento
+    assertThat(rdbs).allMatch(ParsedTransactionDTO::isIncluded);
+    assertThat(rdbs).allMatch(t -> "INVESTMENT".equals(t.getAutoClassification()));
+    assertThat(rdbs)
+        .allSatisfy(
+            t -> {
+              assertThat(t.getType()).isEqualTo("INVESTMENT");
+              if (t.getDescription().toLowerCase().startsWith("resgate")) {
+                assertThat(t.getInvestmentDirection()).isEqualTo("REDEMPTION");
+              } else {
+                assertThat(t.getInvestmentDirection()).isEqualTo("CONTRIBUTION");
+              }
+            });
   }
 
   @Test
-  void pagamento_fatura_is_filtered() {
-    assertThat(result.transactions())
-        .noneMatch(t -> t.getDescription().startsWith("Pagamento de fatura"));
+  void pagamento_fatura_when_present_is_marked_as_internal_included_and_ignored_by_default() {
+    result.transactions().stream()
+        .filter(t -> t.getDescription().startsWith("Pagamento de fatura"))
+        .forEach(
+            t -> {
+              assertThat(t.isIncluded()).isTrue();
+              assertThat(t.getAutoClassification()).isEqualTo("INTERNAL");
+              // Ignored so the lump payment never double-counts against the itemized fatura.
+              assertThat(t.isIgnored()).isTrue();
+            });
   }
 
   @Test
@@ -116,5 +138,40 @@ class NubankExtratoParserTest {
   @Test
   void at_least_twenty_transactions_present() {
     assertThat(result.transactions()).hasSizeGreaterThanOrEqualTo(20);
+  }
+
+  @Test
+  void received_transfer_under_saidas_section_is_income() {
+    // Reproduces the bug: a "recebida" transfer that falls under a "saídas" block
+    String text =
+        String.join(
+            "\n",
+            "Movimentações",
+            "10 MAI 2026 Total de saídas -",
+            "Transferência recebida pelo Pix ROSANGELA ELISABETH SANTOS OLIVEIRA",
+            "100,00");
+    NubankExtratoParser.ParseResult r = new NubankExtratoParser().parse(text, HOLDER);
+
+    assertThat(r.transactions())
+        .anyMatch(
+            t ->
+                t.getDescription().contains("ROSANGELA")
+                    && "INCOME".equals(t.getType())
+                    && t.getAmount().compareTo(new BigDecimal("100.00")) == 0);
+  }
+
+  @Test
+  void sent_transfer_under_entradas_section_is_expense() {
+    String text =
+        String.join(
+            "\n",
+            "Movimentações",
+            "10 MAI 2026 Total de entradas +",
+            "Transferência enviada pelo Pix FULANO DE TAL",
+            "50,00");
+    NubankExtratoParser.ParseResult r = new NubankExtratoParser().parse(text, HOLDER);
+
+    assertThat(r.transactions())
+        .anyMatch(t -> t.getDescription().contains("FULANO") && "EXPENSE".equals(t.getType()));
   }
 }

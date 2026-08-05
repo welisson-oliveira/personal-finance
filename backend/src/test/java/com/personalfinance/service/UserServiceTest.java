@@ -27,6 +27,7 @@ class UserServiceTest {
 
   @Mock private UserRepository userRepository;
   @Mock private PasswordEncoder passwordEncoder;
+  @Mock private CategoryProvisioningService categoryProvisioningService;
 
   @InjectMocks private UserService userService;
 
@@ -76,6 +77,8 @@ class UserServiceTest {
     assertThat(result.getName()).isEqualTo("John Doe");
     verify(passwordEncoder).encode("password123");
     verify(userRepository).save(any(User.class));
+    // The new user gets their own copy of the starter category tree.
+    verify(categoryProvisioningService).provisionDefaults(saved);
   }
 
   @Test

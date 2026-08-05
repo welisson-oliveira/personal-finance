@@ -36,14 +36,45 @@ public class Transaction {
   @Column(nullable = false)
   private TransactionType type;
 
-  @Column(name = "income_type", length = 30)
-  private String incomeType;
-
+  /** Only for EXPENSE: ESSENTIAL | NON_ESSENTIAL (the 50/30 of the 50/30/20). */
   @Column(name = "budget_group", length = 20)
   private String budgetGroup;
 
+  /** Only for INVESTMENT: CONTRIBUTION (aporte) | REDEMPTION (resgate). */
+  @Column(name = "investment_direction", length = 20)
+  private String investmentDirection;
+
+  /** Excluded from every dashboard calculation (e.g. transfers between the user's own accounts). */
+  @Column(nullable = false)
+  @Builder.Default
+  private boolean ignored = false;
+
+  /**
+   * Reimbursement (contra-expense): an INCOME that is NOT real income but the return of part of an
+   * expense (e.g. flatmates paying their share of a utility bill). It carries a {@link #category}
+   * and {@link #budgetGroup} like an expense; it is excluded from income totals and SUBTRACTED from
+   * its category/group expense, so Dashboard/Reports/Goals show the real net cost. Cash balance
+   * still counts it as money in.
+   */
+  @Column(nullable = false)
+  @Builder.Default
+  private boolean reimbursement = false;
+
+  /** Imported but not yet classified with confidence — surfaced for inline review in the list. */
+  @Column(name = "needs_review", nullable = false)
+  @Builder.Default
+  private boolean needsReview = false;
+
   @Column(nullable = false)
   private LocalDate date;
+
+  /**
+   * Month this transaction counts in the Dashboard/Reports (cash regime). For fatura purchases it
+   * is the payment (due) month; for Pix/débito/manual it mirrors {@link #date}. Nullable —
+   * aggregation queries use {@code COALESCE(competenceDate, date)}.
+   */
+  @Column(name = "competence_date")
+  private LocalDate competenceDate;
 
   private String notes;
 

@@ -1,0 +1,140 @@
+<div class="page-header">
+  <h1>Relatórios</h1>
+</div>
+
+<!-- Evolução mensal -->
+<mat-card class="report-card">
+  <mat-card-header>
+    <mat-card-title>Evolução mensal</mat-card-title>
+    <mat-card-subtitle>Receita real × Despesas — últimos {{ months }} meses</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (loadingEvolution) {
+      <div class="loading-center"><mat-spinner diameter="36"></mat-spinner></div>
+    } @else if (evolution.length === 0) {
+      <p class="empty">Sem dados para o período.</p>
+    } @else {
+      <div class="legend">
+        <span class="legend-item"><span class="swatch receita"></span> Receita</span>
+        <span class="legend-item"><span class="swatch despesa"></span> Despesa</span>
+      </div>
+      <div class="evolution-chart" [style.height.px]="chartHeight + 40">
+        @for (p of evolution; track p.year * 100 + p.month) {
+          <div class="month-col">
+            <div class="bars" [style.height.px]="chartHeight">
+              <div
+                class="bar receita"
+                [style.height.px]="barHeight(p.receita)"
+                [title]="'Receita: ' + fmt(p.receita)"
+              ></div>
+              <div
+                class="bar despesa"
+                [style.height.px]="barHeight(p.despesa)"
+                [title]="'Despesa: ' + fmt(p.despesa)"
+              ></div>
+            </div>
+            <div class="month-label">{{ monthLabel(p) }}</div>
+            <div class="month-balance" [class.negative]="p.saldo < 0">{{ fmtShort(p.saldo) }}</div>
+          </div>
+        }
+      </div>
+    }
+  </mat-card-content>
+</mat-card>
+
+<!-- Gasto por categoria (onde vai o dinheiro) -->
+<mat-card class="report-card">
+  <mat-card-header>
+    <mat-card-title>Onde vai seu dinheiro</mat-card-title>
+    <mat-card-subtitle>{{ period.label() }} — % do total, variação vs mês anterior e metas</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (loadingBreakdown) {
+      <div class="loading-center"><mat-spinner diameter="36"></mat-spinner></div>
+    } @else if (breakdown.length === 0) {
+      <p class="empty">Nenhuma despesa categorizada neste mês.</p>
+    } @else {
+      <div class="breakdown">
+        @for (cat of breakdown; track cat.categoryId) {
+          <div
+            class="breakdown-row"
+            [class.over-goal]="isOverGoal(cat.categoryId)"
+            [class.clickable]="cat.categoryId"
+            (click)="goToCategory(cat)"
+            [matTooltip]="cat.categoryId ? 'Ver lançamentos desta categoria' : ''"
+          >
+            <div class="breakdown-label">
+              <mat-icon [style.color]="cat.categoryColor || null">{{ cat.categoryIcon || 'label' }}</mat-icon>
+              <span>{{ cat.categoryName }}</span>
+              @if (isOverGoal(cat.categoryId)) {
+                <span class="goal-badge" matTooltip="Gasto acima da meta desta categoria">estourou a meta</span>
+              }
+            </div>
+            <div class="breakdown-track">
+              <div
+                class="breakdown-fill"
+                [style.width.%]="breakdownWidth(cat.total)"
+                [style.background]="cat.categoryColor || '#3f51b5'"
+              ></div>
+            </div>
+            <div class="breakdown-value">
+              {{ fmt(cat.total) }}
+              <span class="breakdown-pct">{{ pctOfTotal(cat.total) | number: '1.0-0' }}%</span>
+            </div>
+            <div class="breakdown-extra">
+              @if (cat.deltaPercent !== null && cat.deltaPercent !== undefined) {
+                <span
+                  class="delta"
+                  [class.up]="cat.deltaPercent > 0"
+                  [class.down]="cat.deltaPercent < 0"
+                  matTooltip="Variação vs mês anterior"
+                >
+                  {{ cat.deltaPercent > 0 ? '▲' : '▼' }} {{ abs(cat.deltaPercent) | number: '1.0-0' }}%
+                </span>
+              }
+              @if (goalFor(cat.categoryId); as g) {
+                <span class="goal-info" [class.over]="g.remaining < 0" matTooltip="Meta desta categoria">
+                  meta {{ fmt(g.amount) }}
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </mat-card-content>
+</mat-card>
+
+<!-- Maiores gastos do mês -->
+<mat-card class="report-card">
+  <mat-card-header>
+    <mat-card-title>Maiores gastos do mês</mat-card-title>
+    <mat-card-subtitle>{{ period.label() }} — os lançamentos que mais pesaram</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (loadingTop) {
+      <div class="loading-center"><mat-spinner diameter="36"></mat-spinner></div>
+    } @else if (topExpenses.length === 0) {
+      <p class="empty">Sem despesas neste mês.</p>
+    } @else {
+      <div class="top-list">
+        @for (t of topExpenses; track t.id) {
+          <div class="top-row">
+            <span class="top-rank">{{ $index + 1 }}</span>
+            <div class="top-info">
+              <div class="top-desc">{{ t.description }}</div>
+              <div class="top-sub">
+                @if (t.categoryName) {
+                  <span class="top-cat" [style.color]="t.categoryColor || null">{{ t.categoryName }}</span>
+                  ·
+                }
+                {{ t.date | date: 'dd/MM' }}
+              </div>
+            </div>
+            <span class="top-amount">{{ fmt(t.amount) }}</span>
+          </div>
+        }
+      </div>
+    }
+  </mat-card-content>
+</mat-card>

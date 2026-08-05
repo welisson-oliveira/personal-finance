@@ -1,0 +1,78 @@
+<div class="page-header">
+  <div>
+    <h1>Regras de Classificação</h1>
+    <p class="subtitle">Como cada estabelecimento é classificado ao importar. Regras suas vencem as do sistema.</p>
+  </div>
+  <button mat-raised-button color="primary" (click)="openCreate()">
+    <mat-icon>add</mat-icon>
+    Nova Regra
+  </button>
+</div>
+
+@if (loading) {
+  <div class="loading-center">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+} @else {
+  <mat-card>
+    <mat-list>
+      @for (rule of rules; track rule.id) {
+        <mat-list-item class="rule-item">
+          <mat-icon matListItemIcon [class.system-icon]="rule.global">
+            {{ rule.global ? 'public' : 'person' }}
+          </mat-icon>
+          <span matListItemTitle>
+            {{ rule.merchantName }}
+            <span class="origin-badge" [class.system]="rule.global">
+              {{ rule.global ? 'Sistema' : 'Minha' }}
+            </span>
+          </span>
+          <span matListItemLine class="rule-meta">
+            <mat-chip-set>
+              @if (rule.type) {
+                <mat-chip class="type-chip">{{ typeLabel[rule.type] || rule.type }}</mat-chip>
+              }
+              @if (rule.type !== 'INVESTMENT') {
+                <mat-chip>{{ rule.categoryName || 'Sem categoria' }}</mat-chip>
+              }
+              @if (!rule.type || rule.type === 'EXPENSE') {
+                <mat-chip>{{ groupLabel[rule.expenseType] || rule.expenseType }}</mat-chip>
+              }
+              @if (rule.type === 'INVESTMENT' && rule.investmentDirection) {
+                <mat-chip>{{ directionLabel[rule.investmentDirection] || rule.investmentDirection }}</mat-chip>
+              }
+              @if (rule.ignored) {
+                <mat-chip class="ignored-chip">Ignorada</mat-chip>
+              }
+            </mat-chip-set>
+          </span>
+          <div matListItemMeta class="item-actions">
+            @if (rule.global) {
+              <button
+                mat-icon-button
+                (click)="openEdit(rule)"
+                matTooltip="Personalizar (cria uma regra sua)"
+                title="Personalizar"
+              >
+                <mat-icon>tune</mat-icon>
+              </button>
+            } @else {
+              <button mat-icon-button (click)="openEdit(rule)" matTooltip="Editar" title="Editar">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="confirmDelete(rule)" matTooltip="Excluir" title="Excluir">
+                <mat-icon>delete</mat-icon>
+              </button>
+            }
+          </div>
+        </mat-list-item>
+        <mat-divider></mat-divider>
+      }
+      @if (rules.length === 0) {
+        <mat-list-item>
+          <span matListItemTitle>Nenhuma regra ainda.</span>
+        </mat-list-item>
+      }
+    </mat-list>
+  </mat-card>
+}

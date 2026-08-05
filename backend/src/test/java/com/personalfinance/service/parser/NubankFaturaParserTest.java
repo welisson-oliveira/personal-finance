@@ -38,6 +38,24 @@ class NubankFaturaParserTest {
   }
 
   @Test
+  void closing_in_december_due_in_january_keeps_previous_year() {
+    // Statement closes 02 DEZ but is due 09 JAN of the next year — the closing must stay in the
+    // previous year so the extrato bill-payment reconciliation window lands correctly.
+    String text = "Período vigente: 03 NOV a 02 DEZ\nData de vencimento: 09 JAN 2026\nTRANSAÇÕES\n";
+    NubankFaturaParser.ParseResult r = new NubankFaturaParser().parse(text);
+    assertThat(r.periodStart()).isEqualTo(LocalDate.of(2025, 11, 3));
+    assertThat(r.periodEnd()).isEqualTo(LocalDate.of(2025, 12, 2));
+    // The due (payment) date is the competence anchor for the fatura's purchases.
+    assertThat(r.dueDate()).isEqualTo(LocalDate.of(2026, 1, 9));
+  }
+
+  @Test
+  void due_date_is_parsed_from_fixture() {
+    assertThat(result.dueDate()).isNotNull();
+    assertThat(result.dueDate()).isAfterOrEqualTo(result.periodEnd());
+  }
+
+  @Test
   void welisson_transactions_have_correct_holder() {
     List<ParsedTransactionDTO> welissonTxs =
         result.transactions().stream()
@@ -72,6 +90,20 @@ class NubankFaturaParserTest {
                 t.getDescription().contains("Amazonmktplc*Anacaroli")
                     && "INCOME".equals(t.getType())
                     && t.getAmount().compareTo(new BigDecimal("79.99")) == 0);
+  }
+
+  @Test
+  void estorno_with_space_after_dash_is_income() {
+    // "- R$ 8,10" (space between dash and R$) must be detected as credit, not expense.
+    String text =
+        "TRANSAÇÕES\nWelisson W Oliveira R$ 16,20\n"
+            + "14 MAI Transação de NuTag - R$ 8,10\n"
+            + "14 MAI Transação de NuTag R$ 8,10\n";
+    NubankFaturaParser.ParseResult r = new NubankFaturaParser().parse(text);
+    long incomes = r.transactions().stream().filter(t -> "INCOME".equals(t.getType())).count();
+    long expenses = r.transactions().stream().filter(t -> "EXPENSE".equals(t.getType())).count();
+    assertThat(incomes).isEqualTo(1);
+    assertThat(expenses).isEqualTo(1);
   }
 
   @Test

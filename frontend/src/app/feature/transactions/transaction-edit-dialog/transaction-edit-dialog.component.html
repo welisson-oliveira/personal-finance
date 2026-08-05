@@ -1,0 +1,118 @@
+<h2 mat-dialog-title>{{ data.title || 'Editar Transação' }}</h2>
+
+<mat-dialog-content>
+  @if (data.tx.source !== 'MANUAL') {
+    <p class="source-info">
+      Importada de {{ data.tx.source === 'EXTRATO' ? 'extrato' : 'fatura' }} — descrição original: "{{
+        data.tx.description
+      }}"
+    </p>
+  }
+
+  <div class="form-fields">
+    <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+      <mat-label>Descrição</mat-label>
+      <input matInput [(ngModel)]="description" required cdkFocusInitial />
+    </mat-form-field>
+
+    <div class="field-row">
+      <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
+        <mat-label>Valor</mat-label>
+        <span matTextPrefix>R$&nbsp;</span>
+        <input matInput type="text" inputmode="numeric" appCurrencyMask [(ngModel)]="amount" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
+        <mat-label>Data</mat-label>
+        <input matInput type="date" [(ngModel)]="date" required />
+      </mat-form-field>
+    </div>
+
+    <div class="field-row">
+      <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
+        <mat-label>Competência (mês de pagamento)</mat-label>
+        <input matInput type="month" [(ngModel)]="competenceMonth" />
+        <mat-hint>Mês em que conta no Dashboard/Relatórios. Padrão: o mês da data.</mat-hint>
+      </mat-form-field>
+    </div>
+
+    <div class="field-row">
+      <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
+        <mat-label>Tipo</mat-label>
+        <mat-select [(ngModel)]="type" (ngModelChange)="onTypeChange()">
+          @for (t of types; track t.value) {
+            <mat-option [value]="t.value">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (showBudgetGroup) {
+        <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
+          <mat-label>Grupo de orçamento</mat-label>
+          <mat-select [(ngModel)]="budgetGroup">
+            @for (bg of budgetGroups; track bg.value) {
+              <mat-option [value]="bg.value" [matTooltip]="bg.tooltip" matTooltipPosition="right">
+                {{ bg.label }}
+              </mat-option>
+            }
+          </mat-select>
+          <mat-hint>{{
+            isIncome
+              ? 'Faixa do gasto que este reembolso abate'
+              : 'Regra 50/30/20: Essencial (50%) e Não Essencial (30%)'
+          }}</mat-hint>
+        </mat-form-field>
+      } @else if (isInvestment) {
+        <mat-form-field appearance="outline" class="half-width" subscriptSizing="dynamic">
+          <mat-label>Direção</mat-label>
+          <mat-select [(ngModel)]="investmentDirection">
+            @for (d of directions; track d.value) {
+              <mat-option [value]="d.value" [matTooltip]="d.tooltip" matTooltipPosition="right">
+                {{ d.label }}
+              </mat-option>
+            }
+          </mat-select>
+          <mat-hint>Aporte soma no 20%; resgate abate o líquido</mat-hint>
+        </mat-form-field>
+      }
+    </div>
+
+    @if (isExpense || isIncome) {
+      <div class="field-row">
+        <app-category-select
+          [categories]="data.categories"
+          [(value)]="categoryId"
+          (categoryCreated)="data.categories = data.categories.concat($event)"
+        />
+      </div>
+    }
+
+    @if (isIncome) {
+      <div class="field-row reimb-row">
+        <mat-checkbox [(ngModel)]="reimbursement" (ngModelChange)="onReimbursementChange()">
+          É reembolso — abate o gasto desta categoria (não conta como receita)
+        </mat-checkbox>
+      </div>
+    }
+
+    <div class="field-row ignore-row">
+      <mat-checkbox [(ngModel)]="ignored">Ignorar nos cálculos (ex.: transferência entre contas próprias)</mat-checkbox>
+    </div>
+
+    @if (!data.hidePropagate) {
+      <div class="propagate-section">
+        <p class="propagate-label">Aplicar classificação para...</p>
+        <mat-radio-group [(ngModel)]="propagate" class="propagate-group">
+          <mat-radio-button value="CURRENT">Somente esta transação</mat-radio-button>
+          <mat-radio-button value="FUTURE">Esta e as futuras</mat-radio-button>
+          <mat-radio-button value="ALL">Todas</mat-radio-button>
+        </mat-radio-group>
+      </div>
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="confirm()" [disabled]="!valid">Salvar</button>
+</mat-dialog-actions>

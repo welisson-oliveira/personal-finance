@@ -4,4 +4,6 @@ export interface Category {
   icon?: string;
   color?: string;
   global: boolean;
+  parentId?: string | null;
+  parentName?: string | null;
 }

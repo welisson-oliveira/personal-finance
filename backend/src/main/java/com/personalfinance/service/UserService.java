@@ -1,8 +1,10 @@
 package com.personalfinance.service;
 
 import com.personalfinance.dto.request.RegisterRequest;
+import com.personalfinance.dto.request.UpdateProfileRequest;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.repository.UserRepository;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -16,6 +18,7 @@ public class UserService implements UserDetailsService {
 
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
+  private final CategoryProvisioningService categoryProvisioningService;
 
   @Override
   public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -34,6 +37,20 @@ public class UserService implements UserDetailsService {
             .email(request.email())
             .password(passwordEncoder.encode(request.password()))
             .build();
+    User saved = userRepository.save(user);
+    // Give the new user their own editable copy of the starter category tree.
+    categoryProvisioningService.provisionDefaults(saved);
+    return saved;
+  }
+
+  public User updateProfile(UUID userId, UpdateProfileRequest request) {
+    User user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    user.setMonthlyNetIncome(request.getMonthlyNetIncome());
+    user.setOpeningBalance(request.getOpeningBalance());
+    user.setOpeningBalanceDate(request.getOpeningBalanceDate());
     return userRepository.save(user);
   }
 }

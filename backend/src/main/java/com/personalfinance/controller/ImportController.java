@@ -1,7 +1,11 @@
 package com.personalfinance.controller;
 
+import com.personalfinance.dto.request.ConfirmImportRequest;
+import com.personalfinance.dto.request.ReconcileRequest;
 import com.personalfinance.dto.response.ImportPreviewResponse;
-import com.personalfinance.model.entity.ImportSession;
+import com.personalfinance.dto.response.ImportSessionResponse;
+import com.personalfinance.dto.response.ParsedTransactionDTO;
+import com.personalfinance.dto.response.PendingReconciliationDTO;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.service.TransactionImportService;
 import java.io.IOException;
@@ -24,17 +28,49 @@ public class ImportController {
   @PostMapping(value = "/parse", consumes = "multipart/form-data")
   public ResponseEntity<ImportPreviewResponse> parse(
       @RequestParam("file") MultipartFile file,
-      @RequestParam("documentType") String documentType,
+      @RequestParam(value = "documentType", required = false) String documentType,
       @AuthenticationPrincipal User user)
       throws IOException {
     ImportPreviewResponse preview = importService.parseAndPreview(file, documentType, user);
     return ResponseEntity.status(HttpStatus.CREATED).body(preview);
   }
 
+  @GetMapping("/{id}/preview")
+  public ResponseEntity<ImportPreviewResponse> preview(
+      @PathVariable UUID id, @AuthenticationPrincipal User user) {
+    return ResponseEntity.ok(importService.getPreview(id, user));
+  }
+
+  @PutMapping("/{id}/preview")
+  public ResponseEntity<Void> updatePreview(
+      @PathVariable UUID id,
+      @RequestBody List<ParsedTransactionDTO> transactions,
+      @AuthenticationPrincipal User user) {
+    importService.updatePreview(id, transactions, user);
+    return ResponseEntity.noContent().build();
+  }
+
   @PostMapping("/{id}/confirm")
-  public ResponseEntity<Void> confirm(@PathVariable UUID id, @AuthenticationPrincipal User user) {
-    importService.confirm(id, user);
+  public ResponseEntity<Void> confirm(
+      @PathVariable UUID id,
+      @RequestBody ConfirmImportRequest request,
+      @AuthenticationPrincipal User user) {
+    importService.confirm(
+        id, request.getTransactions(), request.getReconcileExtratoPaymentIds(), user);
     return ResponseEntity.ok().build();
+  }
+
+  @GetMapping("/reconciliation")
+  public ResponseEntity<List<PendingReconciliationDTO>> reconciliation(
+      @AuthenticationPrincipal User user) {
+    return ResponseEntity.ok(importService.getReconciliation(user.getId()));
+  }
+
+  @PostMapping("/reconcile")
+  public ResponseEntity<Void> reconcile(
+      @RequestBody ReconcileRequest request, @AuthenticationPrincipal User user) {
+    importService.reconcile(request.getExtratoPaymentId(), user);
+    return ResponseEntity.noContent().build();
   }
 
   @PostMapping("/{id}/cancel")
@@ -44,7 +80,13 @@ public class ImportController {
   }
 
   @GetMapping("/history")
-  public ResponseEntity<List<ImportSession>> history(@AuthenticationPrincipal User user) {
+  public ResponseEntity<List<ImportSessionResponse>> history(@AuthenticationPrincipal User user) {
     return ResponseEntity.ok(importService.getHistory(user.getId()));
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> delete(@PathVariable UUID id, @AuthenticationPrincipal User user) {
+    importService.deleteSession(id, user);
+    return ResponseEntity.noContent().build();
   }
 }

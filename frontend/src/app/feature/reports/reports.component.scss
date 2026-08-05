@@ -1,0 +1,282 @@
+.report-card {
+  margin-bottom: 16px;
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.empty {
+  color: #888;
+  padding: 16px 0;
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+
+  &.receita {
+    background: #43a047;
+  }
+  &.despesa {
+    background: #e53935;
+  }
+}
+
+/* Monthly evolution — grouped bars */
+.evolution-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.month-col {
+  flex: 1;
+  min-width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.bar {
+  width: 14px;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.2s ease;
+
+  &.receita {
+    background: #43a047;
+  }
+  &.despesa {
+    background: #e53935;
+  }
+}
+
+.month-label {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #555;
+  text-transform: capitalize;
+}
+
+.month-balance {
+  font-size: 0.7rem;
+  color: #2e7d32;
+  font-weight: 600;
+
+  &.negative {
+    color: #c62828;
+  }
+}
+
+/* Category breakdown — horizontal bars */
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.breakdown-row {
+  display: grid;
+  grid-template-columns: 160px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+
+  &.over-goal {
+    background: rgba(244, 67, 54, 0.06);
+    border-radius: 8px;
+    padding: 2px 6px;
+    margin: 0 -6px;
+  }
+
+  &.clickable {
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 2px 6px;
+    margin: 0 -6px;
+
+    &:hover {
+      background: rgba(63, 81, 181, 0.06);
+    }
+  }
+}
+
+.goal-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #c62828;
+  background: rgba(244, 67, 54, 0.14);
+  border-radius: 8px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.breakdown-pct {
+  font-size: 0.72rem;
+  color: #999;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.breakdown-extra {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 74px;
+
+  .delta {
+    font-size: 0.72rem;
+    font-weight: 600;
+
+    &.up {
+      color: #c62828;
+    }
+
+    &.down {
+      color: #2e7d32;
+    }
+  }
+
+  .goal-info {
+    font-size: 0.68rem;
+    color: #999;
+
+    &.over {
+      color: #c62828;
+      font-weight: 600;
+    }
+  }
+}
+
+/* Maiores gastos */
+.top-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.top-rank {
+  flex: 0 0 22px;
+  height: 22px;
+  width: 22px;
+  border-radius: 50%;
+  background: rgba(63, 81, 181, 0.1);
+  color: #3f51b5;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-info {
+  flex: 1;
+  min-width: 0;
+
+  .top-desc {
+    font-size: 0.85rem;
+    font-weight: 500;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .top-sub {
+    font-size: 0.72rem;
+    color: #888;
+
+    .top-cat {
+      font-weight: 600;
+    }
+  }
+}
+
+.top-amount {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #c62828;
+  white-space: nowrap;
+}
+
+.breakdown-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.breakdown-track {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 6px;
+  height: 14px;
+  overflow: hidden;
+}
+
+.breakdown-fill {
+  height: 100%;
+  border-radius: 6px;
+  min-width: 2px;
+  transition: width 0.2s ease;
+}
+
+.breakdown-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .breakdown-row {
+    grid-template-columns: 110px 1fr auto;
+  }
+
+  .breakdown-extra {
+    display: none;
+  }
+}

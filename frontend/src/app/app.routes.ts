@@ -42,14 +42,14 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./feature/import/preview/preview.component').then((m) => m.PreviewComponent),
           },
+          {
+            path: 'reconciliation',
+            loadComponent: () =>
+              import('./feature/import/reconciliation/reconciliation.component').then(
+                (m) => m.ReconciliationComponent
+              ),
+          },
         ],
-      },
-      {
-        path: 'review',
-        loadComponent: () =>
-          import('./feature/review/review-queue/review-queue.component').then(
-            (m) => m.ReviewQueueComponent
-          ),
       },
       {
         path: 'transactions',
@@ -66,10 +66,41 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'budget-goals',
+        loadComponent: () =>
+          import('./feature/budget-goals/budget-goal-list/budget-goal-list.component').then(
+            (m) => m.BudgetGoalListComponent
+          ),
+      },
+      {
+        path: 'reports',
+        loadComponent: () =>
+          import('./feature/reports/reports.component').then((m) => m.ReportsComponent),
+      },
+      {
         path: 'known-persons',
         loadComponent: () =>
           import('./feature/known-persons/known-person-list/known-person-list.component').then(
             (m) => m.KnownPersonListComponent
+          ),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./feature/settings/settings.component').then((m) => m.SettingsComponent),
+      },
+      {
+        path: 'merchant-rules',
+        loadComponent: () =>
+          import('./feature/merchant-rules/merchant-rule-list/merchant-rule-list.component').then(
+            (m) => m.MerchantRuleListComponent
+          ),
+      },
+      {
+        path: 'anomalies',
+        loadComponent: () =>
+          import('./feature/anomalies/anomaly-list/anomaly-list.component').then(
+            (m) => m.AnomalyListComponent
           ),
       },
     ],

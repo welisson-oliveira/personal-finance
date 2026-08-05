@@ -13,6 +13,9 @@ export interface UserResponse {
   id: string;
   name: string;
   email: string;
+  monthlyNetIncome?: number | null;
+  openingBalance?: number | null;
+  openingBalanceDate?: string | null;
 }
 
 export interface AuthResponse {

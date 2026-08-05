@@ -27,4 +27,9 @@ public class Category {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id")
   private User user;
+
+  /** Parent category (self-reference). Null = top-level; non-null = subcategory. */
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "parent_id")
+  private Category parent;
 }

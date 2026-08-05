@@ -1,10 +1,13 @@
 package com.personalfinance.controller;
 
+import com.personalfinance.dto.request.BulkUpdateRequest;
 import com.personalfinance.dto.request.CreateTransactionRequest;
+import com.personalfinance.dto.request.UpdateNotesRequest;
 import com.personalfinance.dto.response.TransactionResponse;
 import com.personalfinance.model.entity.User;
 import com.personalfinance.service.TransactionService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,9 +29,24 @@ public class TransactionController {
   public ResponseEntity<Page<TransactionResponse>> list(
       @RequestParam(required = false) String month,
       @RequestParam(required = false) String type,
+      @RequestParam(required = false) UUID categoryId,
+      @RequestParam(required = false) Boolean needsReview,
+      @RequestParam(required = false) String search,
+      @RequestParam(required = false) String budgetGroup,
+      @RequestParam(defaultValue = "false") boolean includeIgnored,
       @PageableDefault(size = 50, sort = "date") Pageable pageable,
       @AuthenticationPrincipal User user) {
-    return ResponseEntity.ok(transactionService.findAll(user.getId(), month, type, pageable));
+    return ResponseEntity.ok(
+        transactionService.findAll(
+            user.getId(),
+            month,
+            type,
+            categoryId,
+            needsReview,
+            search,
+            budgetGroup,
+            includeIgnored,
+            pageable));
   }
 
   @PostMapping
@@ -43,6 +61,26 @@ public class TransactionController {
       @Valid @RequestBody CreateTransactionRequest request,
       @AuthenticationPrincipal User user) {
     return ResponseEntity.ok(transactionService.update(id, request, user));
+  }
+
+  @PatchMapping("/{id}/notes")
+  public ResponseEntity<TransactionResponse> updateNotes(
+      @PathVariable UUID id,
+      @RequestBody UpdateNotesRequest request,
+      @AuthenticationPrincipal User user) {
+    return ResponseEntity.ok(transactionService.updateNotes(id, user, request.getNotes()));
+  }
+
+  @PatchMapping("/{id}/review")
+  public ResponseEntity<TransactionResponse> confirmReview(
+      @PathVariable UUID id, @AuthenticationPrincipal User user) {
+    return ResponseEntity.ok(transactionService.confirmReview(id, user));
+  }
+
+  @PatchMapping("/bulk")
+  public ResponseEntity<List<TransactionResponse>> bulkUpdate(
+      @Valid @RequestBody BulkUpdateRequest request, @AuthenticationPrincipal User user) {
+    return ResponseEntity.ok(transactionService.bulkUpdate(request, user));
   }
 
   @DeleteMapping("/{id}")

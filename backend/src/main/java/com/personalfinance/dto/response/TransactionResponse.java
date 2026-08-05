@@ -19,9 +19,13 @@ public class TransactionResponse {
   private String normalizedDescription;
   private BigDecimal amount;
   private String type;
-  private String incomeType;
   private String budgetGroup;
+  private String investmentDirection;
+  private boolean ignored;
+  private boolean reimbursement;
+  private boolean needsReview;
   private LocalDate date;
+  private LocalDate competenceDate;
   private String notes;
   private UUID categoryId;
   private String categoryName;

@@ -1,0 +1,70 @@
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+
+  .subtitle {
+    margin: 4px 0 0;
+    font-size: 0.85rem;
+    color: #777;
+    max-width: 520px;
+  }
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+}
+
+.rule-item {
+  height: auto;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.system-icon {
+  color: #9e9e9e;
+}
+
+.origin-badge {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  vertical-align: middle;
+  background: rgba(76, 175, 80, 0.16);
+  color: #2e7d32;
+
+  &.system {
+    background: rgba(120, 120, 120, 0.15);
+    color: #616161;
+  }
+}
+
+.rule-meta {
+  margin-top: 2px;
+}
+
+.type-chip {
+  font-weight: 600;
+}
+
+.ignored-chip {
+  opacity: 0.75;
+  font-style: italic;
+}
+
+.item-actions {
+  display: flex;
+  gap: 2px;
+}

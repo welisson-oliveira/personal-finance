@@ -7,6 +7,7 @@ import com.personalfinance.model.entity.Category;
 import com.personalfinance.model.entity.MerchantRule;
 import com.personalfinance.repository.MerchantRuleRepository;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -95,5 +96,38 @@ class MerchantClassificationServiceTest {
     assertThat(result.getConfidence()).isEqualTo(60);
     assertThat(result.isKnown()).isTrue();
     assertThat(result.isAutoClassifiable()).isFalse();
+  }
+
+  @Test
+  void findUserOverride_carriesTypeAndIgnoredFlag() {
+    UUID userId = UUID.randomUUID();
+    MerchantRule rule =
+        MerchantRule.builder()
+            .merchantName("Transferência Open Banking Itaú")
+            .normalizedName("transferencia open banking itau")
+            .type("INCOME")
+            .ignored(false)
+            .confidence(100)
+            .createdBy("USER")
+            .build();
+    when(merchantRuleRepository.findUserRuleByNormalizedName(
+            "transferencia open banking itau", userId))
+        .thenReturn(Optional.of(rule));
+
+    Optional<ClassificationResult> result =
+        service.findUserOverride("transferencia open banking itau", userId);
+
+    assertThat(result).isPresent();
+    assertThat(result.get().getType()).isEqualTo("INCOME");
+    assertThat(result.get().isIgnored()).isFalse();
+  }
+
+  @Test
+  void findUserOverride_absentWhenNoUserRule() {
+    UUID userId = UUID.randomUUID();
+    when(merchantRuleRepository.findUserRuleByNormalizedName("desconhecido", userId))
+        .thenReturn(Optional.empty());
+
+    assertThat(service.findUserOverride("desconhecido", userId)).isEmpty();
   }
 }

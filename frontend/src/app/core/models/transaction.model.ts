@@ -4,9 +4,13 @@ export interface Transaction {
   normalizedDescription?: string;
   amount: number;
   type: string;
-  incomeType?: string;
   budgetGroup?: string;
+  investmentDirection?: string;
+  ignored: boolean;
+  reimbursement: boolean;
+  needsReview: boolean;
   date: string;
+  competenceDate?: string;
   notes?: string;
   categoryId?: string;
   categoryName?: string;
@@ -16,6 +20,24 @@ export interface Transaction {
   shared: boolean;
   totalAmount?: number;
   userShare?: number;
+}
+
+export interface UpdateTransactionRequest {
+  description: string;
+  amount: number;
+  type: string;
+  date: string;
+  competenceDate?: string;
+  categoryId?: string;
+  budgetGroup?: string;
+  investmentDirection?: string;
+  ignored?: boolean;
+  reimbursement?: boolean;
+  notes?: string;
+  shared: boolean;
+  totalAmount?: number;
+  userShare?: number;
+  propagate?: 'ALL' | 'FUTURE' | 'CURRENT';
 }
 
 export interface Page<T> {

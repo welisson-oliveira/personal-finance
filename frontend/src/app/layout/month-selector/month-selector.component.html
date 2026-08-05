@@ -1,0 +1,42 @@
+<div class="month-selector">
+  <button mat-icon-button (click)="period.prev()" title="Mês anterior">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+
+  <button mat-button class="period-label" [matMenuTriggerFor]="periodMenu">
+    <mat-icon>calendar_month</mat-icon>
+    {{ period.label() }}
+  </button>
+
+  <button mat-icon-button (click)="period.next()" title="Próximo mês">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+
+  @if (!period.isCurrentMonth()) {
+    <button mat-icon-button (click)="period.goToCurrent()" title="Mês atual">
+      <mat-icon>today</mat-icon>
+    </button>
+  }
+</div>
+
+<mat-menu #periodMenu="matMenu" class="period-menu">
+  <div class="period-menu-content" (click)="$event.stopPropagation()">
+    <mat-form-field appearance="outline" class="menu-field">
+      <mat-label>Mês</mat-label>
+      <mat-select [ngModel]="period.month()" (ngModelChange)="onMonthChange($event)">
+        @for (label of period.monthLabels; track $index) {
+          <mat-option [value]="$index + 1">{{ label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="menu-field">
+      <mat-label>Ano</mat-label>
+      <mat-select [ngModel]="period.year()" (ngModelChange)="onYearChange($event)">
+        @for (y of years; track y) {
+          <mat-option [value]="y">{{ y }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+</mat-menu>

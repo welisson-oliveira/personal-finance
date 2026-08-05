@@ -5,9 +5,20 @@
 <mat-card class="filter-card">
   <mat-card-content>
     <div class="filters">
-      <mat-form-field appearance="outline">
-        <mat-label>Mês</mat-label>
-        <input matInput type="month" [(ngModel)]="filterMonth" (change)="applyFilters()" />
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Buscar</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input
+          matInput
+          [(ngModel)]="filterSearch"
+          (ngModelChange)="onSearchInput()"
+          placeholder="Descrição ou apelido"
+        />
+        @if (filterSearch) {
+          <button matSuffix mat-icon-button (click)="filterSearch = ''; applyFilters()" aria-label="Limpar busca">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -19,7 +30,34 @@
         </mat-select>
       </mat-form-field>
 
-      <button mat-stroked-button (click)="filterMonth = ''; filterType = ''; applyFilters()">
+      <mat-form-field appearance="outline">
+        <mat-label>Categoria</mat-label>
+        <mat-select [(ngModel)]="filterCategoryId" (ngModelChange)="applyFilters()">
+          <mat-option value="">Todas</mat-option>
+          @for (cat of categories; track cat.id) {
+            <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Grupo</mat-label>
+        <mat-select [(ngModel)]="filterBudgetGroup" (ngModelChange)="applyFilters()">
+          <mat-option value="">Todos</mat-option>
+          <mat-option value="ESSENTIAL">Essencial</mat-option>
+          <mat-option value="NON_ESSENTIAL">Não Essencial</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-checkbox [(ngModel)]="pendingOnly" (ngModelChange)="applyFilters()" class="pending-filter">
+        Só pendentes de revisão
+      </mat-checkbox>
+
+      <mat-slide-toggle [(ngModel)]="showIgnored" (ngModelChange)="applyFilters()" class="pending-filter">
+        Mostrar ignoradas
+      </mat-slide-toggle>
+
+      <button mat-stroked-button (click)="clearFilters()">
         <mat-icon>clear</mat-icon>
         Limpar
       </button>
@@ -32,66 +70,218 @@
     <mat-spinner diameter="40"></mat-spinner>
   </div>
 } @else if (page) {
+  @if (selectedIds.size > 0) {
+    <mat-card class="bulk-bar">
+      <span class="bulk-count">{{ selectedIds.size }} selecionada(s)</span>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="bulk-field">
+        <mat-label>Grupo</mat-label>
+        <mat-select [(ngModel)]="bulkGroup" (selectionChange)="bulkSetGroup()">
+          <mat-option value="ESSENTIAL">Essencial</mat-option>
+          <mat-option value="NON_ESSENTIAL">Não Essencial</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="bulk-field">
+        <mat-label>Categoria</mat-label>
+        <mat-select [(ngModel)]="bulkCategoryId" (selectionChange)="bulkSetCategory()">
+          @for (cat of categories; track cat.id) {
+            <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="bulk-field">
+        <mat-label>Competência</mat-label>
+        <input matInput type="month" [(ngModel)]="bulkCompetenceMonth" (change)="bulkSetCompetence()" />
+      </mat-form-field>
+      <button mat-stroked-button (click)="bulkIgnore(true)" matTooltip="Ignorar nos cálculos">
+        <mat-icon>visibility_off</mat-icon>
+        Ignorar
+      </button>
+      <button mat-stroked-button (click)="bulkIgnore(false)" matTooltip="Voltar a contabilizar">
+        <mat-icon>visibility</mat-icon>
+        Contabilizar
+      </button>
+      <button mat-button (click)="clearSelection()">
+        <mat-icon>close</mat-icon>
+        Limpar seleção
+      </button>
+    </mat-card>
+  }
   <mat-card class="table-card">
     <div class="table-wrapper">
-      <table mat-table [dataSource]="page.content" class="tx-table">
+      <table
+        mat-table
+        [dataSource]="page.content"
+        class="tx-table"
+        matSort
+        [matSortActive]="sortActive"
+        [matSortDirection]="sortDirection"
+        matSortDisableClear
+        (matSortChange)="onSortChange($event)"
+      >
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef class="select-cell">
+            <mat-checkbox
+              (change)="toggleAll()"
+              [checked]="isAllSelected()"
+              [indeterminate]="isSomeSelected()"
+              matTooltip="Selecionar todas nesta página"
+            ></mat-checkbox>
+          </th>
+          <td mat-cell *matCellDef="let tx" class="select-cell">
+            <mat-checkbox
+              [checked]="isSelected(tx)"
+              (change)="toggleRow(tx)"
+              (click)="$event.stopPropagation()"
+            ></mat-checkbox>
+          </td>
+        </ng-container>
+
         <ng-container matColumnDef="date">
-          <th mat-header-cell *matHeaderCellDef>Data</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Data</th>
           <td mat-cell *matCellDef="let tx">{{ tx.date | date: 'dd/MM/yyyy' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="description">
-          <th mat-header-cell *matHeaderCellDef>Descrição</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Descrição</th>
           <td mat-cell *matCellDef="let tx" class="desc-cell">
-            <div class="desc-main">{{ tx.normalizedDescription || tx.description }}</div>
-            @if (tx.notes) {
-              <div class="desc-note">{{ tx.notes }}</div>
+            @if (editingId === tx.id) {
+              <div class="desc-edit-row">
+                <input
+                  class="notes-input"
+                  [(ngModel)]="editingNotes"
+                  placeholder="Apelido..."
+                  (keyup.enter)="saveNotes(tx)"
+                  (keyup.escape)="cancelEdit()"
+                  appAutofocus
+                />
+                <button mat-icon-button color="primary" (click)="saveNotes(tx)" title="Salvar">
+                  <mat-icon>check</mat-icon>
+                </button>
+                <button mat-icon-button (click)="cancelEdit()" title="Cancelar">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            } @else {
+              <div class="desc-content" (click)="startEdit(tx)">
+                <div class="desc-main">{{ tx.notes || tx.normalizedDescription || tx.description }}</div>
+                @if (tx.notes) {
+                  <div class="desc-note">{{ tx.normalizedDescription || tx.description }}</div>
+                } @else {
+                  <div class="desc-note desc-note-placeholder">Adicionar apelido...</div>
+                }
+                @if (tx.source !== 'MANUAL') {
+                  <span
+                    class="source-badge"
+                    [matTooltip]="
+                      tx.source === 'EXTRATO'
+                        ? 'Importada do extrato da conta corrente'
+                        : 'Importada da fatura do cartão de crédito'
+                    "
+                    >{{ tx.source }}</span
+                  >
+                }
+                <mat-icon class="edit-icon">edit</mat-icon>
+              </div>
             }
-            @if (tx.source !== 'MANUAL') {
-              <span class="source-badge">{{ tx.source }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo</th>
+          <td mat-cell *matCellDef="let tx" class="type-cell">
+            <button
+              class="cell-chip-btn"
+              [matMenuTriggerFor]="typeMenu"
+              [matMenuTriggerData]="{ tx: tx }"
+              matTooltip="Alterar tipo"
+            >
+              <span
+                class="type-chip"
+                [class.income-chip]="tx.type === 'INCOME'"
+                [class.expense-chip]="tx.type === 'EXPENSE'"
+                [class.investment-chip]="tx.type === 'INVESTMENT'"
+              >
+                {{ typeLabels[tx.type] || tx.type }}
+              </span>
+              <mat-icon class="chip-caret">arrow_drop_down</mat-icon>
+            </button>
+            @if (tx.needsReview) {
+              <button
+                type="button"
+                class="review-chip"
+                (click)="confirmReview(tx)"
+                matTooltip="Precisa de revisão — clique para marcar como revisado"
+                aria-label="Confirmar revisão"
+              >
+                <mat-icon>done</mat-icon>
+                <span>Revisar</span>
+              </button>
+            }
+            @if (tx.ignored) {
+              <span class="ignored-chip" matTooltip="Não conta nos cálculos">Ignorada</span>
+            }
+            @if (tx.reimbursement) {
+              <span class="reimbursement-chip" matTooltip="Abate o gasto da categoria (não conta como receita)"
+                >Reembolso</span
+              >
             }
           </td>
         </ng-container>
 
         <ng-container matColumnDef="category">
           <th mat-header-cell *matHeaderCellDef>Categoria</th>
-          <td mat-cell *matCellDef="let tx">{{ tx.categoryName || '—' }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="type">
-          <th mat-header-cell *matHeaderCellDef>Tipo</th>
-          <td mat-cell *matCellDef="let tx">
-            <span
-              class="type-chip"
-              [class.income-chip]="tx.type === 'INCOME'"
-              [class.expense-chip]="tx.type === 'EXPENSE'"
-            >
-              {{ tx.type === 'INCOME' ? 'Receita' : 'Despesa' }}
-            </span>
+          <td mat-cell *matCellDef="let tx" class="cat-cell">
+            @if (tx.type === 'EXPENSE' || tx.type === 'INCOME') {
+              <button
+                class="cell-chip-btn"
+                [matMenuTriggerFor]="categoryMenu"
+                [matMenuTriggerData]="{ tx: tx }"
+                matTooltip="Alterar categoria"
+              >
+                <span class="cat-chip" [class.empty]="!tx.categoryName">{{ tx.categoryName || 'Definir…' }}</span>
+                <mat-icon class="chip-caret">arrow_drop_down</mat-icon>
+              </button>
+            } @else {
+              <span class="muted">—</span>
+            }
           </td>
         </ng-container>
 
-        <ng-container matColumnDef="budgetGroup">
+        <ng-container matColumnDef="group">
           <th mat-header-cell *matHeaderCellDef>Grupo</th>
-          <td mat-cell *matCellDef="let tx">
-            @if (tx.budgetGroup) {
-              <span class="group-chip group-{{ tx.budgetGroup | lowercase }}">
-                {{
-                  tx.budgetGroup === 'ESSENTIAL'
-                    ? 'Essencial'
-                    : tx.budgetGroup === 'NON_ESSENTIAL'
-                      ? 'Não Essencial'
-                      : 'Investimento'
-                }}
-              </span>
+          <td mat-cell *matCellDef="let tx" class="group-cell">
+            @if (tx.type === 'EXPENSE') {
+              <button
+                class="cell-chip-btn"
+                [matMenuTriggerFor]="groupMenu"
+                [matMenuTriggerData]="{ tx: tx }"
+                matTooltip="Alterar grupo 50/30/20"
+              >
+                <span class="group-chip group-{{ tx.budgetGroup || '' | lowercase }}" [class.empty]="!tx.budgetGroup">
+                  {{ tx.budgetGroup ? budgetGroupLabels[tx.budgetGroup] : 'Definir…' }}
+                </span>
+                <mat-icon class="chip-caret">arrow_drop_down</mat-icon>
+              </button>
+            } @else if (tx.type === 'INVESTMENT') {
+              <button
+                class="cell-chip-btn"
+                [matMenuTriggerFor]="groupMenu"
+                [matMenuTriggerData]="{ tx: tx }"
+                matTooltip="Alterar direção do investimento"
+              >
+                <span class="group-chip" [class.empty]="!tx.investmentDirection">
+                  {{ tx.investmentDirection ? directionLabels[tx.investmentDirection] : 'Definir…' }}
+                </span>
+                <mat-icon class="chip-caret">arrow_drop_down</mat-icon>
+              </button>
             } @else {
-              —
+              <span class="muted">—</span>
             }
           </td>
         </ng-container>
 
         <ng-container matColumnDef="amount">
-          <th mat-header-cell *matHeaderCellDef class="amount-header">Valor</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header class="amount-header">Valor</th>
           <td
             mat-cell
             *matCellDef="let tx"
@@ -105,7 +295,30 @@
 
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let tx">
+          <td mat-cell *matCellDef="let tx" class="actions-cell">
+            <button mat-icon-button (click)="openEditDialog(tx)" title="Editar transação">
+              <mat-icon>edit_note</mat-icon>
+            </button>
+            @if (isBillPayment(tx)) {
+              @if (tx.ignored) {
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="countBillPayment(tx)"
+                  title="Contabilizar como despesa neste mês (mês de transição, sem fatura correspondente)"
+                >
+                  <mat-icon>playlist_add_check</mat-icon>
+                </button>
+              } @else {
+                <button
+                  mat-icon-button
+                  (click)="ignoreBillPayment(tx)"
+                  title="Voltar a ignorar este pagamento de fatura"
+                >
+                  <mat-icon>visibility_off</mat-icon>
+                </button>
+              }
+            }
             @if (tx.source === 'MANUAL') {
               <button mat-icon-button color="warn" (click)="confirmDelete(tx)" title="Excluir">
                 <mat-icon>delete</mat-icon>
@@ -115,7 +328,13 @@
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumns"
+          [class.needs-review-row]="row.needsReview"
+          [class.ignored-row]="row.ignored"
+          [class.selected-row]="isSelected(row)"
+        ></tr>
       </table>
     </div>
 
@@ -127,4 +346,63 @@
       (page)="onPageChange($event)"
     ></mat-paginator>
   </mat-card>
+
+  <!-- Per-field quick-edit menus (shared, context = { tx }) -->
+  <mat-menu #typeMenu="matMenu">
+    <ng-template matMenuContent let-tx="tx">
+      @for (opt of editTypeOptions; track opt.value) {
+        <button mat-menu-item (click)="onTypePick(tx, opt.value)">
+          @if (tx.type === opt.value) {
+            <mat-icon>check</mat-icon>
+          }
+          <span>{{ opt.label }}</span>
+        </button>
+      }
+    </ng-template>
+  </mat-menu>
+
+  <mat-menu #groupMenu="matMenu">
+    <ng-template matMenuContent let-tx="tx">
+      @if (tx.type === 'EXPENSE') {
+        @for (opt of budgetGroupOptions; track opt.value) {
+          <button mat-menu-item (click)="onGroupPick(tx, opt.value)">
+            @if (tx.budgetGroup === opt.value) {
+              <mat-icon>check</mat-icon>
+            }
+            <span>{{ opt.label }}</span>
+          </button>
+        }
+      } @else if (tx.type === 'INVESTMENT') {
+        @for (opt of directionOptions; track opt.value) {
+          <button mat-menu-item (click)="onGroupPick(tx, opt.value)">
+            @if (tx.investmentDirection === opt.value) {
+              <mat-icon>check</mat-icon>
+            }
+            <span>{{ opt.label }}</span>
+          </button>
+        }
+      }
+    </ng-template>
+  </mat-menu>
+
+  <mat-menu #categoryMenu="matMenu" class="cat-menu">
+    <ng-template matMenuContent let-tx="tx">
+      <button mat-menu-item (click)="createCategoryFor(tx)">
+        <mat-icon>add</mat-icon>
+        <span>Nova categoria…</span>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="onCategoryPick(tx, undefined)">
+        <span class="muted">Nenhuma</span>
+      </button>
+      @for (cat of categories; track cat.id) {
+        <button mat-menu-item (click)="onCategoryPick(tx, cat.id)">
+          @if (tx.categoryId === cat.id) {
+            <mat-icon>check</mat-icon>
+          }
+          <span>{{ cat.name }}</span>
+        </button>
+      }
+    </ng-template>
+  </mat-menu>
 }

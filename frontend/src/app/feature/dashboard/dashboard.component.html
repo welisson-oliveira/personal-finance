@@ -1,23 +1,5 @@
 <div class="dashboard-header">
   <h1>Dashboard</h1>
-  <div class="period-selector">
-    <mat-form-field appearance="outline" class="selector-field">
-      <mat-label>Mês</mat-label>
-      <mat-select [(ngModel)]="selectedMonth" (ngModelChange)="load()">
-        @for (m of months; track m.value) {
-          <mat-option [value]="m.value">{{ m.label }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="selector-field">
-      <mat-label>Ano</mat-label>
-      <mat-select [(ngModel)]="selectedYear" (ngModelChange)="load()">
-        @for (y of years; track y) {
-          <mat-option [value]="y">{{ y }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-  </div>
 </div>
 
 @if (loading) {
@@ -27,48 +9,84 @@
 } @else if (errorMessage) {
   <p class="error-text">{{ errorMessage }}</p>
 } @else if (data) {
-  <!-- Receita -->
-  <div class="section-title">Receita — {{ monthLabel() }} {{ selectedYear }}</div>
+  @if (alerts.length > 0) {
+    <a class="alerts-banner" routerLink="/anomalies">
+      <mat-icon>notification_important</mat-icon>
+      <span class="alerts-text">
+        <strong>{{ alerts.length }}</strong>
+        {{ alerts.length === 1 ? 'alerta' : 'alertas' }} de transação — {{ alerts[0].title }}:
+        {{ alerts[0].description }}
+      </span>
+      <span class="alerts-cta">Revisar <mat-icon>chevron_right</mat-icon></span>
+    </a>
+  }
+
+  <!-- 1. Quanto dinheiro entrou? -->
+  <div class="section-title">Quanto entrou? — {{ period.label() }}</div>
   <div class="cards-row">
-    <mat-card class="metric-card income">
-      <mat-card-content>
-        <mat-icon>trending_up</mat-icon>
-        <div class="metric-label">Receita Bruta</div>
-        <div class="metric-value">{{ fmt(data.receitaBruta) }}</div>
-      </mat-card-content>
-    </mat-card>
-    <mat-card class="metric-card reimbursement">
-      <mat-card-content>
-        <mat-icon>swap_horiz</mat-icon>
-        <div class="metric-label">Reembolsos</div>
-        <div class="metric-value">{{ fmt(data.reembolsos) }}</div>
-      </mat-card-content>
-    </mat-card>
-    <mat-card class="metric-card real-income">
+    <mat-card
+      class="metric-card income"
+      matTooltip="Entradas reais do mês (receita disponível). Ignora transferências entre contas próprias"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>attach_money</mat-icon>
-        <div class="metric-label">Receita Real</div>
-        <div class="metric-value">{{ fmt(data.receitaReal) }}</div>
-      </mat-card-content>
-    </mat-card>
-    <mat-card class="metric-card balance" [class.negative]="data.saldo < 0">
-      <mat-card-content>
-        <mat-icon>account_balance_wallet</mat-icon>
-        <div class="metric-label">Saldo</div>
-        <div class="metric-value">{{ fmt(data.saldo) }}</div>
+        <div class="metric-label">Entradas do mês</div>
+        <div class="metric-value">{{ fmt(data.entradas) }}</div>
       </mat-card-content>
     </mat-card>
   </div>
+  @if (data.entradasBreakdown?.length) {
+    <button mat-button class="drill-toggle" (click)="toggle('ent')">
+      <mat-icon>{{ expanded.ent ? 'expand_less' : 'expand_more' }}</mat-icon>
+      {{ expanded.ent ? 'Ocultar categorias' : 'De onde veio o dinheiro' }}
+    </button>
+    @if (expanded.ent) {
+      <div class="drill">
+        @for (c of data.entradasBreakdown!; track c.categoryName) {
+          <div class="drill-row">
+            <span class="drill-name">
+              <mat-icon class="drill-icon" [style.color]="c.categoryColor || null">{{
+                c.categoryIcon || 'label'
+              }}</mat-icon>
+              {{ c.categoryName }}
+            </span>
+            <span class="drill-val"
+              >{{ fmt(c.total) }}
+              <span class="drill-pct">{{ bucketPct(c.total, data.entradas) | number: '1.0-0' }}%</span></span
+            >
+          </div>
+        }
+      </div>
+    }
+  }
 
-  <!-- 50/30/20 -->
-  <div class="section-title">Distribuição 50/30/20</div>
+  <!-- 3. Estou seguindo o método 50/30/20? -->
+  <div class="section-title">Está seguindo o 50/30/20?</div>
   <mat-card class="budget-card">
     <mat-card-content>
+      @if (!hasBase()) {
+        <p class="budget-no-base">
+          <mat-icon>info_outline</mat-icon>
+          Sem base de renda para o cálculo —
+          <a routerLink="/settings">configure seu salário líquido</a> ou importe o extrato do mês.
+        </p>
+      }
+      <!-- Essenciais (teto 50%) -->
       <div class="budget-row">
-        <div class="budget-label">
+        <div
+          class="budget-label"
+          matTooltip="Gastos necessários: moradia, alimentação, transporte, saúde. Meta: até 50% da renda"
+        >
           <span class="dot essential"></span>
           Essenciais
-          <span class="budget-pct">{{ data.percentualEssenciais | number: '1.1-1' }}%</span>
+          @if (hasBase()) {
+            <span class="budget-pct" [class.over]="data.percentualEssenciais > 100"
+              >{{ data.percentualEssenciais | number: '1.1-1' }}%</span
+            >
+          } @else {
+            <span class="budget-pct">—</span>
+          }
           <span class="budget-target">(meta 50%)</span>
         </div>
         <div class="budget-values">
@@ -77,16 +95,59 @@
       </div>
       <mat-progress-bar
         mode="determinate"
-        [value]="clamp(data.percentualEssenciais)"
+        [value]="hasBase() ? clamp(data.percentualEssenciais) : 0"
         color="primary"
         class="budget-bar"
       ></mat-progress-bar>
+      @if (hasBase()) {
+        <div class="budget-meta">
+          Meta {{ fmt(meta(0.5)) }} ·
+          @if (folga(data.despesasEssenciais, 0.5) >= 0) {
+            <span class="folga">{{ fmt(folga(data.despesasEssenciais, 0.5)) }} de folga</span>
+          } @else {
+            <span class="estouro">{{ fmt(-folga(data.despesasEssenciais, 0.5)) }} acima da meta</span>
+          }
+        </div>
+      }
+      @if (data.breakdown?.essenciais?.length) {
+        <button mat-button class="drill-toggle" (click)="toggle('ess')">
+          <mat-icon>{{ expanded.ess ? 'expand_less' : 'expand_more' }}</mat-icon>
+          {{ expanded.ess ? 'Ocultar categorias' : 'Ver categorias' }}
+        </button>
+        @if (expanded.ess) {
+          <div class="drill">
+            @for (c of data.breakdown!.essenciais; track c.categoryName) {
+              <div class="drill-row">
+                <span class="drill-name">
+                  <mat-icon class="drill-icon" [style.color]="c.categoryColor || null">{{
+                    c.categoryIcon || 'label'
+                  }}</mat-icon>
+                  {{ c.categoryName }}
+                </span>
+                <span class="drill-val"
+                  >{{ fmt(c.total) }}
+                  <span class="drill-pct"
+                    >{{ bucketPct(c.total, data.despesasEssenciais) | number: '1.0-0' }}%</span
+                  ></span
+                >
+              </div>
+            }
+          </div>
+        }
+      }
 
+      <!-- Não Essenciais (teto 30%) -->
       <div class="budget-row">
-        <div class="budget-label">
+        <div class="budget-label" matTooltip="Lazer, assinaturas, compras não prioritárias. Meta: até 30% da renda">
           <span class="dot non-essential"></span>
           Não Essenciais
-          <span class="budget-pct">{{ data.percentualNaoEssenciais | number: '1.1-1' }}%</span>
+          @if (hasBase()) {
+            <span class="budget-pct" [class.over]="data.percentualNaoEssenciais > 100"
+              >{{ data.percentualNaoEssenciais | number: '1.1-1' }}%</span
+            >
+          } @else {
+            <span class="budget-pct">—</span>
+          }
           <span class="budget-target">(meta 30%)</span>
         </div>
         <div class="budget-values">
@@ -95,132 +156,371 @@
       </div>
       <mat-progress-bar
         mode="determinate"
-        [value]="clamp(data.percentualNaoEssenciais)"
+        [value]="hasBase() ? clamp(data.percentualNaoEssenciais) : 0"
         color="accent"
         class="budget-bar"
       ></mat-progress-bar>
+      @if (hasBase()) {
+        <div class="budget-meta">
+          Meta {{ fmt(meta(0.3)) }} ·
+          @if (folga(data.despesasNaoEssenciais, 0.3) >= 0) {
+            <span class="folga">{{ fmt(folga(data.despesasNaoEssenciais, 0.3)) }} de folga</span>
+          } @else {
+            <span class="estouro">{{ fmt(-folga(data.despesasNaoEssenciais, 0.3)) }} acima da meta</span>
+          }
+        </div>
+      }
+      @if (data.breakdown?.naoEssenciais?.length) {
+        <button mat-button class="drill-toggle" (click)="toggle('nao')">
+          <mat-icon>{{ expanded.nao ? 'expand_less' : 'expand_more' }}</mat-icon>
+          {{ expanded.nao ? 'Ocultar categorias' : 'Ver categorias' }}
+        </button>
+        @if (expanded.nao) {
+          <div class="drill">
+            @for (c of data.breakdown!.naoEssenciais; track c.categoryName) {
+              <div class="drill-row">
+                <span class="drill-name">
+                  <mat-icon class="drill-icon" [style.color]="c.categoryColor || null">{{
+                    c.categoryIcon || 'label'
+                  }}</mat-icon>
+                  {{ c.categoryName }}
+                </span>
+                <span class="drill-val"
+                  >{{ fmt(c.total) }}
+                  <span class="drill-pct"
+                    >{{ bucketPct(c.total, data.despesasNaoEssenciais) | number: '1.0-0' }}%</span
+                  ></span
+                >
+              </div>
+            }
+          </div>
+        }
+      }
 
+      <!-- Investimentos (piso 20%) -->
       <div class="budget-row">
-        <div class="budget-label">
+        <div class="budget-label" matTooltip="Aportes e reservas financeiras. Meta: ao menos 20% da renda">
           <span class="dot investment"></span>
           Investimentos
-          <span class="budget-pct">{{ data.percentualInvestimentos | number: '1.1-1' }}%</span>
+          @if (hasBase()) {
+            <span class="budget-pct" [class.over]="data.percentualInvestimentos > 100"
+              >{{ data.percentualInvestimentos | number: '1.1-1' }}%</span
+            >
+          } @else {
+            <span class="budget-pct">—</span>
+          }
           <span class="budget-target">(meta 20%)</span>
         </div>
         <div class="budget-values">
-          {{ fmt(data.investido) }}
+          {{ fmt(data.aplicado) }}
         </div>
       </div>
       <mat-progress-bar
         mode="determinate"
-        [value]="clamp(data.percentualInvestimentos)"
+        [value]="hasBase() ? clamp(data.percentualInvestimentos) : 0"
         color="warn"
         class="budget-bar"
       ></mat-progress-bar>
+      @if (hasBase()) {
+        <div class="budget-meta">
+          Meta {{ fmt(meta(0.2)) }} ·
+          @if (data.aplicado >= meta(0.2)) {
+            <span class="folga">meta de 20% atingida</span>
+          } @else {
+            <span class="falta">faltam {{ fmt(meta(0.2) - data.aplicado) }} para os 20%</span>
+          }
+        </div>
+      }
+      <button mat-button class="drill-toggle" (click)="toggle('inv')">
+        <mat-icon>{{ expanded.inv ? 'expand_less' : 'expand_more' }}</mat-icon>
+        {{ expanded.inv ? 'Ocultar detalhes' : 'Ver detalhes' }}
+      </button>
+      @if (expanded.inv) {
+        <div class="drill">
+          <div class="drill-row">
+            <span class="drill-name">Aportes brutos</span>
+            <span class="drill-val">{{ fmt(data.aportes) }}</span>
+          </div>
+          <div class="drill-row">
+            <span class="drill-name">Resgates brutos</span>
+            <span class="drill-val">− {{ fmt(data.resgatado) }}</span>
+          </div>
+        </div>
+      }
+
+      @if (hasBase()) {
+        <p class="budget-base-info">Base do cálculo: {{ fmt(data.rendaBase) }} ({{ baseLabel() }})</p>
+      }
     </mat-card-content>
   </mat-card>
 
-  <!-- Despesas -->
-  <div class="section-title">Despesas</div>
+  <!-- 2. Para onde o dinheiro foi? -->
+  <div class="section-title">Para onde o dinheiro foi?</div>
   <div class="cards-row">
-    <mat-card class="metric-card essential">
+    <mat-card
+      class="metric-card essential"
+      matTooltip="Gastos necessários: moradia, alimentação, transporte, saúde"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>home</mat-icon>
-        <div class="metric-label">Essenciais</div>
+        <div class="metric-label">Despesas Essenciais</div>
         <div class="metric-value">{{ fmt(data.despesasEssenciais) }}</div>
       </mat-card-content>
     </mat-card>
-    <mat-card class="metric-card non-essential">
+    <mat-card
+      class="metric-card non-essential"
+      matTooltip="Lazer, assinaturas, compras não prioritárias"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>local_mall</mat-icon>
-        <div class="metric-label">Não Essenciais</div>
+        <div class="metric-label">Despesas Não Essenciais</div>
         <div class="metric-value">{{ fmt(data.despesasNaoEssenciais) }}</div>
       </mat-card-content>
     </mat-card>
-    <mat-card class="metric-card total-expenses">
-      <mat-card-content>
-        <mat-icon>receipt</mat-icon>
-        <div class="metric-label">Total Despesas</div>
-        <div class="metric-value">{{ fmt(data.totalDespesas) }}</div>
-      </mat-card-content>
-    </mat-card>
-  </div>
-
-  <!-- Investimentos -->
-  <div class="section-title">Investimentos</div>
-  <div class="cards-row">
-    <mat-card class="metric-card investment">
+    @if (data.despesasSemGrupo > 0) {
+      <mat-card
+        class="metric-card other-expense"
+        matTooltip="Despesas sem grupo 50/30/20 (ex.: pagamento de fatura contabilizado no mês de transição). Contam no Resultado, mas não nas metas"
+        matTooltipPosition="above"
+      >
+        <mat-card-content>
+          <mat-icon>receipt_long</mat-icon>
+          <div class="metric-label">Outras despesas (sem grupo)</div>
+          <div class="metric-value">{{ fmt(data.despesasSemGrupo) }}</div>
+        </mat-card-content>
+      </mat-card>
+    }
+    <mat-card
+      class="metric-card investment"
+      matTooltip="Total bruto aplicado em investimentos no mês (aportes)"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>trending_up</mat-icon>
-        <div class="metric-label">Investido</div>
-        <div class="metric-value">{{ fmt(data.investido) }}</div>
+        <div class="metric-label">Aportes brutos</div>
+        <div class="metric-value">{{ fmt(data.aportes) }}</div>
       </mat-card-content>
     </mat-card>
-    <mat-card class="metric-card reimbursement">
+    <mat-card
+      class="metric-card reimbursement"
+      matTooltip="Total bruto resgatado de investimentos no mês. Não conta como receita"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
         <mat-icon>trending_down</mat-icon>
-        <div class="metric-label">Resgatado</div>
+        <div class="metric-label">Resgates brutos</div>
         <div class="metric-value">{{ fmt(data.resgatado) }}</div>
       </mat-card-content>
     </mat-card>
-  </div>
-
-  <!-- Destaques -->
-  @if (data.destaques) {
-    <div class="section-title">Destaques</div>
-    <mat-card class="destaques-card">
+    <mat-card
+      class="metric-card aplicado"
+      matTooltip="Fluxo líquido de investimentos no mês (aportes brutos − resgates brutos). Valor positivo = patrimônio investido cresceu"
+      matTooltipPosition="above"
+    >
       <mat-card-content>
-        <div class="destaques-grid">
-          @if (data.destaques.maiorSupermercado) {
-            <div class="destaque-item">
-              <mat-icon>shopping_cart</mat-icon>
-              <div>
-                <div class="destaque-label">Maior Supermercado</div>
-                <div class="destaque-value">{{ data.destaques.maiorSupermercado }}</div>
-                <div class="destaque-sub">{{ fmt(data.destaques.maiorSupermercadoValor) }}</div>
-              </div>
-            </div>
-          }
-          @if (data.destaques.maiorDelivery) {
-            <div class="destaque-item">
-              <mat-icon>delivery_dining</mat-icon>
-              <div>
-                <div class="destaque-label">Maior Delivery</div>
-                <div class="destaque-value">{{ data.destaques.maiorDelivery }}</div>
-                <div class="destaque-sub">{{ fmt(data.destaques.maiorDeliveryValor) }}</div>
-              </div>
-            </div>
-          }
-          <div class="destaque-item">
-            <mat-icon>subscriptions</mat-icon>
-            <div>
-              <div class="destaque-label">Assinaturas</div>
-              <div class="destaque-value">{{ data.destaques.quantidadeAssinaturas }}</div>
-            </div>
-          </div>
-          <div class="destaque-item">
-            <mat-icon>shopping_bag</mat-icon>
-            <div>
-              <div class="destaque-label">Compras</div>
-              <div class="destaque-value">{{ data.destaques.quantidadeCompras }}</div>
-            </div>
-          </div>
-          <div class="destaque-item">
-            <mat-icon>send</mat-icon>
-            <div>
-              <div class="destaque-label">PIX Enviados</div>
-              <div class="destaque-value">{{ data.destaques.quantidadePixEnviados }}</div>
-            </div>
-          </div>
-          <div class="destaque-item">
-            <mat-icon>call_received</mat-icon>
-            <div>
-              <div class="destaque-label">PIX Recebidos</div>
-              <div class="destaque-value">{{ data.destaques.quantidadePixRecebidos }}</div>
-            </div>
-          </div>
-        </div>
+        <mat-icon>account_balance</mat-icon>
+        <div class="metric-label">Líquido investido</div>
+        <div class="metric-value" [class.negative]="data.aplicado < 0">{{ fmt(data.aplicado) }}</div>
       </mat-card-content>
     </mat-card>
+  </div>
+
+  <!-- 4. Quanto sobrou? -->
+  <div class="section-title">Quanto sobrou?</div>
+  <div class="cards-row">
+    <mat-card
+      class="metric-card balance"
+      [class.negative]="(data.usandoSalarioPrevisto ? data.resultadoPrevisto : data.resultado) < 0"
+      matTooltip="Entradas do mês menos o total de despesas do período (performance isolada do mês). No mês corrente, se o salário ainda não foi importado, projeta com o salário configurado como piso"
+      matTooltipPosition="above"
+    >
+      <mat-card-content>
+        <mat-icon>account_balance_wallet</mat-icon>
+        <div class="metric-label">
+          Resultado do mês
+          @if (data.usandoSalarioPrevisto) {
+            <span
+              class="previsto-badge"
+              matTooltip="Projeção usando seu salário configurado ({{
+                fmt(data.salarioEsperado)
+              }}) como piso — a renda real deste mês ainda não foi toda importada"
+              >previsto</span
+            >
+          }
+        </div>
+        <div class="metric-value">
+          {{ fmt(data.usandoSalarioPrevisto ? data.resultadoPrevisto : data.resultado) }}
+        </div>
+        @if (data.usandoSalarioPrevisto) {
+          <div class="metric-sub">Real importado até agora: {{ fmt(data.resultado) }}</div>
+        }
+      </mat-card-content>
+    </mat-card>
+    <mat-card
+      class="metric-card accumulated"
+      [class.negative]="data.saldoAcumulado < 0"
+      matTooltip="Saldo corrido em conta acumulado do início até o fim deste mês (receitas − despesas − aportes líquidos). Dá o contexto que o resultado isolado do mês não mostra"
+      matTooltipPosition="above"
+    >
+      <mat-card-content>
+        <mat-icon>savings</mat-icon>
+        <div class="metric-label">Saldo Geral (acumulado)</div>
+        <div class="metric-value">{{ fmt(data.saldoAcumulado) }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  @if (data.pagamentosFaturaIgnorados > 0) {
+    <p class="ignored-bill-notice">
+      <mat-icon>info_outline</mat-icon>
+      <span>
+        {{ fmt(data.pagamentosFaturaIgnorados) }} em pagamento(s) de fatura estão ignorados neste mês (sem fatura
+        importada). Se este é o mês de início do uso, <a routerLink="/transactions">abra as Transações</a> (ative
+        "Mostrar ignoradas") e clique em "Contabilizar" para o resultado refletir a saída real.
+      </span>
+    </p>
+  }
+  @if (data.resultado < 0 && data.saldoAcumulado >= 0) {
+    <p class="coverage-notice">
+      <mat-icon>verified_user</mat-icon>
+      <span>
+        O resultado isolado deste mês está negativo, mas seu <strong>Saldo Geral</strong> segue positivo ({{
+          fmt(data.saldoAcumulado)
+        }}) — o déficit do mês está coberto pelo que você acumulou.
+      </span>
+    </p>
+  }
+
+  <!-- Insights do mês -->
+  @if (data.insights; as ins) {
+    <div class="section-title">Insights do mês</div>
+    @if (hasAnyInsight()) {
+      <div class="insights-grid">
+        <!-- 4. Ritmo do mês / projeção de fechamento (só mês corrente) -->
+        @if (ins.mesCorrente && ins.projecaoFechamento !== null && ins.projecaoFechamento !== undefined) {
+          <mat-card class="insight-card">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>speed</mat-icon><span>Ritmo do mês</span></div>
+              <p class="insight-sub">
+                {{ fmt(ins.totalMesAtual) }} gastos em {{ ins.diasDecorridos }} de {{ ins.diasNoMes }} dias.
+              </p>
+              <p class="insight-lead">
+                No ritmo atual, o mês fecha em <strong>{{ fmt(ins.projecaoFechamento) }}</strong
+                >.
+              </p>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- 2. Comparativo com o mês passado -->
+        @if (ins.totalMesAnterior > 0) {
+          <mat-card class="insight-card">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>compare_arrows</mat-icon><span>Vs. mês passado</span></div>
+              @if (ins.variacaoPercentual !== null && ins.variacaoPercentual !== undefined) {
+                <p class="insight-lead">
+                  Gastou
+                  <span class="delta" [class.up]="ins.variacaoPercentual > 0" [class.down]="ins.variacaoPercentual < 0">
+                    {{ ins.variacaoPercentual > 0 ? '▲' : ins.variacaoPercentual < 0 ? '▼' : '' }}
+                    {{ abs(ins.variacaoPercentual) | number: '1.0-1' }}%
+                  </span>
+                  vs. o mês passado.
+                </p>
+                <p class="insight-sub">{{ fmt(ins.totalMesAnterior) }} → {{ fmt(ins.totalMesAtual) }}</p>
+              }
+              @if (ins.categoriaQueMaisSubiu) {
+                <p class="insight-sub">
+                  Quem mais subiu: <strong>{{ ins.categoriaQueMaisSubiu }}</strong> (+{{
+                    fmt(ins.categoriaQueMaisSubiuVariacao)
+                  }})
+                </p>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- 5. Estourou a meta -->
+        @if (ins.metasEstouradas.length) {
+          <mat-card class="insight-card alert">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>report</mat-icon><span>Metas estouradas</span></div>
+              @for (m of ins.metasEstouradas; track m.categoriaNome) {
+                <div class="insight-row">
+                  <span class="insight-row-name">
+                    <span class="cat-emoji">{{ m.categoriaIcon || '🎯' }}</span
+                    >{{ m.categoriaNome }}
+                  </span>
+                  <span class="insight-row-val over">
+                    {{ fmt(m.gasto) }} / {{ fmt(m.teto) }}
+                    <span class="pct">{{ m.percentual | number: '1.0-0' }}%</span>
+                  </span>
+                </div>
+              }
+              <a routerLink="/budget-goals">Ver metas</a>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- 1. Maiores gastos do mês -->
+        @if (ins.maioresGastos.length) {
+          <mat-card class="insight-card">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>trending_up</mat-icon><span>Maiores gastos</span></div>
+              @for (g of ins.maioresGastos; track g.id) {
+                <div class="insight-row">
+                  <span class="insight-row-name">{{ g.description }}</span>
+                  <span class="insight-row-val">{{ fmt(g.amount) }}</span>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- 3. Assinaturas & recorrentes -->
+        @if (ins.recorrentes.length) {
+          <mat-card class="insight-card">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>autorenew</mat-icon><span>Assinaturas & recorrentes</span></div>
+              <p class="insight-lead">
+                <strong>{{ fmt(ins.totalRecorrente) }}</strong> comprometidos por mês
+              </p>
+              @for (r of ins.recorrentes; track r.nome) {
+                <div class="insight-row">
+                  <span class="insight-row-name">
+                    {{ r.nome }}
+                    @if (r.nova) {
+                      <span class="nova-badge">nova</span>
+                    }
+                  </span>
+                  <span class="insight-row-val">{{ fmt(r.valor) }}</span>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- 6. Pequenos que somaram muito -->
+        @if (ins.pequenosGastos.length) {
+          <mat-card class="insight-card">
+            <mat-card-content>
+              <div class="insight-head"><mat-icon>grain</mat-icon><span>Pequenos que somaram</span></div>
+              <p class="insight-lead">Gastos miúdos e frequentes que, juntos, pesaram:</p>
+              @for (p of ins.pequenosGastos; track p.nome) {
+                <div class="insight-row">
+                  <span class="insight-row-name">{{ p.nome }} ×{{ p.quantidade }}</span>
+                  <span class="insight-row-val">{{ fmt(p.total) }}</span>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    } @else {
+      <p class="insights-empty">
+        <mat-icon>lightbulb</mat-icon>
+        Ainda não há dados suficientes para gerar insights. Importe mais um mês para comparar e revelar recorrências.
+      </p>
+    }
   }
 }

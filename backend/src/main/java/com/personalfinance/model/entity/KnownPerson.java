@@ -29,9 +29,10 @@ public class KnownPerson {
   @Column(nullable = false)
   private String relationship;
 
-  @Column(name = "default_income_type", nullable = false)
+  /** How income from this person is treated: INCOME | IGNORE | ALWAYS_REVIEW. */
+  @Column(name = "default_treatment", nullable = false)
   @Builder.Default
-  private String defaultIncomeType = "REIMBURSEMENT";
+  private String defaultTreatment = "INCOME";
 
   @Column(name = "default_label")
   private String defaultLabel;

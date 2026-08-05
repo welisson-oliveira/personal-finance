@@ -7,6 +7,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../core/auth/auth.service';
+import { MonthSelectorComponent } from './month-selector/month-selector.component';
 
 interface NavItem {
   label: string;
@@ -27,6 +28,7 @@ interface NavItem {
     MatListModule,
     MatIconModule,
     MatButtonModule,
+    MonthSelectorComponent,
   ],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
@@ -34,11 +36,15 @@ interface NavItem {
 export class LayoutComponent {
   navItems: NavItem[] = [
     { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
+    { label: 'Relatórios', icon: 'insights', route: '/reports' },
     { label: 'Transações', icon: 'receipt_long', route: '/transactions' },
     { label: 'Importar', icon: 'upload_file', route: '/import' },
-    { label: 'Fila de Revisão', icon: 'rate_review', route: '/review' },
     { label: 'Categorias', icon: 'category', route: '/categories' },
+    { label: 'Metas', icon: 'savings', route: '/budget-goals' },
+    { label: 'Regras', icon: 'rule', route: '/merchant-rules' },
+    { label: 'Alertas', icon: 'notification_important', route: '/anomalies' },
     { label: 'Pessoas Conhecidas', icon: 'people', route: '/known-persons' },
+    { label: 'Configurações', icon: 'settings', route: '/settings' },
   ];
 
   constructor(
