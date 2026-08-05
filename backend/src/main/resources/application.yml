@@ -1,3 +1,7 @@
+server:
+  # Bind to the platform-provided port when present (e.g. Render sets $PORT); 8080 everywhere else.
+  port: ${PORT:8080}
+
 spring:
   application:
     name: personal-finance
@@ -9,6 +13,9 @@ spring:
 management:
   endpoints:
     web:
+      # Keep actuator under /api so it matches the security allow-list (/api/actuator/**) and the
+      # reverse-proxy /api forwarding. Health check: GET /api/actuator/health.
+      base-path: /api/actuator
       exposure:
         include: health,info,metrics
   endpoint:
