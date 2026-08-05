@@ -72,3 +72,25 @@ jobs:
 
       - name: Build Docker image
         run: docker compose build
+
+  # Triggers the Render deploy ONLY after all checks pass on a push to main (i.e. a release
+  # merge). Requires the repo secret RENDER_DEPLOY_HOOK (Render → service → Settings → Deploy Hook).
+  # With this in place, turn OFF Render's own Auto-Deploy so deploys aren't triggered twice.
+  deploy:
+    name: Deploy backend (Render)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK secret is not set. Add it in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "All checks green on main (${GITHUB_SHA}); triggering Render deploy..."
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK" > /dev/null
+          echo "Render deploy triggered."
