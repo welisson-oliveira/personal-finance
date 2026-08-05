@@ -1,0 +1,82 @@
+name: Cut Release
+
+# Promove um release candidate para um PR de release. Dado um tag de RC (ex. v0.0.1-rc.363), cria a
+# branch release/<versão> apontando para o COMMIT EXATO que o RC marca e abre um PR para main.
+#
+# Como a branch aponta para o commit do RC (que já passou no CI), os mesmos check runs "Backend"/
+# "Frontend" já estão verdes nesse SHA — a branch protection do main os enxerga sem reexecutar. Ao
+# mergear o PR, o workflow Deploy builda/pusha a imagem e sobe no Render.
+#
+# Rode em Actions → Cut Release → Run workflow e cole o tag do RC.
+on:
+  workflow_dispatch:
+    inputs:
+      rc_tag:
+        description: "Tag do RC a promover (ex. v0.0.1-rc.363)."
+        required: true
+        type: string
+
+jobs:
+  cut-release:
+    name: Criar branch de release e abrir PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # criar a branch release/*
+      pull-requests: write # abrir o PR para main
+
+    steps:
+      - name: Validar tag e derivar versão
+        id: v
+        env:
+          RC_TAG: ${{ inputs.rc_tag }}
+        run: |
+          if [[ ! "$RC_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
+            echo "::error::'$RC_TAG' não parece um tag de RC (esperado: vX.Y.Z-rc.N)."
+            exit 1
+          fi
+          VERSION="${RC_TAG#v}"      # 0.0.1-rc.363
+          VERSION="${VERSION%-rc.*}" # 0.0.1
+          {
+            echo "version=$VERSION"
+            echo "branch=release/$VERSION"
+          } >> "$GITHUB_OUTPUT"
+          echo "RC $RC_TAG → versão $VERSION → branch release/$VERSION"
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # precisa do histórico e dos tags para resolver o RC
+
+      - name: Criar branch de release no commit do RC
+        env:
+          RC_TAG: ${{ inputs.rc_tag }}
+          BRANCH: ${{ steps.v.outputs.branch }}
+        run: |
+          SHA=$(git rev-list -n1 "$RC_TAG") || { echo "::error::Tag $RC_TAG não encontrado."; exit 1; }
+          echo "Commit do RC: $SHA"
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "::error::A branch $BRANCH já existe. Apague-a ou promova outra versão."
+            exit 1
+          fi
+          git push origin "$SHA:refs/heads/$BRANCH"
+          echo "Branch $BRANCH criada em $SHA."
+
+      - name: Abrir PR para main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RC_TAG: ${{ inputs.rc_tag }}
+          BRANCH: ${{ steps.v.outputs.branch }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          cat > pr-body.md <<EOF
+          Promove o RC \`$RC_TAG\` para produção.
+
+          Ao **mergear** este PR, o workflow **Deploy** builda a imagem \`$VERSION\`, publica no ghcr, sobe no Render e, quando \`live\`, publica a Release \`v$VERSION\`.
+
+          - Cortado do commit exato do RC (mesmo SHA já validado no CI).
+          - Pré-requisito: setup do Render pronto — ver \`docs/deploy.md\`.
+          EOF
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "release: v$VERSION" \
+            --body-file pr-body.md
