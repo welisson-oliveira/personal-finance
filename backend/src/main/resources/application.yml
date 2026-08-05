@@ -13,6 +13,9 @@ spring:
 management:
   endpoints:
     web:
+      # Keep actuator under /api so it matches the security allow-list (/api/actuator/**) and the
+      # reverse-proxy /api forwarding. Health check: GET /api/actuator/health.
+      base-path: /api/actuator
       exposure:
         include: health,info,metrics
   endpoint:
