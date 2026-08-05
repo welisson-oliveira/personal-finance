@@ -1,0 +1,62 @@
+name: Deploy
+
+# Production deploy gate: fires ONLY when a release/* branch is merged into main. Any other merge
+# into main (hotfix, direct commit, etc.) does NOT deploy. On a real release merge it publishes the
+# final GitHub Release v<pom-version> (marking exactly what went to prod) and triggers the Render
+# deploy via its Deploy Hook.
+#
+# Requires the repo secret RENDER_DEPLOY_HOOK (Render → service → Settings → Deploy Hook).
+# With this workflow in place, keep Render's own Auto-Deploy OFF so deploys aren't triggered twice.
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Publish release & deploy (Render)
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
+    permissions:
+      contents: write # required to create the final GitHub Release/tag
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Read version from pom.xml
+        id: ver
+        run: |
+          V=$(xmllint --xpath "/*[local-name()='project']/*[local-name()='version']/text()" backend/pom.xml)
+          V=${V%-SNAPSHOT}
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Releasing version: $V"
+
+      - name: Publish final release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.ver.outputs.version }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — skipping creation."
+          else
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes "Promoted from \`${{ github.event.pull_request.head.ref }}\` (PR #${{ github.event.pull_request.number }})." \
+              --target main
+          fi
+
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK secret is not set. Add it in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "Release merged into main; triggering Render deploy..."
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK" > /dev/null
+          echo "Render deploy triggered."
