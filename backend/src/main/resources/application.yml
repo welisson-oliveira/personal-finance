@@ -1,3 +1,7 @@
+server:
+  # Bind to the platform-provided port when present (e.g. Render sets $PORT); 8080 everywhere else.
+  port: ${PORT:8080}
+
 spring:
   application:
     name: personal-finance
