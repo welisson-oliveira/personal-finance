@@ -96,6 +96,8 @@ Como o código sai de `develop` e chega em produção, automatizado em `.github/
 ```
 feature/* ──PR──▶ develop ──(push)──▶ [CI verde] ──▶ RC  v<versão>-rc.<run>  (pre-release, NÃO faz deploy)
                      │
+        Cut Release (manual, informa o tag do RC) ──▶ cria release/<versão> no commit do RC
+                     │
                 release/*  ──PR──▶ main ──(merge)──▶ [Deploy]
                                                        ├─ build + push  ghcr.io/<owner>/personal-finance-backend:<versão> (+ :latest)
                                                        ├─ Render deploy dessa imagem via API ──▶ espera status "live"
@@ -111,11 +113,22 @@ feature/* ──PR──▶ develop ──(push)──▶ [CI verde] ──▶ R
 
 | Workflow          | Arquivo        | Dispara em                                          | O que faz |
 | ----------------- | -------------- | --------------------------------------------------- | --------- |
-| CI                | `ci.yml`       | push/PR em `develop` e `main`                       | Spotless, testes (back), lint/format/test/build (front), build das imagens Docker (sem push). No push em `develop`, o job final **`release-candidate`** (gateado por `needs`) publica a pre-release `v<versão>-rc.<run>` — **só com o CI verde** |
-| Deploy            | `deploy.yml`   | PR **fechado+mergeado** em `main`, head `release/*` | Build+push da imagem do backend no ghcr, deploy no Render via API, espera `live`, publica a Release |
-| Rollback          | `rollback.yml` | manual (`workflow_dispatch`, input `version`)       | Redeploya um tag imutável anterior no Render |
+| CI                | `ci.yml`         | push/PR em `develop` e `main`                       | Spotless, testes (back), lint/format/test/build (front), build das imagens Docker (sem push). No push em `develop`, o job final **`release-candidate`** (gateado por `needs`) publica a pre-release `v<versão>-rc.<run>` — **só com o CI verde** |
+| Cut Release       | `cut-release.yml`| manual (`workflow_dispatch`, input `rc_tag`)        | Cria a branch `release/<versão>` **no commit exato do RC** e abre o PR para `main` |
+| Deploy            | `deploy.yml`     | PR **fechado+mergeado** em `main`, head `release/*` | Build+push da imagem do backend no ghcr, deploy no Render via API, espera `live`, publica a Release |
+| Rollback          | `rollback.yml`   | manual (`workflow_dispatch`, input `version`)       | Redeploya um tag imutável anterior no Render |
 
 A lógica "dispara deploy no Render + faz poll até `live`" fica em **`.github/scripts/render-deploy.sh`**, compartilhada por `deploy.yml` e `rollback.yml` (recebe `RENDER_API_KEY`, `RENDER_SERVICE_ID`, `IMAGE`; sai ≠ 0 se falhar ou estourar 20 min).
+
+### Cortar uma release (RC → produção)
+
+Cada push no `develop` gera um RC (`v<versão>-rc.<run>`). Um RC é só um **marcador** — não faz deploy. Para promover um deles:
+
+1. **Actions → Cut Release → Run workflow**, cole o tag do RC (ex. `v0.0.1-rc.363`).
+2. O workflow cria `release/<versão>` **no commit exato do RC** e abre o PR para `main`.
+3. Você **revisa e aprova**. O merge dispara o `deploy.yml`.
+
+> **Por que cortar do commit do RC** (e não do `develop` atual): o `develop` pode ter avançado desde o RC. Apontar a release para o SHA do RC garante que produção recebe **exatamente** o que passou no CI. Como esse SHA já tem os checks `Backend`/`Frontend` verdes, a branch protection do `main` os enxerga **sem reexecutar** o CI. Se você exigir que o CI rode de novo no PR de release, abra-o manualmente (ou use um PAT no workflow em vez do `GITHUB_TOKEN` — eventos disparados pelo `GITHUB_TOKEN` não acionam outros workflows).
 
 ### Artefato: imagem imutável no ghcr
 
