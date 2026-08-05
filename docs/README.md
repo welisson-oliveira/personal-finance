@@ -18,6 +18,8 @@ Esta pasta documenta a aplicação **por feature de negócio**, cruzando backend
 | Metas de orçamento          | [metas-de-orcamento.md](./metas-de-orcamento.md)                   | teto de gasto por categoria, sugestão 50/30/20 e acompanhamento mensal       |
 | Pessoas conhecidas          | [pessoas-conhecidas.md](./pessoas-conhecidas.md)                   | pessoas de PIX e o tratamento padrão de entrada                              |
 
+**Operação (transversal):** [deploy.md](./deploy.md) — provisionamento gratuito (Neon/Render/Cloudflare) e a **entrega contínua** (RC, release, deploy da imagem imutável no Render e rollback). Mexa aqui ao mudar qualquer workflow de `.github/workflows/`.
+
 ---
 
 ## Visão geral da arquitetura

@@ -1,10 +1,17 @@
 name: CI
 
 on:
+  # Push builds only on the long-lived branches; feature branches are covered by their PR run below,
+  # so a branch with an open PR no longer runs CI twice.
   push:
-    branches: ["**"]
+    branches: [develop, main]
   pull_request:
     branches: [main, develop]
+
+# Supersede in-flight runs for the same branch/PR when new commits arrive.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
@@ -70,5 +77,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker compose build
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # docker-compose.ci.yml adds GitHub Actions layer cache (type=gha) so unchanged layers are
+      # reused across runs. COMPOSE_BAKE routes the build through buildx bake, which honors cache_to.
+      - name: Build images (with layer cache)
+        env:
+          COMPOSE_BAKE: "true"
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build
+
+  # Release candidate: publishes a pre-release snapshot of develop, but ONLY after the whole CI passes
+  # (needs backend+frontend+docker). Gating it here — instead of a standalone workflow triggered in
+  # parallel on push — guarantees an RC never marks a commit with red CI. Runs only on push to develop.
+  release-candidate:
+    name: Publish RC pre-release
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    permissions:
+      contents: write # required to create the GitHub Release/tag
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from pom.xml
+        id: ver
+        run: |
+          # Direct child <version> of <project> (not the Spring Boot parent's), with -SNAPSHOT stripped.
+          # Parsed with python3 (always on the runner) because ubuntu-latest no longer ships xmllint.
+          V=$(python3 -c "import xml.etree.ElementTree as ET; r=ET.parse('backend/pom.xml').getroot(); ns={'m':r.tag[r.tag.find('{')+1:r.tag.find('}')]}; print(r.find('m:version',ns).text)")
+          V=${V%-SNAPSHOT}
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Project version: $V"
+
+      - name: Publish RC pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.ver.outputs.version }}-rc.${{ github.run_number }}"
+          echo "Creating pre-release $TAG at ${GITHUB_SHA}"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "Release candidate — snapshot of \`develop\` at ${GITHUB_SHA} (CI green)." \
+            --prerelease \
+            --target "${GITHUB_SHA}"
