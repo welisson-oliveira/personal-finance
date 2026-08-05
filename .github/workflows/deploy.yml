@@ -51,7 +51,8 @@ jobs:
         id: ver
         run: |
           # Direct child <version> of <project> (not the Spring Boot parent's), with -SNAPSHOT stripped.
-          V=$(xmllint --xpath "/*[local-name()='project']/*[local-name()='version']/text()" backend/pom.xml)
+          # Parsed with python3 (always on the runner) because ubuntu-latest no longer ships xmllint.
+          V=$(python3 -c "import xml.etree.ElementTree as ET; r=ET.parse('backend/pom.xml').getroot(); ns={'m':r.tag[r.tag.find('{')+1:r.tag.find('}')]}; print(r.find('m:version',ns).text)")
           V=${V%-SNAPSHOT}
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "Deploying version: $V"
