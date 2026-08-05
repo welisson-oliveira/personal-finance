@@ -81,8 +81,10 @@ jobs:
           tags: |
             ${{ steps.img.outputs.backend }}:${{ steps.ver.outputs.version }}
             ${{ steps.img.outputs.backend }}:latest
+          # Só LÊ o cache (o CI já popula via type=gha). Escrever aqui (cache-to) disputava o mesmo
+          # cache do job Docker do CI e derrubava o deploy com "failed to reserve cache" — depois de
+          # a imagem já ter sido publicada. Ler é inofensivo; um miss só rebuilda.
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Deploy image on Render & wait for live
         env:
