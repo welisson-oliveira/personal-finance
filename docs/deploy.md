@@ -94,7 +94,7 @@ Em runtime o app lê `assets/config.json` (`ConfigService` + `apiUrlInterceptor`
 Como o código sai de `develop` e chega em produção, automatizado em `.github/workflows/`. **Ao mexer em qualquer workflow, atualize esta seção na mesma PR.**
 
 ```
-feature/* ──PR──▶ develop ──(push)──▶ [Release Candidate]  v<versão>-rc.<run>  (pre-release, NÃO faz deploy)
+feature/* ──PR──▶ develop ──(push)──▶ [CI verde] ──▶ RC  v<versão>-rc.<run>  (pre-release, NÃO faz deploy)
                      │
                 release/*  ──PR──▶ main ──(merge)──▶ [Deploy]
                                                        ├─ build + push  ghcr.io/<owner>/personal-finance-backend:<versão> (+ :latest)
@@ -111,8 +111,7 @@ feature/* ──PR──▶ develop ──(push)──▶ [Release Candidate]  v
 
 | Workflow          | Arquivo        | Dispara em                                          | O que faz |
 | ----------------- | -------------- | --------------------------------------------------- | --------- |
-| CI                | `ci.yml`       | push/PR em `develop` e `main`                       | Spotless, testes (back), lint/format/test/build (front), build das imagens Docker (sem push) |
-| Release Candidate | `release.yml`  | push em `develop`                                   | Publica pre-release `v<versão>-rc.<run>` (marca o integrado; **não** faz deploy) |
+| CI                | `ci.yml`       | push/PR em `develop` e `main`                       | Spotless, testes (back), lint/format/test/build (front), build das imagens Docker (sem push). No push em `develop`, o job final **`release-candidate`** (gateado por `needs`) publica a pre-release `v<versão>-rc.<run>` — **só com o CI verde** |
 | Deploy            | `deploy.yml`   | PR **fechado+mergeado** em `main`, head `release/*` | Build+push da imagem do backend no ghcr, deploy no Render via API, espera `live`, publica a Release |
 | Rollback          | `rollback.yml` | manual (`workflow_dispatch`, input `version`)       | Redeploya um tag imutável anterior no Render |
 
