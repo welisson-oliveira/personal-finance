@@ -1,26 +1,46 @@
 name: Deploy
 
-# Production deploy gate: fires ONLY when a release/* branch is merged into main. Any other merge
-# into main (hotfix, direct commit, etc.) does NOT deploy. On a real release merge it publishes the
-# final GitHub Release v<pom-version> (marking exactly what went to prod) and triggers the Render
-# deploy via its Deploy Hook.
+# Production deploy gate: fires ONLY when a release/* branch is merged into main. Any other merge into
+# main (hotfix, direct commit, etc.) does NOT deploy.
 #
-# Requires the repo secret RENDER_DEPLOY_HOOK (Render → service → Settings → Deploy Hook).
-# With this workflow in place, keep Render's own Auto-Deploy OFF so deploys aren't triggered twice.
+# On a real release merge it:
+#   1. Builds the backend image and pushes it to GitHub Container Registry (ghcr.io) with the IMMUTABLE
+#      version tag from backend/pom.xml (e.g. 0.0.1) plus :latest.
+#   2. Tells Render to deploy that exact image via the Render API and WAITS until it is live.
+#   3. Only after a healthy, live deploy, publishes the final GitHub Release v<version>.
+#
+# Render runs the BACKEND only. If the deploy fails its health check, Render keeps the previous version
+# live (zero-downtime), the run goes red, and no Release is published — prod is untouched. Use the
+# Rollback workflow to redeploy an earlier immutable tag.
+#
+# One-time setup:
+#   - Repo secrets: RENDER_API_KEY, RENDER_SERVICE_ID (backend service id, e.g. srv-xxxx).
+#   - Render service type: "Deploy an existing image from a registry". Add a Registry Credential
+#     (GitHub PAT with read:packages) so Render can pull the private ghcr image.
+#   - Render Health Check Path: /api/actuator/health  (enables the auto-rollback described above).
+#   - Turn Render Auto-Deploy OFF — this workflow is the only trigger.
 on:
   pull_request:
     types: [closed]
     branches: [main]
 
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    name: Publish release & deploy (Render)
+    name: Build, push & deploy backend (Render)
     runs-on: ubuntu-latest
     if: >-
       github.event.pull_request.merged == true &&
       startsWith(github.event.pull_request.head.ref, 'release/')
     permissions:
-      contents: write # required to create the final GitHub Release/tag
+      contents: write # publish the final GitHub Release/tag
+      packages: write # push the image to ghcr.io
+
+    env:
+      REGISTRY: ghcr.io
 
     steps:
       - uses: actions/checkout@v4
@@ -30,10 +50,45 @@ jobs:
       - name: Read version from pom.xml
         id: ver
         run: |
+          # Direct child <version> of <project> (not the Spring Boot parent's), with -SNAPSHOT stripped.
           V=$(xmllint --xpath "/*[local-name()='project']/*[local-name()='version']/text()" backend/pom.xml)
           V=${V%-SNAPSHOT}
           echo "version=$V" >> "$GITHUB_OUTPUT"
-          echo "Releasing version: $V"
+          echo "Deploying version: $V"
+
+      - name: Compute image name
+        id: img
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "backend=${REGISTRY}/${OWNER}/personal-finance-backend" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: |
+            ${{ steps.img.outputs.backend }}:${{ steps.ver.outputs.version }}
+            ${{ steps.img.outputs.backend }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy image on Render & wait for live
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          IMAGE: ${{ steps.img.outputs.backend }}:${{ steps.ver.outputs.version }}
+        run: bash .github/scripts/render-deploy.sh
 
       - name: Publish final release
         env:
@@ -45,18 +100,6 @@ jobs:
           else
             gh release create "$TAG" \
               --title "$TAG" \
-              --notes "Promoted from \`${{ github.event.pull_request.head.ref }}\` (PR #${{ github.event.pull_request.number }})." \
+              --notes "Promoted from \`${{ github.event.pull_request.head.ref }}\` (PR #${{ github.event.pull_request.number }}). Image \`${{ steps.img.outputs.backend }}:${{ steps.ver.outputs.version }}\` is live on Render." \
               --target main
           fi
-
-      - name: Trigger Render deploy
-        env:
-          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
-        run: |
-          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
-            echo "::error::RENDER_DEPLOY_HOOK secret is not set. Add it in Settings → Secrets and variables → Actions."
-            exit 1
-          fi
-          echo "Release merged into main; triggering Render deploy..."
-          curl -fsS -X POST "$RENDER_DEPLOY_HOOK" > /dev/null
-          echo "Render deploy triggered."

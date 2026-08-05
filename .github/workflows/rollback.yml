@@ -1,0 +1,42 @@
+name: Rollback
+
+# Manual production rollback. Redeploys a previously published backend image tag on Render. Because
+# every release pushes an IMMUTABLE ghcr tag (the pom version, e.g. 0.0.1), rolling back is just
+# "redeploy that tag" — no rebuild, byte-for-byte the artifact that was live before.
+#
+# Does NOT touch GitHub Releases (the Release history keeps pointing at what was originally promoted).
+# Run from the Actions tab → Rollback → Run workflow, and enter the target version.
+#
+# Uses the same repo secrets as Deploy: RENDER_API_KEY, RENDER_SERVICE_ID.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to roll back to (pom version, no 'v' prefix, e.g. 0.0.1)."
+        required: true
+        type: string
+
+# Share the Deploy concurrency group so a rollback never races an in-flight deploy.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: Redeploy previous backend image (Render)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute image name
+        id: img
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "backend=ghcr.io/${OWNER}/personal-finance-backend" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy target image on Render & wait for live
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          IMAGE: ${{ steps.img.outputs.backend }}:${{ inputs.version }}
+        run: bash .github/scripts/render-deploy.sh
