@@ -1,0 +1,44 @@
+name: Release Candidate
+
+# Every merge into develop publishes a pre-release (release candidate) snapshot of the integration
+# branch: tag v<pom-version>-rc.<run>, e.g. v0.0.1-rc.42. It is NOT a deploy — it only marks what is
+# currently integrated in develop. The version comes from backend/pom.xml (single source of truth).
+on:
+  push:
+    branches: [develop]
+
+# Prevent overlapping RC publishes if several merges land close together.
+concurrency:
+  group: release-candidate
+  cancel-in-progress: false
+
+jobs:
+  release-candidate:
+    name: Publish RC pre-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required to create the GitHub Release/tag
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from pom.xml
+        id: ver
+        run: |
+          # Direct child <version> of <project> (not the Spring Boot parent's), with -SNAPSHOT stripped.
+          V=$(xmllint --xpath "/*[local-name()='project']/*[local-name()='version']/text()" backend/pom.xml)
+          V=${V%-SNAPSHOT}
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Project version: $V"
+
+      - name: Publish RC pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.ver.outputs.version }}-rc.${{ github.run_number }}"
+          echo "Creating pre-release $TAG at ${GITHUB_SHA}"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "Release candidate — snapshot of \`develop\` at ${GITHUB_SHA}." \
+            --prerelease \
+            --target "${GITHUB_SHA}"
