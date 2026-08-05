@@ -79,7 +79,10 @@ export class UploadComponent implements OnInit {
   private groupByMonth(sessions: ImportSessionResponse[]): MonthGroup[] {
     const map = new Map<string, ImportSessionResponse[]>();
     for (const s of sessions) {
-      const date = s.periodStart ? new Date(s.periodStart + 'T00:00:00') : new Date(s.createdAt);
+      // Use periodEnd for grouping: faturas have periodStart in the previous billing month,
+      // while periodEnd falls in the closing month that matches the competence date of transactions.
+      const anchor = s.periodEnd ?? s.periodStart;
+      const date = anchor ? new Date(anchor + 'T00:00:00') : new Date(s.createdAt);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
       if (!map.has(key)) map.set(key, []);
@@ -171,8 +174,9 @@ export class UploadComponent implements OnInit {
   }
 
   goToTransactions(session: ImportSessionResponse): void {
-    if (session.periodStart) {
-      const d = new Date(session.periodStart + 'T00:00:00');
+    const anchor = session.periodEnd ?? session.periodStart;
+    if (anchor) {
+      const d = new Date(anchor + 'T00:00:00');
       const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       this.period.setFromMonthString(month);
       this.router.navigate(['/transactions']);
