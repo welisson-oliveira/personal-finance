@@ -18,6 +18,9 @@ jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
+    # Só em PR. No merge (push no develop) NÃO re-roda: a branch protection já exigiu Backend verde pra
+    # mergear, então o código integrado já foi validado — re-testar seria a duplicação PR↔merge.
+    if: github.event_name == 'pull_request'
     defaults:
       run:
         working-directory: backend
@@ -41,6 +44,8 @@ jobs:
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
+    # Só em PR (mesmo motivo do Backend): no merge não re-roda.
+    if: github.event_name == 'pull_request'
     defaults:
       run:
         working-directory: frontend
@@ -121,9 +126,10 @@ jobs:
   candidate:
     name: Publish candidate
     runs-on: ubuntu-latest
-    # Gateado por backend+frontend. O docker check não roda no push do develop (só em PR), então não
-    # entra no needs — senão o candidato seria pulado junto com ele.
-    needs: [backend, frontend]
+    # Roda sozinho no push do develop, SEM re-rodar os testes. A validação é a branch protection do
+    # develop (exige Backend+Frontend verdes pra mergear), então o commit integrado já é confiável.
+    # Recomendado ligar "Require branches to be up to date before merging" pra fechar a brecha de o
+    # develop ter avançado entre o CI do PR e o merge.
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     permissions:
       contents: write # required to create the GitHub Release/tag
