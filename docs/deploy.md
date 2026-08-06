@@ -113,22 +113,26 @@ feature/* ──PR──▶ develop ──(push)──▶ [CI verde] ──▶ R
 
 | Workflow          | Arquivo        | Dispara em                                          | O que faz |
 | ----------------- | -------------- | --------------------------------------------------- | --------- |
-| CI                | `ci.yml`         | push/PR em `develop` e `main`                       | Spotless, testes (back), lint/format/test/build (front), build das imagens Docker (sem push). No push em `develop`, o job final **`release-candidate`** (gateado por `needs`) publica a pre-release `v<versão>-rc.<run>` — **só com o CI verde** |
-| Cut Release       | `cut-release.yml`| manual (`workflow_dispatch`, input `rc_tag`)        | Cria a branch `release/<versão>` **no commit exato do RC** e abre o PR para `main` |
-| Deploy            | `deploy.yml`     | PR **fechado+mergeado** em `main`, head `release/*` | Build+push da imagem do backend no ghcr, deploy no Render via API, espera `live`, publica a Release |
+| CI                | `ci.yml`         | push/PR em `develop` e `main`                       | Spotless, testes (back), lint/format/test/build (front), build das imagens Docker (sem push). No push em `develop`, o job final **`release-candidate`** (gateado por `needs`) publica a pre-release `v<versão>-rc.<run>` — **só com o CI verde** e **só se a versão ainda não foi deployada** |
+| Cut Release       | `cut-release.yml`| manual (`workflow_dispatch`)                        | Sem digitar nada: promove o **RC mais recente** (ou uma tag informada), cria `release/<versão>` **no commit do RC** e abre o PR para `main` |
+| Deploy            | `deploy.yml`     | PR **fechado+mergeado** em `main`, head `release/*` | **Falha se a versão já foi deployada**; senão build+push da imagem no ghcr, deploy no Render via API, espera `live`, publica a Release |
 | Rollback          | `rollback.yml`   | manual (`workflow_dispatch`, input `version`)       | Redeploya um tag imutável anterior no Render |
 
 A lógica "dispara deploy no Render + faz poll até `live`" fica em **`.github/scripts/render-deploy.sh`**, compartilhada por `deploy.yml` e `rollback.yml` (recebe `RENDER_API_KEY`, `RENDER_SERVICE_ID`, `IMAGE`; sai ≠ 0 se falhar ou estourar 20 min).
 
 ### Cortar uma release (RC → produção)
 
-Cada push no `develop` gera um RC (`v<versão>-rc.<run>`). Um RC é só um **marcador** — não faz deploy. Para promover um deles:
+Cada push no `develop` gera um RC (`v<versão>-rc.<run>`). Um RC é só um **marcador** — não faz deploy. Para promover:
 
-1. **Actions → Cut Release → Run workflow**, cole o tag do RC (ex. `v0.0.1-rc.363`).
+1. **Actions → Cut Release → Run workflow** e **deixe o campo vazio** (não precisa digitar tag): ele promove o **RC mais recente**. Se quiser um RC específico, informe a tag.
 2. O workflow cria `release/<versão>` **no commit exato do RC** e abre o PR para `main`.
 3. Você **revisa e aprova**. O merge dispara o `deploy.yml`.
 
-> **Por que cortar do commit do RC** (e não do `develop` atual): o `develop` pode ter avançado desde o RC. Apontar a release para o SHA do RC garante que produção recebe **exatamente** o que passou no CI. Como esse SHA já tem os checks `Backend`/`Frontend` verdes, a branch protection do `main` os enxerga **sem reexecutar** o CI. Se você exigir que o CI rode de novo no PR de release, abra-o manualmente (ou use um PAT no workflow em vez do `GITHUB_TOKEN` — eventos disparados pelo `GITHUB_TOKEN` não acionam outros workflows).
+> **Por que cortar do commit do RC** (e não do `develop` atual): o `develop` pode ter avançado desde o RC. Apontar a release para o SHA do RC garante que produção recebe **exatamente** o que passou no CI. Como esse SHA já tem os checks `Backend`/`Frontend` verdes, a branch protection do `main` os enxerga **sem reexecutar** o CI.
+
+### Trava: uma versão só é deployada uma vez
+
+A release final `v<versão>` é criada só pelo deploy. Enquanto ela existir, **subir a mesma versão de novo falha** — no Cut Release, no Deploy e até no job de RC do `develop`. Consequência prática: **depois de deployar `v0.0.1`, o próximo merge no `develop` falha** até você subir o pom para a próxima versão (ex. `0.0.2-SNAPSHOT`). É a trava que garante que cada versão em produção é única e imutável.
 
 ### Artefato: imagem imutável no ghcr
 

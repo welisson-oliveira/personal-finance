@@ -111,6 +111,18 @@ jobs:
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "Project version: $V"
 
+      - name: Falhar se a versão já foi deployada
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          # Se v<versão> já é uma release final (já foi para produção), não faz sentido gerar mais RC
+          # dessa versão — o develop deve seguir na PRÓXIMA versão. Suba o pom antes de mergear.
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "::error::v$VERSION já foi deployada. Suba a versão no pom (ex. próxima MINOR/PATCH -SNAPSHOT) antes de mergear no develop."
+            exit 1
+          fi
+
       - name: Publish RC pre-release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
