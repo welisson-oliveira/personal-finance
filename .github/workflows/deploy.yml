@@ -7,7 +7,8 @@ name: Deploy
 #   1. Builds the backend image and pushes it to GitHub Container Registry (ghcr.io) with the IMMUTABLE
 #      version tag from backend/pom.xml (e.g. 0.0.1) plus :latest.
 #   2. Tells Render to deploy that exact image via the Render API and WAITS until it is live.
-#   3. Only after a healthy, live deploy, publishes the final GitHub Release v<version>.
+#   3. Only after a healthy, live deploy, promotes the candidate pre-release to the final GitHub
+#      Release <version> (tag = the version number, no v/rc).
 #
 # Render runs the BACKEND only. If the deploy fails its health check, Render keeps the previous version
 # live (zero-downtime), the run goes red, and no Release is published — prod is untouched. Use the
@@ -57,6 +58,19 @@ jobs:
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "Deploying version: $V"
 
+      - name: Falhar se a versão já foi deployada
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          # A tag <versão> pode existir como CANDIDATO (pré-release) — isso é esperado, será promovida.
+          # Mas se já for release FINAL, essa versão já foi para produção — deployar de novo é erro
+          # (imagem/tag imutável). Suba a versão no pom antes.
+          if [ "$(gh release view "$VERSION" --json isPrerelease -q .isPrerelease 2>/dev/null)" = "false" ]; then
+            echo "::error::$VERSION já foi deployada em produção. Suba a versão no pom antes de subir de novo."
+            exit 1
+          fi
+
       - name: Compute image name
         id: img
         run: |
@@ -81,8 +95,10 @@ jobs:
           tags: |
             ${{ steps.img.outputs.backend }}:${{ steps.ver.outputs.version }}
             ${{ steps.img.outputs.backend }}:latest
+          # Só LÊ o cache (o CI já popula via type=gha). Escrever aqui (cache-to) disputava o mesmo
+          # cache do job Docker do CI e derrubava o deploy com "failed to reserve cache" — depois de
+          # a imagem já ter sido publicada. Ler é inofensivo; um miss só rebuilda.
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Deploy image on Render & wait for live
         env:
@@ -91,16 +107,18 @@ jobs:
           IMAGE: ${{ steps.img.outputs.backend }}:${{ steps.ver.outputs.version }}
         run: bash .github/scripts/render-deploy.sh
 
-      - name: Publish final release
+      - name: Promover o candidato à Release final
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          NOTES: "Promovido de `${{ github.event.pull_request.head.ref }}` (PR #${{ github.event.pull_request.number }}). Imagem `${{ steps.img.outputs.backend }}:${{ steps.ver.outputs.version }}` live no Render."
         run: |
-          TAG="v${{ steps.ver.outputs.version }}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists — skipping creation."
+          # Tag = a versão (sem v/rc). Se o candidato (pré-release) existe, promove-o a release final;
+          # senão cria a release final direto.
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Promovendo o candidato $VERSION para release final."
+            gh release edit "$VERSION" --prerelease=false --latest --notes "$NOTES"
           else
-            gh release create "$TAG" \
-              --title "$TAG" \
-              --notes "Promoted from \`${{ github.event.pull_request.head.ref }}\` (PR #${{ github.event.pull_request.number }}). Image \`${{ steps.img.outputs.backend }}:${{ steps.ver.outputs.version }}\` is live on Render." \
-              --target main
+            echo "Criando a Release final $VERSION."
+            gh release create "$VERSION" --title "$VERSION" --latest --target main --notes "$NOTES"
           fi

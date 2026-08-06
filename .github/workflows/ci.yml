@@ -1,10 +1,11 @@
 name: CI
 
 on:
-  # Push builds only on the long-lived branches; feature branches are covered by their PR run below,
-  # so a branch with an open PR no longer runs CI twice.
+  # CI roda no push do develop (pra gerar o candidato) e nos PRs. NÃO roda no push da main: a main só
+  # é alcançada via PR de release, que já foi validado como PR — re-rodar no commit de merge seria só
+  # rebuildar/retestar exatamente o mesmo código. O Deploy é o único workflow que dispara no merge.
   push:
-    branches: [develop, main]
+    branches: [develop]
   pull_request:
     branches: [main, develop]
 
@@ -73,6 +74,9 @@ jobs:
     name: Docker build check
     runs-on: ubuntu-latest
     needs: [backend, frontend]
+    # Só em PR para develop. Não roda em push (já foi checado no PR) nem em PR de release para main
+    # (o Deploy builda a imagem de verdade logo após o merge). O Dockerfile já foi validado no candidato.
+    if: github.event_name == 'pull_request' && github.base_ref == 'develop'
 
     steps:
       - uses: actions/checkout@v4
@@ -87,13 +91,39 @@ jobs:
           COMPOSE_BAKE: "true"
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build
 
-  # Release candidate: publishes a pre-release snapshot of develop, but ONLY after the whole CI passes
-  # (needs backend+frontend+docker). Gating it here — instead of a standalone workflow triggered in
-  # parallel on push — guarantees an RC never marks a commit with red CI. Runs only on push to develop.
-  release-candidate:
-    name: Publish RC pre-release
+  # PR guard (trava de versão): em PRs para develop, falha se a versão do pom já tem tag/release. Força
+  # cada PR a subir backend/pom.xml para uma versão nova — dois merges nunca compartilham a mesma tag.
+  # Torne este check REQUIRED na branch protection do develop para ele de fato bloquear o merge.
+  version-check:
+    name: Version bump check
     runs-on: ubuntu-latest
-    needs: [backend, frontend, docker]
+    if: github.event_name == 'pull_request' && github.base_ref == 'develop'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Falhar se a versão do pom já tem tag/release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          V=$(python3 -c "import xml.etree.ElementTree as ET; r=ET.parse('backend/pom.xml').getroot(); ns={'m':r.tag[r.tag.find('{')+1:r.tag.find('}')]}; print(r.find('m:version',ns).text)")
+          V=${V%-SNAPSHOT}
+          echo "Versão do pom: $V"
+          if gh release view "$V" >/dev/null 2>&1; then
+            echo "::error::A versão $V já tem release/tag. Suba backend/pom.xml para a próxima versão (X.Y.Z-SNAPSHOT) neste PR."
+            exit 1
+          fi
+          echo "OK — $V ainda não tem tag."
+
+  # Candidato: publica um pre-release marcando o develop, mas SÓ com o CI inteiro verde (needs). A tag é
+  # apenas o número da versão (sem v/rc/.n). O deploy depois PROMOVE esse pre-release a release final.
+  candidate:
+    name: Publish candidate
+    runs-on: ubuntu-latest
+    # Gateado por backend+frontend. O docker check não roda no push do develop (só em PR), então não
+    # entra no needs — senão o candidato seria pulado junto com ele.
+    needs: [backend, frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     permissions:
       contents: write # required to create the GitHub Release/tag
@@ -111,14 +141,20 @@ jobs:
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "Project version: $V"
 
-      - name: Publish RC pre-release
+      - name: Publicar candidato (pre-release)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          V: ${{ steps.ver.outputs.version }}
         run: |
-          TAG="v${{ steps.ver.outputs.version }}-rc.${{ github.run_number }}"
-          echo "Creating pre-release $TAG at ${GITHUB_SHA}"
-          gh release create "$TAG" \
-            --title "$TAG" \
-            --notes "Release candidate — snapshot of \`develop\` at ${GITHUB_SHA} (CI green)." \
+          # Tag = a versão, sem v/rc/.n. Se já existir (versão reusada — o version-check deveria ter
+          # pego), falha pedindo bump. É o backstop da trava caso dois PRs corram.
+          if gh release view "$V" >/dev/null 2>&1; then
+            echo "::error::A versão $V já tem release/tag. Suba backend/pom.xml antes de mergear no develop."
+            exit 1
+          fi
+          echo "Criando candidato $V em ${GITHUB_SHA}"
+          gh release create "$V" \
+            --title "$V" \
+            --notes "Candidato — snapshot de \`develop\` em ${GITHUB_SHA} (CI verde)." \
             --prerelease \
             --target "${GITHUB_SHA}"
