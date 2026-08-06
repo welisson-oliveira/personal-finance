@@ -13,7 +13,7 @@
 
     <groupId>com.personalfinance</groupId>
     <artifactId>personal-finance-backend</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>0.0.3-SNAPSHOT</version>
     <name>personal-finance-backend</name>
     <description>Personal Finance Control - Backend API</description>
 
