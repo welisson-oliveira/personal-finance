@@ -1,17 +1,17 @@
 name: Cut Release
 
-# Promove um release candidate para um PR de release. Por padrão promove o RC MAIS RECENTE — é só
+# Promove um candidato para um PR de release. Por padrão promove o candidato MAIS RECENTE — é só
 # clicar "Run workflow" e deixar o campo vazio (nada pra digitar). Cria a branch release/<versão>
-# apontando para o COMMIT EXATO do RC e abre um PR para main.
+# apontando para o COMMIT EXATO do candidato e abre um PR para main.
 #
-# Como a branch aponta para o commit do RC (que já passou no CI), os mesmos check runs "Backend"/
-# "Frontend" já estão verdes nesse SHA — a branch protection do main os enxerga sem reexecutar. Ao
-# mergear o PR, o workflow Deploy builda/pusha a imagem e sobe no Render.
+# Como a branch aponta para o commit do candidato (que já passou no CI), os mesmos check runs
+# "Backend"/"Frontend" já estão verdes nesse SHA — a branch protection do main os enxerga sem
+# reexecutar. Ao mergear o PR, o workflow Deploy builda/pusha a imagem e sobe no Render.
 on:
   workflow_dispatch:
     inputs:
-      rc_tag:
-        description: "Deixe VAZIO para promover o RC mais recente. Ou informe uma tag específica (ex. v0.0.1-rc.365)."
+      version:
+        description: "Deixe VAZIO para promover o candidato mais recente. Ou informe uma versão (ex. 0.0.1)."
         required: false
         type: string
 
@@ -26,53 +26,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # precisa do histórico e dos tags para resolver o RC
+          fetch-depth: 0 # precisa do histórico e dos tags para resolver o candidato
 
-      - name: Resolver o RC e derivar a versão
+      - name: Resolver o candidato
         id: v
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RC_INPUT: ${{ inputs.rc_tag }}
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
-          RC="$RC_INPUT"
-          if [ -z "$RC" ]; then
-            # Nada digitado: pega a pré-release (RC) mais recente publicada.
-            RC=$(gh release list --limit 40 --json tagName,isPrerelease,createdAt \
-                 --jq 'map(select(.isPrerelease and (.tagName|test("-rc\\.[0-9]+$")))) | sort_by(.createdAt) | last | .tagName')
-            if [ -z "$RC" ] || [ "$RC" = "null" ]; then
-              echo "::error::Nenhum RC (pré-release vX.Y.Z-rc.N) encontrado para promover."
+          VERSION="$VERSION_INPUT"
+          if [ -z "$VERSION" ]; then
+            # Nada digitado: pega o candidato (pré-release) mais recente publicado.
+            VERSION=$(gh release list --limit 40 --json tagName,isPrerelease,createdAt \
+                      --jq 'map(select(.isPrerelease)) | sort_by(.createdAt) | last | .tagName')
+            if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+              echo "::error::Nenhum candidato (pré-release) encontrado para promover."
               exit 1
             fi
-            echo "Nenhuma tag informada → promovendo o RC mais recente: $RC"
+            echo "Nada informado → promovendo o candidato mais recente: $VERSION"
           fi
-          if [[ ! "$RC" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
-            echo "::error::'$RC' não parece um tag de RC (esperado: vX.Y.Z-rc.N)."
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$VERSION' não é uma versão válida (esperado: X.Y.Z)."
             exit 1
           fi
-          VERSION="${RC#v}"          # 0.0.1-rc.365
-          VERSION="${VERSION%-rc.*}" # 0.0.1
-          SHA=$(git rev-list -n1 "$RC") || { echo "::error::Tag $RC não encontrado no repositório."; exit 1; }
+          SHA=$(git rev-list -n1 "$VERSION") || { echo "::error::Tag $VERSION não encontrado no repositório."; exit 1; }
           {
-            echo "rc=$RC"
             echo "version=$VERSION"
             echo "branch=release/$VERSION"
             echo "sha=$SHA"
           } >> "$GITHUB_OUTPUT"
-          echo "Promovendo $RC → versão $VERSION → branch release/$VERSION @ $SHA"
+          echo "Promovendo $VERSION @ $SHA → branch release/$VERSION"
 
       - name: Falhar se a versão já foi deployada
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.v.outputs.version }}
         run: |
-          # A release final é criada só no deploy. Se v<versão> já existe, essa versão já foi para
+          # Um candidato é pré-release (esperado). Se a tag já for release FINAL, a versão já foi para
           # produção — promover de novo é erro. Suba a versão no pom antes.
-          if gh release view "v$VERSION" >/dev/null 2>&1; then
-            echo "::error::v$VERSION já foi deployada em produção. Suba a versão no pom (ex. próxima MINOR/PATCH) antes de promover."
+          if [ "$(gh release view "$VERSION" --json isPrerelease -q .isPrerelease 2>/dev/null)" = "false" ]; then
+            echo "::error::$VERSION já foi deployada em produção. Suba a versão no pom antes de promover."
             exit 1
           fi
 
-      - name: Criar branch de release no commit do RC
+      - name: Criar branch de release no commit do candidato
         env:
           BRANCH: ${{ steps.v.outputs.branch }}
           SHA: ${{ steps.v.outputs.sha }}
@@ -87,20 +84,19 @@ jobs:
       - name: Abrir PR para main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RC: ${{ steps.v.outputs.rc }}
           BRANCH: ${{ steps.v.outputs.branch }}
           VERSION: ${{ steps.v.outputs.version }}
         run: |
           cat > pr-body.md <<EOF
-          Promove o RC \`$RC\` para produção.
+          Promove o candidato \`$VERSION\` para produção.
 
-          Ao **mergear** este PR, o workflow **Deploy** builda a imagem \`$VERSION\`, publica no ghcr, sobe no Render e, quando \`live\`, publica a Release \`v$VERSION\`.
+          Ao **mergear** este PR, o workflow **Deploy** builda a imagem \`$VERSION\`, publica no ghcr, sobe no Render e, quando \`live\`, promove o candidato à Release final \`$VERSION\`.
 
-          - Cortado do commit exato do RC (mesmo SHA já validado no CI).
+          - Cortado do commit exato do candidato (mesmo SHA já validado no CI).
           - Pré-requisito: setup do Render pronto — ver \`docs/deploy.md\`.
           EOF
           gh pr create \
             --base main \
             --head "$BRANCH" \
-            --title "release: v$VERSION" \
+            --title "release: $VERSION" \
             --body-file pr-body.md

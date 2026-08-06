@@ -94,45 +94,54 @@ Em runtime o app lê `assets/config.json` (`ConfigService` + `apiUrlInterceptor`
 Como o código sai de `develop` e chega em produção, automatizado em `.github/workflows/`. **Ao mexer em qualquer workflow, atualize esta seção na mesma PR.**
 
 ```
-feature/* ──PR──▶ develop ──(push)──▶ [CI verde] ──▶ RC  v<versão>-rc.<run>  (pre-release, NÃO faz deploy)
+feature/* (com pom bumpado) ──PR──▶ [version-check: falha se a versão já tem tag] ──▶ develop
                      │
-        Cut Release (manual, informa o tag do RC) ──▶ cria release/<versão> no commit do RC
+                develop ──(push)──▶ [CI verde] ──▶ candidato  <versão>  (pre-release, tag = a versão, NÃO faz deploy)
+                     │
+        Cut Release (manual, vazio = mais recente) ──▶ cria release/<versão> no commit do candidato
                      │
                 release/*  ──PR──▶ main ──(merge)──▶ [Deploy]
                                                        ├─ build + push  ghcr.io/<owner>/personal-finance-backend:<versão> (+ :latest)
                                                        ├─ Render deploy dessa imagem via API ──▶ espera status "live"
-                                                       │     ├─ live  → publica Release v<versão>
+                                                       │     ├─ live  → PROMOVE o candidato à Release final <versão>
                                                        │     └─ falhou/timeout → run vermelho, SEM Release; versão anterior fica no ar
                                                        └─ health check /api/actuator/health gateia o corte de tráfego
 ```
 
-- **Fonte da versão:** `backend/pom.xml` (`<version>`, sem `-SNAPSHOT`). Única fonte — dita a tag do RC, da imagem e da Release. Lida com `python3` (`xml.etree`), **não** com `xmllint` (o runner `ubuntu-latest` não traz mais o `libxml2-utils`).
+- **Fonte da versão:** `backend/pom.xml` (`<version>`, sem `-SNAPSHOT`). Única fonte da tag (só o número — **sem `v`, sem `rc`, sem `.n`**), da imagem e da Release. Lida com `python3` (`xml.etree`), **não** com `xmllint` (o runner `ubuntu-latest` não traz mais o `libxml2-utils`).
+- **Uma versão, uma tag:** cada PR para `develop` precisa **subir a versão** no pom. O `version-check` **falha o PR** se a versão já tiver tag/release — dois merges nunca compartilham a tag.
 - **Git Flow:** feature sai de `develop` e volta pra `develop`; produção só recebe via `release/* → main`. Nunca abra PR de feature para `main`.
 
 ### Workflows
 
 | Workflow          | Arquivo        | Dispara em                                          | O que faz |
 | ----------------- | -------------- | --------------------------------------------------- | --------- |
-| CI                | `ci.yml`         | push/PR em `develop` e `main`                       | Spotless, testes (back), lint/format/test/build (front), build das imagens Docker (sem push). No push em `develop`, o job final **`release-candidate`** (gateado por `needs`) publica a pre-release `v<versão>-rc.<run>` — **só com o CI verde** e **só se a versão ainda não foi deployada** |
-| Cut Release       | `cut-release.yml`| manual (`workflow_dispatch`)                        | Sem digitar nada: promove o **RC mais recente** (ou uma tag informada), cria `release/<versão>` **no commit do RC** e abre o PR para `main` |
-| Deploy            | `deploy.yml`     | PR **fechado+mergeado** em `main`, head `release/*` | **Falha se a versão já foi deployada**; senão build+push da imagem no ghcr, deploy no Render via API, espera `live`, publica a Release |
+| CI                | `ci.yml`         | push/PR em `develop` e `main`                       | Spotless, testes (back), lint/format/test/build (front), build das imagens Docker (sem push). Em **PR para `develop`**, o job **`version-check`** falha se a versão do pom já tem tag. No **push em `develop`**, o job **`candidate`** (gateado por `needs`) publica o pré-release **`<versão>`** (tag = só o número) — **só com o CI verde** |
+| Cut Release       | `cut-release.yml`| manual (`workflow_dispatch`)                        | Sem digitar nada: promove o **candidato mais recente** (ou uma versão informada), cria `release/<versão>` **no commit do candidato** e abre o PR para `main` |
+| Deploy            | `deploy.yml`     | PR **fechado+mergeado** em `main`, head `release/*` | **Falha se a versão já é release final**; senão build+push da imagem no ghcr, deploy no Render via API, espera `live`, **promove o candidato à Release final** |
 | Rollback          | `rollback.yml`   | manual (`workflow_dispatch`, input `version`)       | Redeploya um tag imutável anterior no Render |
 
 A lógica "dispara deploy no Render + faz poll até `live`" fica em **`.github/scripts/render-deploy.sh`**, compartilhada por `deploy.yml` e `rollback.yml` (recebe `RENDER_API_KEY`, `RENDER_SERVICE_ID`, `IMAGE`; sai ≠ 0 se falhar ou estourar 20 min).
 
-### Cortar uma release (RC → produção)
+### Versionamento — uma versão por PR
 
-Cada push no `develop` gera um RC (`v<versão>-rc.<run>`). Um RC é só um **marcador** — não faz deploy. Para promover:
+A unicidade da tag vem da **versão** (não de um `rc.N`). Regra: **todo PR para `develop` sobe `backend/pom.xml`** para uma versão que ainda não tem tag. O job **`version-check`** falha o PR que esquecer de bumpar — assim dois merges nunca geram a mesma tag.
 
-1. **Actions → Cut Release → Run workflow** e **deixe o campo vazio** (não precisa digitar tag): ele promove o **RC mais recente**. Se quiser um RC específico, informe a tag.
-2. O workflow cria `release/<versão>` **no commit exato do RC** e abre o PR para `main`.
-3. Você **revisa e aprova**. O merge dispara o `deploy.yml`.
+> Torne o `Version bump check` um **required status check** na branch protection do `develop` para ele de fato bloquear o merge.
 
-> **Por que cortar do commit do RC** (e não do `develop` atual): o `develop` pode ter avançado desde o RC. Apontar a release para o SHA do RC garante que produção recebe **exatamente** o que passou no CI. Como esse SHA já tem os checks `Backend`/`Frontend` verdes, a branch protection do `main` os enxerga **sem reexecutar** o CI.
+Ao mergear, o `candidate` publica o pré-release **`<versão>`** (ex. `0.0.1`) apontando pro commit do merge. Esse é o candidato.
+
+### Cortar uma release (candidato → produção)
+
+1. **Actions → Cut Release → Run workflow** e **deixe o campo vazio**: promove o **candidato mais recente**. Se quiser um específico, informe a versão (ex. `0.0.1`).
+2. O workflow cria `release/<versão>` **no commit exato do candidato** e abre o PR para `main`.
+3. Você **revisa e aprova**. O merge dispara o `deploy.yml`, que ao ficar `live` **promove o candidato** (pré-release → release final).
+
+> **Por que cortar do commit do candidato:** aquele SHA já tem os checks `Backend`/`Frontend` verdes, então a branch protection do `main` os enxerga **sem reexecutar** o CI, e produção recebe exatamente o que foi validado.
 
 ### Trava: uma versão só é deployada uma vez
 
-A release final `v<versão>` é criada só pelo deploy. Enquanto ela existir, **subir a mesma versão de novo falha** — no Cut Release, no Deploy e até no job de RC do `develop`. Consequência prática: **depois de deployar `v0.0.1`, o próximo merge no `develop` falha** até você subir o pom para a próxima versão (ex. `0.0.2-SNAPSHOT`). É a trava que garante que cada versão em produção é única e imutável.
+A **Release final** `<versão>` (pré-release promovido a final) marca o que foi para produção. Enquanto ela existir como **final**, subir a mesma versão de novo falha — no Cut Release e no Deploy. Combinado com o `version-check`, isso garante que cada versão em produção é única e imutável: **depois de deployar `0.0.1`, você precisa subir o pom** (ex. `0.0.2-SNAPSHOT`) para o próximo ciclo.
 
 ### Artefato: imagem imutável no ghcr
 
@@ -158,7 +167,7 @@ O Render precisa de uma imagem existente para criar o serviço, mas a imagem só
 
 - **Actions** → run `Deploy` verde, com `Deploy … is live` no log.
 - **Packages** (ghcr) → `personal-finance-backend` com a tag da versão e `latest`.
-- **Releases** → `v<versão>` publicada.
+- **Releases** → `<versão>` como release final (o candidato deixou de ser pré-release).
 - `GET https://<backend>.onrender.com/api/actuator/health` → `{"status":"UP"}`.
 
 ## Rodando local (sem deploy)
