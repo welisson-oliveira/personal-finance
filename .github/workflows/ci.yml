@@ -1,10 +1,11 @@
 name: CI
 
 on:
-  # Push builds only on the long-lived branches; feature branches are covered by their PR run below,
-  # so a branch with an open PR no longer runs CI twice.
+  # CI roda no push do develop (pra gerar o candidato) e nos PRs. NÃO roda no push da main: a main só
+  # é alcançada via PR de release, que já foi validado como PR — re-rodar no commit de merge seria só
+  # rebuildar/retestar exatamente o mesmo código. O Deploy é o único workflow que dispara no merge.
   push:
-    branches: [develop, main]
+    branches: [develop]
   pull_request:
     branches: [main, develop]
 
@@ -73,6 +74,9 @@ jobs:
     name: Docker build check
     runs-on: ubuntu-latest
     needs: [backend, frontend]
+    # Só em PR para develop. Não roda em push (já foi checado no PR) nem em PR de release para main
+    # (o Deploy builda a imagem de verdade logo após o merge). O Dockerfile já foi validado no candidato.
+    if: github.event_name == 'pull_request' && github.base_ref == 'develop'
 
     steps:
       - uses: actions/checkout@v4
@@ -117,7 +121,9 @@ jobs:
   candidate:
     name: Publish candidate
     runs-on: ubuntu-latest
-    needs: [backend, frontend, docker]
+    # Gateado por backend+frontend. O docker check não roda no push do develop (só em PR), então não
+    # entra no needs — senão o candidato seria pulado junto com ele.
+    needs: [backend, frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     permissions:
       contents: write # required to create the GitHub Release/tag
