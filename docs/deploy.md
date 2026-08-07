@@ -96,11 +96,11 @@ Em runtime o app lê `assets/config.json` (`ConfigService` + `apiUrlInterceptor`
 O deploy do frontend é o **Cloudflare Pages nativo** (não passa pelo GitHub Actions), alinhado ao Git Flow:
 
 - **Production branch = `main`** → o front de produção só atualiza quando um release chega na `main` — mesmo gatilho do backend. Configurar em Pages → Settings → Builds & deployments → **Production branch**.
-- **Preview deployments** automáticos para `develop` e PRs → URL de review por branch (ex. alias `develop.<projeto>.pages.dev`). Bom pra validar antes do release.
-- **Rollback** nativo: Pages → Deployments → deploy anterior → **Rollback**.
+- **Preview deployments = None** → Pages → Settings → Builds & deployments → **Preview deployments → None**. Só o `main` builda (produção); nenhuma branch gera preview. Motivo: o Pages builda **um deployment por vez** (serial), então previews de `develop`/`release/*` entram na fila e um espera o outro. Como o `release/*` é o mesmo código que vai pro `main` segundos depois, o preview era redundante — desligar dá **1 build por release, sem fila**.
+- **Rollback** nativo: Pages → Deployments → deploy anterior → **Rollback**. (É a rede de segurança que substitui o "olhar no preview antes de promover".)
 - ⚠️ **Não é gated pelo CI do GitHub** — o Pages builda por conta própria. A garantia de que só código validado chega na `main` vem da branch protection do `develop` (exige o CI verde pra mergear) + o Git Flow (`main` só via release).
 
-**CORS dos previews:** cada preview tem origem própria e o backend só libera a de produção. Se quiser que o preview do `develop` funcione contra o backend, adicione o alias dele ao `CORS_ALLOWED_ORIGINS` no Render (separado por vírgula). Previews de PR (hash aleatório) não dá pra liberar um a um.
+> Se um dia quiser um staging pra revisar antes do prod, ligue preview só pra `release/*` (Custom branches → Include `release/*`) — aí aceita 2 builds serializados por release. Nesse caso, pra o preview falar com o backend, adicione o alias dele ao `CORS_ALLOWED_ORIGINS` no Render.
 
 ## 4. Pós-deploy — importante
 
