@@ -14,6 +14,17 @@ Guia para subir a aplicação de graça para poucos usuários, usando três serv
 
 > ⚠️ Free tiers mudam. Confira os limites atuais de cada provedor na hora de subir.
 
+## Ambiente em produção (alfa)
+
+| Camada | URL |
+| --- | --- |
+| Frontend (Cloudflare Pages) | <https://personal-finance-2c1.pages.dev> |
+| Backend (Render · imagem do ghcr) | <https://personal-finance-backend-latest-8el1.onrender.com> |
+| Health check | `…/api/actuator/health` |
+| Banco | Neon (PostgreSQL) |
+
+**Amarração:** o front lê `assets/config.json` (`apiBaseUrl` = URL do backend, injetada no build do Pages via a env `API_BASE_URL`) e o interceptor prefixa `/api`; o backend libera a origem do Pages via `CORS_ALLOWED_ORIGINS`. Trocou alguma URL? Atualize `API_BASE_URL` (Pages) e `CORS_ALLOWED_ORIGINS` (Render).
+
 ---
 
 ## 1. Banco — Neon
@@ -79,6 +90,17 @@ O Render **não builda do repositório**: ele puxa a imagem pronta que o CI publ
 ### Como o frontend acha o backend
 
 Em runtime o app lê `assets/config.json` (`ConfigService` + `apiUrlInterceptor`). Se `apiBaseUrl` estiver vazio, as chamadas `/api/...` ficam **relativas** (funciona no `npm start` com o `proxy.conf.json` e num deploy same-host com o Nginx). No Pages, o comando de build injeta a URL do backend em `config.json`, e o interceptor prefixa as chamadas — por isso o backend precisa liberar o CORS da origem do Pages.
+
+### Esteira (deploy contínuo)
+
+O deploy do frontend é o **Cloudflare Pages nativo** (não passa pelo GitHub Actions), alinhado ao Git Flow:
+
+- **Production branch = `main`** → o front de produção só atualiza quando um release chega na `main` — mesmo gatilho do backend. Configurar em Pages → Settings → Builds & deployments → **Production branch**.
+- **Preview deployments** automáticos para `develop` e PRs → URL de review por branch (ex. alias `develop.<projeto>.pages.dev`). Bom pra validar antes do release.
+- **Rollback** nativo: Pages → Deployments → deploy anterior → **Rollback**.
+- ⚠️ **Não é gated pelo CI do GitHub** — o Pages builda por conta própria. A garantia de que só código validado chega na `main` vem da branch protection do `develop` (exige o CI verde pra mergear) + o Git Flow (`main` só via release).
+
+**CORS dos previews:** cada preview tem origem própria e o backend só libera a de produção. Se quiser que o preview do `develop` funcione contra o backend, adicione o alias dele ao `CORS_ALLOWED_ORIGINS` no Render (separado por vírgula). Previews de PR (hash aleatório) não dá pra liberar um a um.
 
 ## 4. Pós-deploy — importante
 
