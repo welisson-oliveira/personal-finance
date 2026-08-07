@@ -91,6 +91,17 @@ O Render **não builda do repositório**: ele puxa a imagem pronta que o CI publ
 
 Em runtime o app lê `assets/config.json` (`ConfigService` + `apiUrlInterceptor`). Se `apiBaseUrl` estiver vazio, as chamadas `/api/...` ficam **relativas** (funciona no `npm start` com o `proxy.conf.json` e num deploy same-host com o Nginx). No Pages, o comando de build injeta a URL do backend em `config.json`, e o interceptor prefixa as chamadas — por isso o backend precisa liberar o CORS da origem do Pages.
 
+### Esteira (deploy contínuo)
+
+O deploy do frontend é o **Cloudflare Pages nativo** (não passa pelo GitHub Actions), alinhado ao Git Flow:
+
+- **Production branch = `main`** → o front de produção só atualiza quando um release chega na `main` — mesmo gatilho do backend. Configurar em Pages → Settings → Builds & deployments → **Production branch**.
+- **Preview deployments** automáticos para `develop` e PRs → URL de review por branch (ex. alias `develop.<projeto>.pages.dev`). Bom pra validar antes do release.
+- **Rollback** nativo: Pages → Deployments → deploy anterior → **Rollback**.
+- ⚠️ **Não é gated pelo CI do GitHub** — o Pages builda por conta própria. A garantia de que só código validado chega na `main` vem da branch protection do `develop` (exige o CI verde pra mergear) + o Git Flow (`main` só via release).
+
+**CORS dos previews:** cada preview tem origem própria e o backend só libera a de produção. Se quiser que o preview do `develop` funcione contra o backend, adicione o alias dele ao `CORS_ALLOWED_ORIGINS` no Render (separado por vírgula). Previews de PR (hash aleatório) não dá pra liberar um a um.
+
 ## 4. Pós-deploy — importante
 
 - **Backup do banco** (são dados financeiros): rode `pg_dump` periodicamente ou use o **branching/point-in-time** do Neon.
