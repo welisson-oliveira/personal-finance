@@ -94,9 +94,9 @@ Em runtime o app lê `assets/config.json` (`ConfigService` + `apiUrlInterceptor`
 Como o código sai de `develop` e chega em produção, automatizado em `.github/workflows/`. **Ao mexer em qualquer workflow, atualize esta seção na mesma PR.**
 
 ```
-feature/* (com pom bumpado) ──PR──▶ [version-check: falha se a versão já tem tag] ──▶ develop
+feature/* (com pom bumpado) ──PR──▶ [CI: Backend+Frontend+Docker+version-check] ──(merge só com verde)──▶ develop
                      │
-                develop ──(push)──▶ [CI verde] ──▶ candidato  <versão>  (pre-release, tag = a versão, NÃO faz deploy)
+                develop ──(push)──▶ candidato  <versão>  (só publica o pre-release; NÃO re-roda testes nem faz deploy)
                      │
         Cut Release (manual, vazio = mais recente) ──▶ cria release/<versão> no commit do candidato
                      │
@@ -116,12 +116,44 @@ feature/* (com pom bumpado) ──PR──▶ [version-check: falha se a versão
 
 | Workflow          | Arquivo        | Dispara em                                          | O que faz |
 | ----------------- | -------------- | --------------------------------------------------- | --------- |
-| CI                | `ci.yml`         | push em `develop`; PR em `develop`/`main`           | Spotless, testes (back), lint/format/test/build (front). O **Docker build check** roda **só em PR para `develop`** (o Deploy builda a imagem de verdade; o merge na `main` não re-roda CI). Em PR para `develop`, o **`version-check`** falha se a versão do pom já tem tag. No push em `develop`, o **`candidate`** publica o pré-release **`<versão>`** (tag = só o número) |
+| CI                | `ci.yml`         | push em `develop`; PR em `develop`/`main`           | **Backend/Frontend rodam só em PR** — no merge (push no `develop`) **não re-rodam**, pois a branch protection já os exigiu verdes pra mergear (elimina a duplicação PR↔merge). **Docker check** e **version-check** só em PR para `develop`. No push em `develop` roda **só o `candidate`**, que publica o pré-release **`<versão>`** (tag = só o número) |
 | Cut Release       | `cut-release.yml`| manual (`workflow_dispatch`)                        | Sem digitar nada: promove o **candidato mais recente** (ou uma versão informada), cria `release/<versão>` **no commit do candidato** e abre o PR para `main` |
 | Deploy            | `deploy.yml`     | PR **fechado+mergeado** em `main`, head `release/*` | **Falha se a versão já é release final**; senão build+push da imagem no ghcr, deploy no Render via API, espera `live`, **promove o candidato à Release final** |
 | Rollback          | `rollback.yml`   | manual (`workflow_dispatch`, input `version`)       | Redeploya um tag imutável anterior no Render |
 
 A lógica "dispara deploy no Render + faz poll até `live`" fica em **`.github/scripts/render-deploy.sh`**, compartilhada por `deploy.yml` e `rollback.yml` (recebe `RENDER_API_KEY`, `RENDER_SERVICE_ID`, `IMAGE`; sai ≠ 0 se falhar ou estourar 20 min).
+
+### Configuração do GitHub (uma vez)
+
+Tudo que precisa estar ligado no lado do GitHub para o pipeline funcionar. Sem isso, os sintomas são silenciosos (Cut Release cria branch mas não abre PR, merge passa sem bump, etc.).
+
+**1. Secrets** — Settings → Secrets and variables → Actions:
+
+| Secret | Origem |
+| --- | --- |
+| `RENDER_API_KEY` | Render → Account Settings → API Keys |
+| `RENDER_SERVICE_ID` | id do serviço do backend (`srv-...`, na URL) |
+
+**2. Permissões das Actions** — Settings → Actions → General → Workflow permissions:
+
+- ✅ **Allow GitHub Actions to create and approve pull requests** — **obrigatório**, senão o **Cut Release** cria o branch `release/*` mas falha ao abrir o PR (`GitHub Actions is not permitted to create or approve pull requests`).
+
+**3. Limpeza de branches** — Settings → General → Pull Requests:
+
+- ✅ **Automatically delete head branches** — apaga `release/*` após o merge; sem isso, um `release/<versão>` velho faz o Cut Release da mesma versão colidir (`branch já existe`).
+
+**4. Branch protection** — Settings → Branches (ou Rulesets):
+
+| Branch | Required status checks |
+| --- | --- |
+| `develop` | `Backend`, `Frontend`, **`Version bump check`** |
+| `main` | `Backend`, `Frontend` |
+
+- Marque **`Version bump check`** como required no `develop` — senão ele fica vermelho de aviso mas não bloqueia o merge sem bump. (O check só aparece na lista depois de ter rodado ao menos uma vez.)
+- **Não** marque `Docker build check` como required (ele nem roda em PR de release para `main`).
+- Recomendado no `develop`: **Require branches to be up to date before merging** — garante que o merge é exatamente o código que o CI testou (o merge não re-roda os testes).
+
+> **Credencial do ghcr no Render:** a imagem é privada, então o Render precisa de um **PAT classic** com escopo `read:packages` cadastrado como *Registry Credential* (ver seção 2). É diferente dos secrets acima — mora no Render, não no GitHub.
 
 ### Versionamento — uma versão por PR
 
