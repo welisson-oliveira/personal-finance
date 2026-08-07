@@ -14,6 +14,17 @@ Guia para subir a aplicação de graça para poucos usuários, usando três serv
 
 > ⚠️ Free tiers mudam. Confira os limites atuais de cada provedor na hora de subir.
 
+## Ambiente em produção (alfa)
+
+| Camada | URL |
+| --- | --- |
+| Frontend (Cloudflare Pages) | <https://personal-finance-2c1.pages.dev> |
+| Backend (Render · imagem do ghcr) | <https://personal-finance-backend-latest-8el1.onrender.com> |
+| Health check | `…/api/actuator/health` |
+| Banco | Neon (PostgreSQL) |
+
+**Amarração:** o front lê `assets/config.json` (`apiBaseUrl` = URL do backend, injetada no build do Pages via a env `API_BASE_URL`) e o interceptor prefixa `/api`; o backend libera a origem do Pages via `CORS_ALLOWED_ORIGINS`. Trocou alguma URL? Atualize `API_BASE_URL` (Pages) e `CORS_ALLOWED_ORIGINS` (Render).
+
 ---
 
 ## 1. Banco — Neon
