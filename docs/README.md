@@ -18,7 +18,9 @@ Esta pasta documenta a aplicação **por feature de negócio**, cruzando backend
 | Metas de orçamento          | [metas-de-orcamento.md](./metas-de-orcamento.md)                   | teto de gasto por categoria, sugestão 50/30/20 e acompanhamento mensal       |
 | Pessoas conhecidas          | [pessoas-conhecidas.md](./pessoas-conhecidas.md)                   | pessoas de PIX e o tratamento padrão de entrada                              |
 
-**Operação (transversal):** [deploy.md](./deploy.md) — provisionamento gratuito (Neon/Render/Cloudflare) e a **entrega contínua** (RC, release, deploy da imagem imutável no Render e rollback). Mexa aqui ao mudar qualquer workflow de `.github/workflows/`.
+**Operação (transversal):** [deploy.md](./deploy.md) — provisionamento gratuito (Neon/Render/Cloudflare), o **ambiente de produção (alfa)** e a **entrega contínua** (candidato por versão, release, deploy da imagem imutável no Render e rollback). Mexa aqui ao mudar qualquer workflow de `.github/workflows/`.
+
+**Produto & guias:** [Visão do Produto](./Personal_Finance_Visao_do_Produto.md) (modelo de domínio simplificado) · [Guia: primeiro acesso](./guia-primeiro-acesso.md) (importar histórico sem saber o saldo inicial).
 
 ---
 
@@ -54,7 +56,7 @@ DTOs (`dto/request`, `dto/response`) cruzam a fronteira do controller; **entidad
 | `test`         | H2 em memória (modo PostgreSQL)    | desabilitado | `create-drop` |
 
 Env vars: `SPRING_PROFILES_ACTIVE`, `JWT_SECRET`, `JWT_EXPIRATION_MS`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
-Migrations em `backend/src/main/resources/db/migration/` (V1…V21; a `V21` adiciona a coluna `reimbursement` em `transactions` e `merchant_rules` — ver o glossário). `jpa.open-in-view: false` — os services carregam as associações necessárias antes de retornar.
+Migrations em `backend/src/main/resources/db/migration/` (V1…V23; a `V21` adiciona a coluna `reimbursement` em `transactions` e `merchant_rules` — ver o glossário; a `V22` adiciona o feedback de anomalia; a `V23` corrige a normalização das merchant rules). **Versionamento/deploy:** `backend/pom.xml` é a fonte única da versão — cada PR para `develop` sobe a versão (ver [deploy.md](./deploy.md)). `jpa.open-in-view: false` — os services carregam as associações necessárias antes de retornar.
 
 ## Comandos
 
