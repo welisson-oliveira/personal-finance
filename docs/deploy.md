@@ -35,7 +35,7 @@ Guia para subir a aplicação de graça para poucos usuários, usando três serv
 
 ## 2. Backend — Render (imagem do ghcr)
 
-O Render **não builda do repositório**: ele puxa a imagem pronta que o CI publica no ghcr (ver [5. Entrega contínua](#5-entrega-contínua--rc-release-deploy-e-rollback)). O deploy é disparado pelo workflow `Deploy`, não pelo Render.
+O Render **não builda do repositório**: ele puxa a imagem pronta que o CI publica no ghcr (ver [5. Entrega contínua](#5-entrega-contínua--candidato-release-deploy-e-rollback)). O deploy é disparado pelo workflow `Deploy`, não pelo Render.
 
 1. Em <https://render.com>, **New → Web Service → Deploy an existing image from a registry**.
    - **Image URL:** `ghcr.io/<owner>/personal-finance-backend:latest`
@@ -111,7 +111,7 @@ O deploy do frontend é o **Cloudflare Pages nativo** (não passa pelo GitHub Ac
 - **Cold start:** no free tier o backend hiberna após inatividade; a primeira requisição depois disso demora alguns segundos. Aceitável para alfa fechada.
 - **Escopo:** os parsers de importação cobrem **apenas Nubank** (extrato + fatura). Deixe isso claro para quem for testar.
 
-## 5. Entrega contínua — RC, release, deploy e rollback
+## 5. Entrega contínua — candidato, release, deploy e rollback
 
 Como o código sai de `develop` e chega em produção, automatizado em `.github/workflows/`. **Ao mexer em qualquer workflow, atualize esta seção na mesma PR.**
 
