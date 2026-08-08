@@ -12,6 +12,7 @@ A pasta [`docs/`](./docs/README.md) documenta a aplicação **por feature de neg
 
 - [`docs/README.md`](./docs/README.md) — índice, arquitetura, stack, convenções, componentes compartilhados e **glossário de domínio** (tipo único receita/despesa/investimento, `budget_group` 50/30/20, `investment_direction`, `ignored`, `needs_review`, nome efetivo).
 - Domínios: autenticação-e-usuarios · importacao-de-pdfs · classificacao-e-aprendizado (cross-cutting) · transacoes (inclui a revisão inline) · dashboard · relatorios · categorias · metas-de-orcamento · pessoas-conhecidas.
+- Operação: [`docs/deploy.md`](./docs/deploy.md) — provisionamento (Neon/Render/Cloudflare Pages), pipeline CI/CD (versionamento por versão, candidato, Cut Release, deploy da imagem imutável no Render, rollback) e o ambiente de produção. **Leia antes de mexer em `.github/workflows/` ou no versionamento.**
 
 ## Commands
 
@@ -104,7 +105,7 @@ com.personalfinance/
 | `prod` | PostgreSQL (env vars) | enabled | validate |
 | `test` | H2 in-memory (PostgreSQL mode) | disabled | create-drop |
 
-Flyway migrations go in `src/main/resources/db/migration/` (not yet created — add `V1__...sql` files as schema grows).
+Flyway migrations live in `src/main/resources/db/migration/` (`V1__…` through `V23__…`; add the next `V{n}__description.sql` as the schema grows — never edit an applied migration, since `prod`/`dev` run `validate`).
 
 **Testcontainers** is available for tests that need real PostgreSQL behaviour. Use `docker-compose.test.yml` (tmpfs, port 5433) as the container target in those tests.
 
@@ -136,8 +137,9 @@ This project follows Git Flow strictly. **Always follow these rules:**
 - **`main`** receives code only via release branches or hotfixes — **never** direct feature merges.
 - **NEVER open a PR targeting `main` for a feature or bugfix.** Always set the base branch to `develop`.
 - After creating a branch, verify its base: `git log --oneline origin/develop..HEAD`
+- **Bump the version** in `backend/pom.xml` on every PR to `develop` — the `version-check` job fails a PR whose version already has a tag (see [`docs/deploy.md`](./docs/deploy.md)).
 
-> CI tip: the GitHub Actions workflow runs on PRs to both `develop` and `main`.
+> CI runs on PRs to `develop`/`main`; merging a `release/*` into `main` triggers the production deploy. Full pipeline (candidate, Cut Release, deploy, rollback) in [`docs/deploy.md`](./docs/deploy.md).
 
 ## Environment Setup
 
